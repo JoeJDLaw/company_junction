@@ -1,0 +1,33 @@
+# Python cache / bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# VSCode / IDE settings (optional)
+.vscode/
+.idea/
+
+# Data (don’t commit large or sensitive files)
+data/raw/*
+data/interim/*
+data/processed/*
+data/manual/*
+
+# Logs
+pipeline.log
+
+# Test cache
+.pytest_cache/

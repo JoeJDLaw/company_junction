@@ -1,0 +1,7 @@
+Id,Name,Email,Phone,Industry,Rating
+001,Acme Corporation,acme@example.com,555-0101,Technology,Hot
+002,Acme Corp,acme@example.com,555-0102,Technology,Warm
+003,Tech Solutions Inc,tech@example.com,555-0201,Technology,Hot
+004,Tech Solutions,tech@example.com,555-0202,Technology,Cold
+005,Global Industries,global@example.com,555-0301,Manufacturing,Hot
+006,Innovation Labs,innovation@example.com,555-0401,Technology,Hot

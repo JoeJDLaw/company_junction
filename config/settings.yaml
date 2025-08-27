@@ -1,0 +1,56 @@
+# Company Junction Pipeline Configuration
+
+# Data Processing Settings
+data:
+  # Default name column for duplicate detection
+  name_column: "Account Name"
+  
+  # Supported file formats
+  supported_formats: [".csv", ".xlsx", ".xls"]
+  
+  # Output file naming pattern
+  output_pattern: "cleaned_{object_type}_{timestamp}.csv"
+
+similarity:
+  high: 92
+  medium: 84
+  penalty:
+    suffix_mismatch: 25
+    num_style_mismatch: 5
+    punctuation_mismatch: 3
+  max_alias_pairs: 100000
+
+llm:
+  enabled: false
+  delete_threshold: 85
+
+survivorship:
+  tie_breakers: [created_date, account_id]
+
+io:
+  interim_format: parquet
+
+# Salesforce Integration
+salesforce:
+  # Default object types
+  object_types: ["Account", "Contact", "Lead", "Opportunity"]
+  
+  # Batch size for API operations
+  batch_size: 200
+  
+  # Retry settings for failed operations
+  max_retries: 3
+  retry_delay: 5
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "pipeline.log"
+
+# File Paths
+paths:
+  raw_data: "data/raw"
+  interim_data: "data/interim"
+  processed_data: "data/processed"
+  test_fixtures: "tests/fixtures"

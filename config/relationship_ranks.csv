@@ -1,0 +1,22 @@
+Relationship,Rank
+Company Name on 1099 form,10
+Company Name on Paycheck,10
+Company Name on Paystubs,10
+Company Name on W-2,10
+Company Logo on Paycheck,15
+Company Logo on Paystubs,15
+Franchise Name (Not a direct employee),15
+Company Name on Arbitration,20
+Company Name on Background Check,20
+Company Name on EEHB,20
+Company Name on New Hire Docs,20
+Company Name on Separation Letter,20
+Company Logo on EEHB,25
+Company Logo on Emails,25
+Company Logo on New Hire Docs,25
+Company Name on Email Signature Lines,30
+Company Name on LC 2810.5,30
+"Per PNC, Company Name on the Paystub",40
+"Per PNC, Staffing Agency",40
+"Per PNC, Company Name",45
+Other/Miscellaneous,60
