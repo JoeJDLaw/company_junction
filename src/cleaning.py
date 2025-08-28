@@ -21,18 +21,22 @@ import os
 from datetime import datetime
 
 # Import local modules
-from normalize import normalize_dataframe, excel_serial_to_datetime
-from similarity import pair_scores, save_candidate_pairs, get_stop_tokens
-from grouping import create_groups_with_edge_gating
+from src.normalize import normalize_dataframe, excel_serial_to_datetime
+from src.similarity import pair_scores, save_candidate_pairs, get_stop_tokens
+from src.grouping import create_groups_with_edge_gating
 
-# Hash utilities not used in this module
-from survivorship import (
+# Import ID utilities for Salesforce ID canonicalization
+try:
+    from src.utils.id_utils import normalize_sfid_series
+except ImportError:
+    from src.utils.id_utils import normalize_sfid_series
+from src.survivorship import (
     select_primary_records,
     generate_merge_preview,
     save_survivorship_results,
 )
-from disposition import apply_dispositions, save_dispositions
-from alias_matching import (
+from src.disposition import apply_dispositions, save_dispositions
+from src.alias_matching import (
     compute_alias_matches,
     create_alias_cross_refs,
     save_alias_matches,
@@ -45,12 +49,12 @@ try:
     from src.utils.perf_utils import log_perf
     from src.utils.dtypes import optimize_dataframe_memory
 except ImportError:
-    from utils.io_utils import load_settings, load_relationship_ranks
-    from utils.logging_utils import setup_logging
-    from utils.path_utils import ensure_directory_exists
-    from utils.perf_utils import log_perf
-    from utils.dtypes import optimize_dataframe_memory
-from performance import (
+    from src.utils.io_utils import load_settings, load_relationship_ranks
+from src.utils.logging_utils import setup_logging
+from src.utils.path_utils import ensure_directory_exists
+from src.utils.perf_utils import log_perf
+from src.utils.dtypes import optimize_dataframe_memory
+from src.performance import (
     PerformanceTracker,
     save_performance_summary,
     compute_group_size_histogram,
@@ -111,8 +115,8 @@ def _create_audit_snapshot(settings: Dict, alias_stats: Dict, output_dir: str) -
             pass
 
         # Get effective blacklist count
-        from disposition import get_blacklist_terms
-        from manual_io import load_manual_blacklist
+        from src.disposition import get_blacklist_terms
+        from src.manual_io import load_manual_blacklist
 
         builtin_count = len(get_blacklist_terms())
         manual_terms = load_manual_blacklist()
@@ -120,7 +124,7 @@ def _create_audit_snapshot(settings: Dict, alias_stats: Dict, output_dir: str) -
         effective_count = builtin_count + manual_count
 
         # Get manual overrides count
-        from manual_io import load_manual_overrides
+        from src.manual_io import load_manual_overrides
 
         overrides = load_manual_overrides()
         override_count = len(overrides)
@@ -311,15 +315,19 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
 
         df = df.rename(columns=SALESFORCE_TO_INTERNAL)
 
-        # Enforce consistent IDs (handle NaN safely before .str)
-        df["account_id"] = df["account_id"].astype("string").fillna("").str.strip()
+        # Preserve original account_id as account_id_src for audit trail
+        df["account_id_src"] = df["account_id"].astype("string").fillna("").str.strip()
+
+        # Canonicalize Salesforce IDs to 18-character form
+        logger.info("Canonicalizing Salesforce IDs to 18-character form")
+        df["account_id"] = normalize_sfid_series(df["account_id_src"])
 
         # Remove duplicate account_id records (keep first occurrence)
         initial_count = len(df)
         df = df.drop_duplicates(subset=["account_id"], keep="first")
         if len(df) < initial_count:
             logger.warning(
-                f"Removed {initial_count - len(df)} duplicate account_id records"
+                f"Removed {initial_count - len(df)} duplicate account_id records after canonicalization"
             )
 
         # Handle Excel serial dates

@@ -10,7 +10,7 @@ from pathlib import Path
 # Add src directory to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from alias_matching import (
+from src.alias_matching import (
     compute_alias_matches,
     create_alias_cross_refs,
     _normalize_alias,
@@ -66,7 +66,7 @@ class TestAliasMatching(unittest.TestCase):
             {"group_id": [0, 1, 2, 3, 4], "is_primary": [True, True, True, True, True]}
         )
 
-    def test_normalize_alias(self):
+    def test_normalize_alias(self) -> None:
         """Test alias normalization."""
         # Test basic normalization
         result = _normalize_alias("Don Roberto Jewelers")
@@ -83,7 +83,7 @@ class TestAliasMatching(unittest.TestCase):
         result = _normalize_alias(None)
         self.assertEqual(result, "")
 
-    def test_compute_alias_matches(self):
+    def test_compute_alias_matches(self) -> None:
         """Test alias matching computation."""
         # Compute alias matches
         result = compute_alias_matches(self.df_norm, self.df_groups, self.settings)
@@ -113,7 +113,7 @@ class TestAliasMatching(unittest.TestCase):
         self.assertIn("accepted_matches", stats)
         self.assertIn("elapsed_time", stats)
 
-    def test_create_alias_cross_refs(self):
+    def test_create_alias_cross_refs(self) -> None:
         """Test alias cross-reference creation."""
         # Create mock alias matches
         df_matches = pd.DataFrame(
@@ -143,7 +143,7 @@ class TestAliasMatching(unittest.TestCase):
         self.assertEqual(cross_refs[0]["group_id"], 2)
         self.assertEqual(cross_refs[0]["score"], 95)
 
-    def test_empty_alias_matches(self):
+    def test_empty_alias_matches(self) -> None:
         """Test handling of empty alias matches."""
         # Create empty matches
         df_matches = pd.DataFrame()

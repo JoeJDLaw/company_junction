@@ -240,3 +240,64 @@
   - Keep existing thresholds.
   - Ensure a small `similarity.penalty.punctuation_mismatch` (default `3`) remains conservative.
   - Add `max_alias_pairs` guard if not present.
+
+---
+
+## Phase 1.13 Column Naming & ID Standards
+
+### Canonical Column Naming Policy (Inputs vs Internal)
+- **Inputs (Salesforce exports)** may use **spaced, titled columns**: `Account ID`, `Account Name`, `Created Date`, `Relationship`.
+- **Internal canonical columns** (snake_case, used throughout pipeline and tests):
+  - `account_id` → **18-char canonical Salesforce ID** (see ID policy below)
+  - `account_id_src` → original input ID (15 or 18) preserved for audit/UI
+  - `account_name`
+  - `created_date`
+  - `relationship`
+- **Renaming map** for ingestion (apply once, early in cleaning):
+  - `{"Account ID": "account_id", "Account Name": "account_name", "Created Date": "created_date", "Relationship": "relationship"}`
+- **Candidate pairs** must use: `id_a`, `id_b`, and `score` (plus any explain columns).
+- **Never** use spaced/titled names inside `src/` modules; keep them at the ingestion boundary only.
+
+### Salesforce ID Canonicalization Policy
+- All IDs used in joins/grouping/survivorship must be **canonical 18-char Salesforce IDs**.
+- Store original in `account_id_src` (trimmed string) for UI/audit; **never** use `account_id_src` for joins.
+- 15→18 conversion uses the **Salesforce checksum algorithm** (3-char suffix, case-sensitive on the 15-char source).
+- Canonicalization helper location: `src/utils/id_utils.py` with:
+  - `sfid15_to_18(sfid15: str) -> str`
+  - `normalize_sfid_series(series) -> pd.Series` (returns 18-char or validated 18-char pass-through).
+- **Referential integrity** check before grouping: every `id_a`/`id_b` must exist in `accounts[account_id]` (canonical). Fail fast with helpful samples.
+- **Uniqueness**: `accounts[account_id]` must be unique and non-null after canonicalization.
+
+### Utils Layout & Import Rules
+- All shared helpers live under `src/utils/` (no `src/utils.py` usage in code; the legacy file is archived under `deprecated/`).
+- Modules: `path_utils.py`, `logging_utils.py`, `perf_utils.py`, `io_utils.py`, `validation_utils.py`, `dtypes.py`, `hash_utils.py`, `id_utils.py`.
+- **Imports must be absolute and rooted at `src`**, e.g. `from src.utils.id_utils import normalize_sfid_series`.
+- Do not introduce relative imports between top-level modules (`src/foo.py` ↔ `src/bar.py`) that create cycles; extract shared code into `src/utils/` instead.
+
+### Survivorship & Disposition (ID usage reminder)
+- Survivorship tie-breakers use canonical `account_id` for lexicographic comparison (after relationship rank and created date). Never compare using `account_id_src`.
+- Disposition logic and UI explanations should reference canonical ID, with `account_id_src` shown as original where helpful.
+
+### QA Gates: Black / Ruff / MyPy (must run at phase end)
+- At the end of every Phase prompt/PR, run and require **all to pass**:
+  - `black --check .`
+  - `ruff .`
+  - `mypy --config-file mypy.ini .`
+  - `pytest -q`
+- **MyPy configuration** (in `mypy.ini` or `pyproject.toml`):
+  - `mypy_path = src`, `namespace_packages = True`, `ignore_missing_imports = False`
+  - Prefer **absolute imports** (`from src...`) to avoid module path conflicts (e.g., `dtypes_map` vs `src.dtypes_map`).
+- If third-party stubs are needed, add to `requirements-dev.txt` (e.g., `pandas-stubs`, `types-PyYAML`). "Stubs" supply type info only; they don't affect runtime.
+
+### Logging, Perf, and Artifacts
+- Use `log_perf` (from `src/utils/perf_utils.py`) around each major stage.
+- Keep run summaries clear: distinguish **hard duplicate rows removed** (same canonical `account_id`) vs **deduplication groups** (different `account_id`s believed to be same company).
+- Artifacts:
+  - `data/interim/*.parquet` (intermediate)
+  - `data/processed/review_ready.*` (final for UI)
+  - `data/processed/review_meta.json` (metadata)
+  - `data/interim/block_top_tokens.csv` (blocking stats)
+
+### Edit Hygiene
+- Rules edits must be **idempotent**: if a rule exists, update/merge; do not duplicate.
+- Keep terminology consistent with existing sections (Phase labels, bullets, formatting).

@@ -15,7 +15,7 @@ try:
         INTERMEDIATE_COLUMNS_TO_DROP,
     )
 except ImportError:
-    from dtypes_map import ALLOWED_OBJECT_COLUMNS, INTERMEDIATE_COLUMNS_TO_DROP
+    from src.dtypes_map import ALLOWED_OBJECT_COLUMNS, INTERMEDIATE_COLUMNS_TO_DROP
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,8 @@ def apply_dtypes(df: pd.DataFrame, schema: Dict[str, str]) -> pd.DataFrame:
         return result
     except Exception as e:
         logger.error(f"Failed to apply dtypes: {e}")
-        logger.error(f"Dataframe info: {df.info()}")
+        logger.error("Dataframe info:")
+        df.info()
         raise
 
 
@@ -208,5 +209,5 @@ def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
     try:
         from src.dtypes_map import get_dtypes_for_schema as _get_dtypes
     except ImportError:
-        from dtypes_map import get_dtypes_for_schema as _get_dtypes
+        from src.dtypes_map import get_dtypes_for_schema as _get_dtypes
     return _get_dtypes(schema_name)

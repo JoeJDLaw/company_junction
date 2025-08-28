@@ -20,7 +20,7 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from cleaning import load_salesforce_data, validate_required_columns
 from src.utils.io_utils import load_settings
-from normalize import normalize_dataframe
+from src.normalize import normalize_dataframe
 
 
 class TestCleaning(unittest.TestCase):
@@ -52,7 +52,7 @@ class TestCleaning(unittest.TestCase):
             }
         )
 
-    def test_load_salesforce_data_csv(self):
+    def test_load_salesforce_data_csv(self) -> None:
         """Test loading CSV data."""
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".csv", delete=False
@@ -70,7 +70,7 @@ class TestCleaning(unittest.TestCase):
         finally:
             os.unlink(tmp_path)
 
-    def test_validate_required_columns(self):
+    def test_validate_required_columns(self) -> None:
         """Test column validation logic."""
         # Test with all required columns
         self.assertTrue(validate_required_columns(self.sample_data))
@@ -80,7 +80,7 @@ class TestCleaning(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_required_columns(incomplete_data)
 
-    def test_invalid_file_format(self):
+    def test_invalid_file_format(self) -> None:
         """Test handling of invalid file formats."""
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp_file:
             tmp_file.write(b"Invalid data")
@@ -92,7 +92,7 @@ class TestCleaning(unittest.TestCase):
         finally:
             os.unlink(tmp_path)
 
-    def test_enhanced_filtering_removes_problematic_records(self):
+    def test_enhanced_filtering_removes_problematic_records(self) -> None:
         """Test that enhanced filtering removes problematic records before blocking."""
         # Create test data with problematic records
         test_data = pd.DataFrame(
@@ -170,7 +170,7 @@ class TestCleaning(unittest.TestCase):
                 f"Name '{name}' not found in expected patterns",
             )
 
-    def test_performance_logging_context_manager(self):
+    def test_performance_logging_context_manager(self) -> None:
         """Test that performance logging context manager works."""
         from src.utils.perf_utils import log_perf
         import time

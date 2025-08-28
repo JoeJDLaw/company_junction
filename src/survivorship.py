@@ -15,7 +15,7 @@ import logging
 try:
     from src.normalize import excel_serial_to_datetime
 except ImportError:
-    from normalize import excel_serial_to_datetime
+    from src.normalize import excel_serial_to_datetime
 
 logger = logging.getLogger(__name__)
 

@@ -60,8 +60,12 @@ def pair_scores(df_norm: pd.DataFrame, settings: Dict) -> pd.DataFrame:
                 df_norm.loc[idx_a], df_norm.loc[idx_b], penalties
             )
             # Use actual account_id values instead of row indices
-            account_id_a = df_norm.loc[idx_a, "account_id"]
-            account_id_b = df_norm.loc[idx_b, "account_id"]
+            # Handle both standardized and original column names
+            account_id_col = (
+                "account_id" if "account_id" in df_norm.columns else "Account ID"
+            )
+            account_id_a = df_norm.loc[idx_a, account_id_col]
+            account_id_b = df_norm.loc[idx_b, account_id_col]
             scores.append({"id_a": account_id_a, "id_b": account_id_b, **score_data})
         except KeyError as e:
             logger.warning(f"Skipping pair ({idx_a}, {idx_b}): index not found - {e}")

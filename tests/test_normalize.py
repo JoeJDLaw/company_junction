@@ -10,13 +10,13 @@ from pathlib import Path
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from normalize import normalize_name, excel_serial_to_datetime, normalize_dataframe
+from src.normalize import normalize_name, excel_serial_to_datetime, normalize_dataframe
 
 
 class TestNormalize(unittest.TestCase):
     """Test cases for name normalization."""
 
-    def test_basic_normalization(self):
+    def test_basic_normalization(self) -> None:
         """Test basic name normalization."""
         # Test symbol mapping
         result = normalize_name("20-20 Plumbing & Heating, Inc.")
@@ -36,7 +36,7 @@ class TestNormalize(unittest.TestCase):
         self.assertEqual(result3.suffix_class, "INC")
         self.assertEqual(result3.name_core, "20 20 plumbing and heating")
 
-    def test_suffix_detection(self):
+    def test_suffix_detection(self) -> None:
         """Test legal suffix detection."""
         # Test different INC variations
         inc_variants = ["Acme Inc", "Acme Inc.", "Acme Incorporated"]
@@ -58,7 +58,7 @@ class TestNormalize(unittest.TestCase):
         )  # "Company" is recognized as CO suffix
         self.assertEqual(result.name_core, "acme")
 
-    def test_suffix_mismatch_detection(self):
+    def test_suffix_mismatch_detection(self) -> None:
         """Test that different suffixes are properly distinguished."""
         inc_result = normalize_name("20-20 Plumbing & Heating Inc")
         llc_result = normalize_name("20-20 Plumbing & Heating LLC")
@@ -73,7 +73,7 @@ class TestNormalize(unittest.TestCase):
         # This should NOT be considered a match due to suffix mismatch
         self.assertNotEqual(inc_result.suffix_class, llc_result.suffix_class)
 
-    def test_edge_cases(self):
+    def test_edge_cases(self) -> None:
         """Test edge cases and error handling."""
         # Empty/None values
         result = normalize_name(None)
@@ -94,7 +94,7 @@ class TestNormalize(unittest.TestCase):
         self.assertEqual(result.name_base, "company at 123 com")
         self.assertEqual(result.suffix_class, "NONE")
 
-    def test_numeric_style_unification(self):
+    def test_numeric_style_unification(self) -> None:
         """Test numeric style unification."""
         test_cases = [
             ("20-20 Vision", "20 20 vision"),
@@ -108,7 +108,7 @@ class TestNormalize(unittest.TestCase):
             result = normalize_name(input_name)
             self.assertEqual(result.name_base, expected_base)
 
-    def test_excel_serial_conversion(self):
+    def test_excel_serial_conversion(self) -> None:
         """Test Excel serial number to datetime conversion."""
         # Test Excel serial dates
         # Excel serial 44197 = 2021-01-01
@@ -123,7 +123,7 @@ class TestNormalize(unittest.TestCase):
         result = excel_serial_to_datetime(pd.NA)
         self.assertIsNone(result)
 
-    def test_dataframe_normalization(self):
+    def test_dataframe_normalization(self) -> None:
         """Test DataFrame normalization."""
         df = pd.DataFrame(
             {
@@ -158,7 +158,7 @@ class TestNormalize(unittest.TestCase):
         self.assertEqual(result.iloc[2]["suffix_class"], "CORP")
         self.assertEqual(result.iloc[2]["name_core"], "acme")
 
-    def test_three_variants_same_core(self):
+    def test_three_variants_same_core(self) -> None:
         """Test that three '20/20 ... Inc' variants share same name_core."""
         variants = [
             "20-20 Plumbing and Heating Inc",
@@ -178,25 +178,25 @@ class TestNormalize(unittest.TestCase):
         self.assertEqual(len(set(suffix_classes)), 1)
         self.assertEqual(suffix_classes[0], "INC")
 
-    def test_underscore_normalization(self):
+    def test_underscore_normalization(self) -> None:
         """Test underscore normalization."""
         result = normalize_name("__Don_Roberto__")
         self.assertEqual(result.name_base, "don roberto")
         self.assertEqual(result.name_core, "don roberto")
 
-    def test_parentheses_detection(self):
+    def test_parentheses_detection(self) -> None:
         """Test parentheses detection."""
         result = normalize_name("Diamond Foods (Express Staffing)")
         self.assertTrue(result.has_parentheses)
         self.assertEqual(result.name_core, "diamond foods express staffing")
 
-    def test_semicolon_detection(self):
+    def test_semicolon_detection(self) -> None:
         """Test semicolon detection."""
         result = normalize_name("Company A; Company B")
         self.assertTrue(result.has_semicolon)
         self.assertTrue(result.has_multiple_names)
 
-    def test_multiple_names_detection(self):
+    def test_multiple_names_detection(self) -> None:
         """Test multiple names detection."""
         # Test numbered pattern
         result = normalize_name("(1) Don Roberto; (2) BYD Auto")
@@ -206,7 +206,7 @@ class TestNormalize(unittest.TestCase):
         result = normalize_name("Company A and Company B and Company C")
         self.assertTrue(result.has_multiple_names)
 
-    def test_alias_extraction(self):
+    def test_alias_extraction(self) -> None:
         """Test alias candidate extraction."""
         # Test semicolon aliases
         result = normalize_name("(1)Don Roberto Jewelers; (2) BYD Auto")
@@ -229,7 +229,7 @@ class TestNormalize(unittest.TestCase):
         result = normalize_name("Test Company (paystub)")
         self.assertEqual(len(result.alias_candidates), 0)
 
-    def test_numbered_marker_removal(self):
+    def test_numbered_marker_removal(self) -> None:
         """Test that numbered markers are removed from scoring."""
         result = normalize_name("(1)Don Roberto Jewelers")
         self.assertEqual(result.name_core, "don roberto jewelers")

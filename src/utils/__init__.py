@@ -22,6 +22,7 @@ from .io_utils import (
 )
 from .perf_utils import log_perf
 from .hash_utils import config_hash, stable_group_id, _compute_config_hash
+from .id_utils import sfid15_to_18, normalize_sfid_series, validate_sfid_format
 
 __all__ = [
     # Dtype utilities
@@ -49,4 +50,8 @@ __all__ = [
     "config_hash",
     "stable_group_id",
     "_compute_config_hash",
+    # ID utilities
+    "sfid15_to_18",
+    "normalize_sfid_series",
+    "validate_sfid_format",
 ]

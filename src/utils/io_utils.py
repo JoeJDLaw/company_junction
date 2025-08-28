@@ -6,7 +6,7 @@ import logging
 import yaml
 import pandas as pd
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 
 def get_file_info(file_path: str) -> dict:
@@ -54,7 +54,7 @@ def list_data_files(
     return [str(f) for f in files]
 
 
-def load_settings(path: str) -> dict:
+def load_settings(path: str) -> Dict[str, Any]:
     """
     Load settings from YAML file with defaults.
 
@@ -103,7 +103,7 @@ def load_settings(path: str) -> dict:
             user_config = yaml.safe_load(f) or {}
 
         # Deep merge user config over defaults
-        def deep_merge(base, update):
+        def deep_merge(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
             for key, value in update.items():
                 if (
                     key in base

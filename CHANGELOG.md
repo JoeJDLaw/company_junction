@@ -141,6 +141,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Function preservation**: All functions maintain identical behavior and API
 - **Test coverage**: All 81 tests pass after refactor
 
+## [Phase1.13.5] - 2025-08-28
+
+### Added
+- **MyPy Error Reduction** - Targeted, no-churn typing improvements
+  - Systematic addition of return type annotations (`-> None`) to all test functions
+  - Enhanced type annotations for utility functions and app modules
+  - Improved function signatures with proper parameter and return types
+
+### Changed
+- **Test functions**: All test methods now have explicit `-> None` return type annotations
+- **Utils functions**: Added precise return types and parameter annotations
+- **App functions**: Enhanced type safety with proper return type declarations
+- **Error reduction**: Reduced MyPy errors from 186 → 70 (62% reduction)
+
+### Fixed
+- **Missing return types**: Added `-> None` to 179 test functions across 9 test files
+- **Utils typing**: Fixed `load_settings`, `deep_merge`, and other utility function signatures
+- **App typing**: Enhanced type safety in `manual_data.py` and `main.py` functions
+- **Import test functions**: Added proper type annotations to import validation tests
+
+## [Phase1.13.4] - 2025-08-28
+
+### Added
+- **MyPy Module-Path Conflict Resolution** - Zero-errors finalization
+  - Eliminated all module path conflicts (e.g., `dtypes_map` vs `src.dtypes_map`)
+  - Removed `mypy_path` configuration to prevent dual module identities
+  - Enforced single canonical package root (`src`) via targeted MyPy invocation
+  - All bare imports standardized to absolute `src.` paths
+
+### Changed
+- **MyPy configuration**: Removed `mypy_path` and enforced explicit package bases
+- **Import standardization**: All remaining bare imports fixed across src/ and tests/
+- **MyPy invocation**: Changed to `mypy --config-file mypy.ini src tests app` for targeted checking
+- **Error reduction**: Reduced MyPy errors from 216 → 188 (28 fewer errors)
+
+### Fixed
+- **Module path conflicts**: Resolved all `dtypes_map` vs `src.dtypes_map` dual identity issues
+- **Import consistency**: All first-party imports now use canonical `src.` package paths
+- **Test imports**: All test files updated to use absolute imports
+
+## [Phase1.13.3] - 2025-08-28
+
+### Added
+- **Type & Import Hygiene** - MyPy path fix and import test normalization
+  - MyPy configuration updated to enforce single canonical package root (`src`)
+  - `tests/test_imports.py` rewritten as pure-pytest with canonical import validation
+  - All first-party imports now use absolute `src.` paths
+  - Enhanced type checking with stricter configuration
+
+### Changed
+- **Import standardization**: All bare imports (e.g., `from normalize import`) replaced with absolute imports (`from src.normalize import`)
+- **MyPy configuration**: Simplified to focus on `src` as single package root with explicit package bases
+- **Test structure**: Import tests now validate production-like import paths via `src.` package
+
+## [Phase1.13.2] - 2025-08-28
+
+### Added
+- **Column Naming & ID Standards** - Comprehensive rules for canonical column naming and Salesforce ID handling
+  - Canonical column naming policy (inputs vs internal)
+  - Salesforce ID canonicalization policy (18-char canonical IDs)
+  - Utils layout & import rules (absolute imports required)
+  - QA gates enforcement (Black/Ruff/MyPy/PyTest)
+  - Logging, performance, and artifacts standards
+  - Edit hygiene rules for maintaining consistency
+- **Updated `cursor_rules.md`** with Phase 1.13 standards to prevent future churn and ensure consistency
+
 ## [Unreleased]
 
 ### Added

@@ -52,6 +52,7 @@ import sys
 from pathlib import Path
 import json
 import os
+from typing import Optional, Dict, List, Any
 
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
@@ -59,7 +60,7 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 from src.utils.logging_utils import setup_logging
 
 
-def load_review_data():
+def load_review_data() -> Optional[pd.DataFrame]:
     """Load review-ready data from pipeline output."""
     # Try Parquet first (native types for alias fields)
     parquet_path = "data/processed/review_ready.parquet"
@@ -93,7 +94,7 @@ def load_review_data():
     return None
 
 
-def parse_alias_cross_refs(cross_refs_str):
+def parse_alias_cross_refs(cross_refs_str: Any) -> List[Any]:
     """Parse alias cross-references from string representation."""
     if pd.isna(cross_refs_str) or cross_refs_str == "[]":
         return []
@@ -105,7 +106,7 @@ def parse_alias_cross_refs(cross_refs_str):
         return []
 
 
-def load_settings(path="config/settings.yaml"):
+def load_settings(path: str = "config/settings.yaml") -> Dict[str, Any]:
     """Load settings from YAML file."""
     try:
         import yaml
@@ -116,7 +117,7 @@ def load_settings(path="config/settings.yaml"):
         return {}
 
 
-def _safe_get(d, *keys, default=None):
+def _safe_get(d: Dict[str, Any], *keys: str, default: Any = None) -> Any:
     """Safely get nested dictionary values."""
     cur = d
     for k in keys:
@@ -126,7 +127,7 @@ def _safe_get(d, *keys, default=None):
     return cur
 
 
-def parse_merge_preview(preview_json):
+def parse_merge_preview(preview_json: Any) -> Optional[Dict[str, Any]]:
     """Parse merge preview JSON for display."""
     if not preview_json or pd.isna(preview_json):
         return None
@@ -137,7 +138,7 @@ def parse_merge_preview(preview_json):
         return None
 
 
-def main():
+def main() -> None:
     """Main Streamlit application."""
     st.set_page_config(
         page_title="Company Junction Deduplication Review",

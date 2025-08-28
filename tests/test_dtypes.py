@@ -10,24 +10,24 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from utils.dtypes import (
+from src.utils.dtypes import (
     apply_dtypes,
     assert_no_unexpected_object_columns,
     drop_intermediate_columns,
     optimize_dataframe_memory,
     get_dtypes_for_schema,
 )
-from dtypes_map import DTYPES, ALLOWED_OBJECT_COLUMNS, INTERMEDIATE_COLUMNS_TO_DROP
+from src.dtypes_map import DTYPES, ALLOWED_OBJECT_COLUMNS, INTERMEDIATE_COLUMNS_TO_DROP
 
 
 class TestDtypeApplication:
     """Test dtype application functionality."""
 
-    def test_apply_dtypes_basic(self):
+    def test_apply_dtypes_basic(self) -> None:
         """Test basic dtype application."""
         df = pd.DataFrame(
             {
-                "account_id": ["123", "456"],
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],
                 "score": [95.5, 87.2],
             }
@@ -41,10 +41,13 @@ class TestDtypeApplication:
         assert result["name_core"].dtype == "string"
         assert result["score"].dtype == "float32"
 
-    def test_apply_dtypes_missing_columns(self):
+    def test_apply_dtypes_missing_columns(self) -> None:
         """Test dtype application with missing columns."""
         df = pd.DataFrame(
-            {"account_id": ["123", "456"], "name_core": ["company inc", "company llc"]}
+            {
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
+                "name_core": ["company inc", "company llc"],
+            }
         )
 
         schema = {
@@ -60,7 +63,7 @@ class TestDtypeApplication:
         assert result["name_core"].dtype == "string"
         assert "score" not in result.columns
 
-    def test_apply_dtypes_empty_dataframe(self):
+    def test_apply_dtypes_empty_dataframe(self) -> None:
         """Test dtype application with empty dataframe."""
         df = pd.DataFrame()
         schema = {"account_id": "string"}
@@ -74,11 +77,11 @@ class TestDtypeApplication:
 class TestObjectColumnValidation:
     """Test object column validation."""
 
-    def test_assert_no_unexpected_object_columns_pass(self):
+    def test_assert_no_unexpected_object_columns_pass(self) -> None:
         """Test validation passes with allowed object columns."""
         df = pd.DataFrame(
             {
-                "account_id": ["123", "456"],
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],  # Allowed object column
                 "score": [95.5, 87.2],
             }
@@ -87,11 +90,11 @@ class TestObjectColumnValidation:
         # Should not raise exception
         assert_no_unexpected_object_columns(df, context="test")
 
-    def test_assert_no_unexpected_object_columns_fail(self):
+    def test_assert_no_unexpected_object_columns_fail(self) -> None:
         """Test validation fails with unexpected object columns."""
         df = pd.DataFrame(
             {
-                "account_id": ["123", "456"],
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "unexpected_col": ["value1", "value2"],  # Unexpected object column
                 "score": [95.5, 87.2],
             }
@@ -100,17 +103,20 @@ class TestObjectColumnValidation:
         with pytest.raises(AssertionError, match="Unexpected object columns"):
             assert_no_unexpected_object_columns(df, context="test")
 
-    def test_assert_no_unexpected_object_columns_empty(self):
+    def test_assert_no_unexpected_object_columns_empty(self) -> None:
         """Test validation with empty dataframe."""
         df = pd.DataFrame()
 
         # Should not raise exception
         assert_no_unexpected_object_columns(df, context="test")
 
-    def test_assert_no_unexpected_object_columns_custom_allowed(self):
+    def test_assert_no_unexpected_object_columns_custom_allowed(self) -> None:
         """Test validation with custom allowed columns."""
         df = pd.DataFrame(
-            {"account_id": ["123", "456"], "custom_col": ["value1", "value2"]}
+            {
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
+                "custom_col": ["value1", "value2"],
+            }
         )
 
         # Should not raise exception with custom allowed set
@@ -122,11 +128,11 @@ class TestObjectColumnValidation:
 class TestIntermediateColumnDropping:
     """Test intermediate column dropping."""
 
-    def test_drop_intermediate_columns(self):
+    def test_drop_intermediate_columns(self) -> None:
         """Test dropping intermediate columns."""
         df = pd.DataFrame(
             {
-                "account_id": ["123", "456"],
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],
                 "raw_name_tokens": [
                     ["company", "inc"],
@@ -143,10 +149,13 @@ class TestIntermediateColumnDropping:
         assert "raw_name_tokens" not in result.columns
         assert "temp_group_assignments" not in result.columns
 
-    def test_drop_intermediate_columns_none_present(self):
+    def test_drop_intermediate_columns_none_present(self) -> None:
         """Test dropping when no intermediate columns present."""
         df = pd.DataFrame(
-            {"account_id": ["123", "456"], "name_core": ["company inc", "company llc"]}
+            {
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
+                "name_core": ["company inc", "company llc"],
+            }
         )
 
         result = drop_intermediate_columns(df, context="test")
@@ -160,11 +169,11 @@ class TestIntermediateColumnDropping:
 class TestMemoryOptimization:
     """Test memory optimization functionality."""
 
-    def test_optimize_dataframe_memory_basic(self):
+    def test_optimize_dataframe_memory_basic(self) -> None:
         """Test basic memory optimization."""
         df = pd.DataFrame(
             {
-                "account_id": ["123", "456"],
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],
                 "score": [95.5, 87.2],
                 "is_primary": [True, False],
@@ -177,7 +186,7 @@ class TestMemoryOptimization:
         assert len(result) == len(df)
         assert list(result.columns) == list(df.columns)
 
-    def test_optimize_dataframe_memory_empty(self):
+    def test_optimize_dataframe_memory_empty(self) -> None:
         """Test memory optimization with empty dataframe."""
         df = pd.DataFrame()
 
@@ -185,11 +194,11 @@ class TestMemoryOptimization:
 
         assert result.empty
 
-    def test_optimize_dataframe_memory_with_intermediate_columns(self):
+    def test_optimize_dataframe_memory_with_intermediate_columns(self) -> None:
         """Test memory optimization with intermediate columns."""
         df = pd.DataFrame(
             {
-                "account_id": ["123", "456"],
+                "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],
                 "raw_name_tokens": [
                     ["company", "inc"],
@@ -211,7 +220,7 @@ class TestMemoryOptimization:
 class TestSchemaDetection:
     """Test schema detection functionality."""
 
-    def test_get_dtypes_for_schema_accounts(self):
+    def test_get_dtypes_for_schema_accounts(self) -> None:
         """Test getting dtypes for accounts schema."""
         schema = get_dtypes_for_schema("accounts")
 
@@ -232,7 +241,7 @@ class TestSchemaDetection:
         assert schema["account_id"] == "string"
         assert schema["suffix_class"] == "category"
 
-    def test_get_dtypes_for_schema_pairs(self):
+    def test_get_dtypes_for_schema_pairs(self) -> None:
         """Test getting dtypes for pairs schema."""
         schema = get_dtypes_for_schema("pairs")
 
@@ -248,7 +257,7 @@ class TestSchemaDetection:
         assert all(key in schema for key in expected_keys)
         assert schema["score"] == "float32"
 
-    def test_get_dtypes_for_schema_groups(self):
+    def test_get_dtypes_for_schema_groups(self) -> None:
         """Test getting dtypes for groups schema."""
         schema = get_dtypes_for_schema("groups")
 
@@ -270,7 +279,7 @@ class TestSchemaDetection:
         assert schema["group_id"] == "string"
         assert schema["is_primary"] == "boolean"
 
-    def test_get_dtypes_for_schema_review_ready(self):
+    def test_get_dtypes_for_schema_review_ready(self) -> None:
         """Test getting dtypes for review_ready schema."""
         schema = get_dtypes_for_schema("review_ready")
 
@@ -298,7 +307,7 @@ class TestSchemaDetection:
         assert schema["disposition"] == "category"
         assert schema["group_size"] == "int16"
 
-    def test_get_dtypes_for_schema_unknown(self):
+    def test_get_dtypes_for_schema_unknown(self) -> None:
         """Test getting dtypes for unknown schema."""
         schema = get_dtypes_for_schema("unknown")
 
@@ -309,7 +318,7 @@ class TestSchemaDetection:
 class TestDtypeMapConstants:
     """Test dtype map constants."""
 
-    def test_dtypes_structure(self):
+    def test_dtypes_structure(self) -> None:
         """Test that DTYPES has expected structure."""
         assert isinstance(DTYPES, dict)
         assert len(DTYPES) > 0
@@ -320,7 +329,7 @@ class TestDtypeMapConstants:
         assert DTYPES["is_primary"] == "boolean"
         assert DTYPES["disposition"] == "category"
 
-    def test_allowed_object_columns(self):
+    def test_allowed_object_columns(self) -> None:
         """Test ALLOWED_OBJECT_COLUMNS structure."""
         assert isinstance(ALLOWED_OBJECT_COLUMNS, set)
         assert len(ALLOWED_OBJECT_COLUMNS) > 0
@@ -329,7 +338,7 @@ class TestDtypeMapConstants:
         assert "name_core" in ALLOWED_OBJECT_COLUMNS
         assert "disposition_reason" in ALLOWED_OBJECT_COLUMNS
 
-    def test_intermediate_columns_to_drop(self):
+    def test_intermediate_columns_to_drop(self) -> None:
         """Test INTERMEDIATE_COLUMNS_TO_DROP structure."""
         assert isinstance(INTERMEDIATE_COLUMNS_TO_DROP, set)
         assert len(INTERMEDIATE_COLUMNS_TO_DROP) > 0

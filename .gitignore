@@ -42,3 +42,5 @@ pipeline.log
 # Coverage / reports
 htmlcov/
 .coverage
+# MyPy reports
+.mypy_report*.txt

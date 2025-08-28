@@ -14,8 +14,8 @@ try:
     from src.utils.perf_utils import log_perf
     from src.utils.hash_utils import stable_group_id
 except ImportError:
-    from utils.perf_utils import log_perf
-    from utils.hash_utils import stable_group_id
+    from src.utils.perf_utils import log_perf
+from src.utils.hash_utils import stable_group_id
 
 logger = logging.getLogger(__name__)
 
@@ -143,11 +143,23 @@ def create_groups_with_edge_gating(
         logger.info(f"candidate_pairs_df columns: {list(candidate_pairs_df.columns)}")
         logger.info(f"accounts_df columns: {list(accounts_df.columns)}")
 
-        # Sanity checks
-        required_pairs_cols = {"id_a", "id_b", "score"}
-        missing = required_pairs_cols - set(candidate_pairs_df.columns)
-        if missing:
-            raise ValueError(f"pairs missing required columns: {missing}")
+        # Sanity checks - handle both column naming conventions
+        has_id_a_b = (
+            "id_a" in candidate_pairs_df.columns
+            and "id_b" in candidate_pairs_df.columns
+        )
+        has_account_id_1_2 = (
+            "account_id_1" in candidate_pairs_df.columns
+            and "account_id_2" in candidate_pairs_df.columns
+        )
+
+        if not has_id_a_b and not has_account_id_1_2:
+            raise ValueError(
+                "Candidate pairs DataFrame must have either 'id_a'/'id_b' or 'account_id_1'/'account_id_2' columns"
+            )
+
+        if "score" not in candidate_pairs_df.columns:
+            raise ValueError("Candidate pairs DataFrame missing 'score' column")
 
         # Uniqueness & nulls in accounts
         if accounts_df["account_id"].isna().any():
@@ -166,14 +178,26 @@ def create_groups_with_edge_gating(
             "string",
             "object",
         ), f"accounts.account_id dtype is {accounts_df['account_id'].dtype.name}"
-        assert candidate_pairs_df["id_a"].dtype.name in (
-            "string",
-            "object",
-        ), f"pairs.id_a dtype is {candidate_pairs_df['id_a'].dtype.name}"
-        assert candidate_pairs_df["id_b"].dtype.name in (
-            "string",
-            "object",
-        ), f"pairs.id_b dtype is {candidate_pairs_df['id_b'].dtype.name}"
+
+        # Check type consistency for pair ID columns
+        if has_id_a_b:
+            assert candidate_pairs_df["id_a"].dtype.name in (
+                "string",
+                "object",
+            ), f"pairs.id_a dtype is {candidate_pairs_df['id_a'].dtype.name}"
+            assert candidate_pairs_df["id_b"].dtype.name in (
+                "string",
+                "object",
+            ), f"pairs.id_b dtype is {candidate_pairs_df['id_b'].dtype.name}"
+        else:  # has_account_id_1_2
+            assert candidate_pairs_df["account_id_1"].dtype.name in (
+                "string",
+                "object",
+            ), f"pairs.account_id_1 dtype is {candidate_pairs_df['account_id_1'].dtype.name}"
+            assert candidate_pairs_df["account_id_2"].dtype.name in (
+                "string",
+                "object",
+            ), f"pairs.account_id_2 dtype is {candidate_pairs_df['account_id_2'].dtype.name}"
 
         # Check if edge-gating is enabled
         edge_gating_config = config.get("grouping", {}).get("edge_gating", {})
@@ -364,7 +388,7 @@ def create_groups_with_edge_gating(
         try:
             from src.utils.dtypes import optimize_dataframe_memory
         except ImportError:
-            from utils.dtypes import optimize_dataframe_memory
+            from src.utils.dtypes import optimize_dataframe_memory
         groups_df = optimize_dataframe_memory(groups_df, "groups")
 
         logger.info(
@@ -469,7 +493,7 @@ def create_groups_standard(
     try:
         from src.utils.dtypes import optimize_dataframe_memory
     except ImportError:
-        from utils.dtypes import optimize_dataframe_memory
+        from src.utils.dtypes import optimize_dataframe_memory
     groups_df = optimize_dataframe_memory(groups_df, "groups")
 
     logger.info(

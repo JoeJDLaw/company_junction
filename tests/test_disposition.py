@@ -10,14 +10,14 @@ from pathlib import Path
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from disposition import (
+from src.disposition import (
     classify_disposition,
     _is_blacklisted,
     _is_suspicious_singleton,
     apply_dispositions,
     compute_group_metadata,
 )
-from normalize import normalize_dataframe
+from src.normalize import normalize_dataframe
 
 
 class TestDisposition(unittest.TestCase):
@@ -64,7 +64,7 @@ class TestDisposition(unittest.TestCase):
             "llm": {"enabled": False, "delete_threshold": 85},
         }
 
-    def test_blacklist_detection(self):
+    def test_blacklist_detection(self) -> None:
         """Test blacklist detection."""
         # Test blacklisted names
         blacklisted_names = [
@@ -93,7 +93,7 @@ class TestDisposition(unittest.TestCase):
                 _is_blacklisted(name), f"'{name}' should not be blacklisted"
             )
 
-    def test_short_long_name_detection(self):
+    def test_short_long_name_detection(self) -> None:
         """Test detection of very short or long names."""
         # Very short names
         self.assertTrue(_is_blacklisted("A"))
@@ -107,7 +107,7 @@ class TestDisposition(unittest.TestCase):
         self.assertFalse(_is_blacklisted("Acme Corp"))
         self.assertFalse(_is_blacklisted("20-20 Plumbing & Heating Inc"))
 
-    def test_punctuation_stopword_detection(self):
+    def test_punctuation_stopword_detection(self) -> None:
         """Test detection of names that are mostly punctuation or stopwords."""
         # Mostly punctuation
         self.assertTrue(_is_blacklisted("..."))
@@ -122,7 +122,7 @@ class TestDisposition(unittest.TestCase):
         self.assertFalse(_is_blacklisted("Acme Corporation"))
         self.assertFalse(_is_blacklisted("20-20 Plumbing"))
 
-    def test_suspicious_singleton_detection(self):
+    def test_suspicious_singleton_detection(self) -> None:
         """Test detection of suspicious singleton records."""
         # Suspicious patterns
         suspicious_data = [
@@ -147,7 +147,7 @@ class TestDisposition(unittest.TestCase):
             row = pd.Series(record_data)
             self.assertFalse(_is_suspicious_singleton(row, self.settings))
 
-    def test_disposition_classification(self):
+    def test_disposition_classification(self) -> None:
         """Test disposition classification logic."""
         # Test blacklisted -> Delete
         blacklisted_row = pd.Series({"Account Name": "PNC is not sure"})
@@ -184,7 +184,7 @@ class TestDisposition(unittest.TestCase):
         disposition = classify_disposition(non_primary_row, group_meta, self.settings)
         self.assertEqual(disposition, "Update")
 
-    def test_group_metadata_computation(self):
+    def test_group_metadata_computation(self) -> None:
         """Test group metadata computation."""
         # Create test groups
         df_groups = self.df_norm.copy()
@@ -208,7 +208,7 @@ class TestDisposition(unittest.TestCase):
             self.assertFalse(metadata[group_id]["has_suffix_mismatch"])
             self.assertEqual(metadata[group_id]["group_size"], 1)
 
-    def test_apply_dispositions(self):
+    def test_apply_dispositions(self) -> None:
         """Test applying dispositions to a DataFrame."""
         # Create test groups
         df_groups = self.df_norm.copy()
@@ -232,7 +232,7 @@ class TestDisposition(unittest.TestCase):
         )  # '1099, no paystubs'
         self.assertEqual(df_dispositions.iloc[7]["Disposition"], "Delete")  # 'N/A'
 
-    def test_multiple_names_verification(self):
+    def test_multiple_names_verification(self) -> None:
         """Test that records with multiple names are marked as Verify."""
         # Create test data with multiple names
         df_groups = self.df_norm.copy()
@@ -254,7 +254,7 @@ class TestDisposition(unittest.TestCase):
             "multi_name_string_requires_split",
         )
 
-    def test_manual_override_application(self):
+    def test_manual_override_application(self) -> None:
         """Test that manual overrides are applied correctly."""
         import json
         from pathlib import Path
@@ -278,7 +278,7 @@ class TestDisposition(unittest.TestCase):
         override_data = [
             {
                 "record_id": "0",  # First record
-                "account_id": "123",
+                "account_id": "001Hs000054S8kI",
                 "account_name": "Acme Corp Inc",
                 "name_core": "acme corp",
                 "override": "Delete",
@@ -308,7 +308,7 @@ class TestDisposition(unittest.TestCase):
             if (manual_dir / "manual_dispositions.json").exists():
                 (manual_dir / "manual_dispositions.json").unlink()
 
-    def test_manual_blacklist_application(self):
+    def test_manual_blacklist_application(self) -> None:
         """Test that manual blacklist terms are applied correctly."""
         import json
         from pathlib import Path
@@ -335,7 +335,7 @@ class TestDisposition(unittest.TestCase):
             if (manual_dir / "manual_blacklist.json").exists():
                 (manual_dir / "manual_blacklist.json").unlink()
 
-    def test_blacklist_word_boundaries(self):
+    def test_blacklist_word_boundaries(self) -> None:
         """Test that word-boundary matching works correctly."""
         from src.disposition import _is_blacklisted_improved
 
@@ -360,7 +360,7 @@ class TestDisposition(unittest.TestCase):
         self.assertTrue(_is_blacklisted_improved("no paystub"))
         self.assertTrue(_is_blacklisted_improved("1099"))
 
-    def test_blacklist_caching(self):
+    def test_blacklist_caching(self) -> None:
         """Test that manual blacklist terms are cached properly."""
         from src.disposition import _is_blacklisted_improved
 
@@ -376,7 +376,7 @@ class TestDisposition(unittest.TestCase):
         # Should not match other terms
         self.assertFalse(_is_blacklisted_improved("Normal Company", manual_terms))
 
-    def test_disposition_reasons(self):
+    def test_disposition_reasons(self) -> None:
         """Test that disposition reasons are correctly assigned."""
         df_groups = self.df_norm.copy()
         df_groups["group_id"] = [0, 1, 2, 3, 4, 5, 6, 7]
@@ -404,7 +404,7 @@ class TestDisposition(unittest.TestCase):
             df_dispositions.iloc[4]["Disposition"], "Keep"
         )  # 'Acme Corporation'
 
-    def test_suffix_mismatch_verification(self):
+    def test_suffix_mismatch_verification(self) -> None:
         """Test that suffix mismatches are marked as Verify."""
         # Create a group with suffix mismatch
         df_groups = self.df_norm.copy()
@@ -419,7 +419,7 @@ class TestDisposition(unittest.TestCase):
         self.assertEqual(df_dispositions.iloc[0]["Disposition"], "Verify")
         self.assertEqual(df_dispositions.iloc[1]["Disposition"], "Verify")
 
-    def test_strong_match_same_suffix(self):
+    def test_strong_match_same_suffix(self) -> None:
         """Test that strong matches with same suffix get proper dispositions."""
         # Create a group with same suffix
         df_groups = self.df_norm.copy()

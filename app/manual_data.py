@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 import streamlit as st
 
 
-def ensure_manual_directory():
+def ensure_manual_directory() -> Path:
     """Ensure the manual data directory exists."""
     manual_dir = Path("data/manual")
     manual_dir.mkdir(parents=True, exist_ok=True)
@@ -35,7 +35,7 @@ def load_manual_dispositions() -> List[Dict[str, Any]]:
         return []
 
 
-def save_manual_dispositions(dispositions: List[Dict[str, Any]]):
+def save_manual_dispositions(dispositions: List[Dict[str, Any]]) -> bool:
     """Save manual disposition overrides to JSON file."""
     manual_dir = ensure_manual_directory()
     file_path = manual_dir / "manual_dispositions.json"
@@ -56,7 +56,7 @@ def add_manual_disposition(
     name_core: str,
     override: str,
     reason: str = "",
-):
+) -> bool:
     """Add a manual disposition override."""
     dispositions = load_manual_dispositions()
 
@@ -99,7 +99,7 @@ def load_manual_blacklist() -> List[str]:
         return []
 
 
-def save_manual_blacklist(terms: List[str]):
+def save_manual_blacklist(terms: List[str]) -> bool:
     """Save manual blacklist terms to JSON file."""
     manual_dir = ensure_manual_directory()
     file_path = manual_dir / "manual_blacklist.json"
@@ -115,7 +115,7 @@ def save_manual_blacklist(terms: List[str]):
         return False
 
 
-def add_manual_blacklist_term(term: str):
+def add_manual_blacklist_term(term: str) -> bool:
     """Add a term to the manual blacklist."""
     terms = load_manual_blacklist()
     term_lower = term.lower().strip()
@@ -131,7 +131,7 @@ def add_manual_blacklist_term(term: str):
     return False
 
 
-def remove_manual_blacklist_term(term: str):
+def remove_manual_blacklist_term(term: str) -> bool:
     """Remove a term from the manual blacklist."""
     terms = load_manual_blacklist()
     term_lower = term.lower().strip()
@@ -154,7 +154,7 @@ def get_manual_override_for_record(record_id: str) -> Optional[str]:
     return None
 
 
-def export_manual_data():
+def export_manual_data() -> tuple[str, str]:
     """Export manual data files for download."""
     ensure_manual_directory()
 

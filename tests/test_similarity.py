@@ -10,14 +10,14 @@ from pathlib import Path
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from similarity import (
+from src.similarity import (
     pair_scores,
     _compute_pair_score,
     _check_numeric_style_match,
     save_candidate_pairs,
     load_candidate_pairs,
 )
-from normalize import normalize_dataframe
+from src.normalize import normalize_dataframe
 
 
 class TestSimilarity(unittest.TestCase):
@@ -36,7 +36,15 @@ class TestSimilarity(unittest.TestCase):
                     "Tech Solutions Inc",
                     "Tech Solutions LLC",
                 ],
-                "Account ID": ["001", "002", "003", "004", "005", "006", "007"],
+                "Account ID": [
+                    "001Hs000054S8kI",
+                    "001Hs000054SAQt",
+                    "001Hs000054SDWt",
+                    "001Hs000054SLFe",
+                    "001Hs000054S8QZ",
+                    "001Hs000054S6bn",
+                    "001Hs000054S2K3",
+                ],
                 "Created Date": [
                     "2021-01-01",
                     "2021-01-02",
@@ -61,7 +69,7 @@ class TestSimilarity(unittest.TestCase):
             }
         }
 
-    def test_numeric_style_matching(self):
+    def test_numeric_style_matching(self) -> None:
         """Test numeric style matching."""
         # Same numeric style
         self.assertTrue(_check_numeric_style_match("20 20 plumbing", "20 20 heating"))
@@ -75,7 +83,7 @@ class TestSimilarity(unittest.TestCase):
         # Neither has numeric
         self.assertTrue(_check_numeric_style_match("acme corp", "tech solutions"))
 
-    def test_pair_score_computation(self):
+    def test_pair_score_computation(self) -> None:
         """Test pair score computation."""
         # Test INC vs INC (should be high score)
         row_a = self.df_norm.iloc[0]  # 20-20 Plumbing & Heating Inc
@@ -89,7 +97,7 @@ class TestSimilarity(unittest.TestCase):
         self.assertTrue(score_data["suffix_match"])  # Both INC
         self.assertTrue(score_data["num_style_match"])  # Same numeric style
 
-    def test_suffix_mismatch_penalty(self):
+    def test_suffix_mismatch_penalty(self) -> None:
         """Test that suffix mismatches are penalized."""
         # Test INC vs LLC (should be lower score due to suffix penalty)
         row_a = self.df_norm.iloc[0]  # 20-20 Plumbing & Heating Inc
@@ -102,7 +110,7 @@ class TestSimilarity(unittest.TestCase):
         self.assertFalse(score_data["suffix_match"])  # Different suffixes
         self.assertLess(score_data["score"], 90)  # Should be lower due to penalty
 
-    def test_candidate_pair_generation(self):
+    def test_candidate_pair_generation(self) -> None:
         """Test candidate pair generation."""
         pairs_df = pair_scores(self.df_norm, self.settings)
 
@@ -115,7 +123,7 @@ class TestSimilarity(unittest.TestCase):
                 all(pairs_df["score"] >= self.settings["similarity"]["medium"])
             )
 
-    def test_inc_vs_inc_high_score(self):
+    def test_inc_vs_inc_high_score(self) -> None:
         """Test that INC vs INC examples score >= high threshold."""
         # Create test data with INC variants
         inc_data = pd.DataFrame(
@@ -125,7 +133,7 @@ class TestSimilarity(unittest.TestCase):
                     "20/20 Plumbing & Heating Inc",
                     "20 20 Plumbing & Heating Inc",
                 ],
-                "Account ID": ["001", "002", "003"],
+                "Account ID": ["001Hs000054S8kI", "001Hs000054SAQt", "001Hs000054SDWt"],
             }
         )
 
@@ -141,7 +149,7 @@ class TestSimilarity(unittest.TestCase):
                 all(pairs_df["score"] >= self.settings["similarity"]["high"])
             )
 
-    def test_inc_vs_llc_verification_needed(self):
+    def test_inc_vs_llc_verification_needed(self) -> None:
         """Test that INC vs LLC stays below high or is flagged for verify."""
         # Create test data with INC vs LLC
         mixed_data = pd.DataFrame(
@@ -150,7 +158,7 @@ class TestSimilarity(unittest.TestCase):
                     "20-20 Plumbing & Heating Inc",
                     "20-20 Plumbing & Heating LLC",
                 ],
-                "Account ID": ["001", "002"],
+                "Account ID": ["001Hs000054S8kI", "001Hs000054SAQt"],
             }
         )
 
@@ -170,7 +178,7 @@ class TestSimilarity(unittest.TestCase):
                     f"High score ({pair['score']}) with suffix match ({suffix_match}) should not happen",
                 )
 
-    def test_save_load_candidate_pairs(self):
+    def test_save_load_candidate_pairs(self) -> None:
         """Test saving and loading candidate pairs."""
         pairs_df = pair_scores(self.df_norm, self.settings)
 
@@ -193,7 +201,7 @@ class TestSimilarity(unittest.TestCase):
                 if os.path.exists(test_path):
                     os.remove(test_path)
 
-    def test_empty_dataframe(self):
+    def test_empty_dataframe(self) -> None:
         """Test handling of empty DataFrame."""
         empty_df = pd.DataFrame()
         pairs_df = pair_scores(empty_df, self.settings)

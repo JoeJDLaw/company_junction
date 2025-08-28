@@ -15,7 +15,7 @@ import subprocess
 try:
     from src.utils.hash_utils import _compute_config_hash
 except ImportError:
-    from utils.hash_utils import _compute_config_hash
+    from src.utils.hash_utils import _compute_config_hash
 
 logger = logging.getLogger(__name__)
 

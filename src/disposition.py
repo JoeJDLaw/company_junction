@@ -66,7 +66,9 @@ def classify_disposition(row: pd.Series, group_meta: Dict, settings: Dict) -> st
         Disposition string: 'Keep', 'Update', 'Delete', or 'Verify'
     """
     # Check for blacklisted names
-    if _is_blacklisted(row.get("account_name", "")):
+    # Handle both standardized and original column names
+    account_name_col = "account_name" if "account_name" in row.index else "Account Name"
+    if _is_blacklisted(row.get(account_name_col, "")):
         return "Delete"
 
     # Check for multiple names (requires splitting)
@@ -108,7 +110,7 @@ def _load_manual_blacklist() -> List[str]:
         List of blacklist terms, empty list if file doesn't exist
     """
     try:
-        from manual_io import load_manual_blacklist
+        from src.manual_io import load_manual_blacklist
 
         return list(load_manual_blacklist())
     except Exception as e:
@@ -124,7 +126,7 @@ def _load_manual_dispositions() -> Dict[str, str]:
         Dictionary mapping record_id to override disposition
     """
     try:
-        from manual_io import load_manual_overrides
+        from src.manual_io import load_manual_overrides
 
         overrides = load_manual_overrides()
 
@@ -316,7 +318,9 @@ def _is_suspicious_singleton(row: pd.Series, settings: Dict) -> bool:
     Returns:
         True if suspicious
     """
-    name = row.get("account_name", "")
+    # Handle both standardized and original column names
+    account_name_col = "account_name" if "account_name" in row.index else "Account Name"
+    name = row.get(account_name_col, "")
 
     # Check for suspicious patterns
     suspicious_patterns = [
@@ -364,7 +368,11 @@ def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict]:
         has_suffix_mismatch = len(suffix_classes) > 1
 
         # Check for blacklist hits
-        blacklist_hits = group_data["account_name"].apply(_is_blacklisted).sum()
+        # Handle both standardized and original column names
+        account_name_col = (
+            "account_name" if "account_name" in group_data.columns else "Account Name"
+        )
+        blacklist_hits = group_data[account_name_col].apply(_is_blacklisted).sum()
 
         group_metadata[group_id] = {
             "group_size": len(group_data),
@@ -482,7 +490,9 @@ def get_disposition_reason(row: pd.Series, group_meta: Dict, settings: Dict) -> 
         Reason string
     """
     # Check for blacklisted names
-    if _is_blacklisted(row.get("account_name", "")):
+    # Handle both standardized and original column names
+    account_name_col = "account_name" if "account_name" in row.index else "Account Name"
+    if _is_blacklisted(row.get(account_name_col, "")):
         return "blacklisted_name"
 
     # Check for multiple names
