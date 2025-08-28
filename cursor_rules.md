@@ -83,6 +83,93 @@
 
 ---
 
+## Phase 1.10 Performance & Memory Hardening
+
+### Performance Logging Infrastructure (`src/utils/perf_utils.py`)
+- **`log_perf` context manager**: Timing and memory tracking using `tracemalloc`
+- **Integrated throughout pipeline**: All major stages (normalization, candidate generation, grouping, survivorship, disposition, alias matching)
+- **Memory metrics**: Tracks both current and peak memory usage
+- **Lightweight overhead**: Minimal performance impact with comprehensive visibility
+
+### Enhanced Token Filtering (`src/cleaning.py`)
+- **Improved problematic patterns**: Case-insensitive regex patterns for better edge case detection
+- **Normalization-aware filtering**: Accounts for normalization changes (e.g., "n/a" → "n a")
+- **Comprehensive test coverage**: Verifies filtering removes problematic records correctly
+- **Memory safety**: Reduces memory usage by filtering problematic records early
+
+### Stop Token Logic (`src/similarity.py`)
+- **Smart blocking strategy**: Avoids common suffixes (`{"inc", "llc", "ltd"}`) as blocking keys
+- **Fallback logic**: If all tokens are stop tokens, falls back to first token
+- **Improved efficiency**: Reduces unnecessary candidate pairs and memory usage
+- **Conservative approach**: Preserves existing blocking behavior while adding safety
+
+### Block Visibility & Statistics (`src/similarity.py`)
+- **Top token logging**: Logs top-10 most common first-token keys for visibility
+- **Block statistics file**: Writes `data/interim/block_top_tokens.csv` with token distribution
+- **Performance insights**: Helps identify problematic blocking patterns
+- **Debugging capability**: Clear visibility into blocking strategy effectiveness
+
+### Performance Summary Generation (`src/cleaning.py`)
+- **`_create_performance_summary` function**: Generates `perf_summary.json` with key metrics
+- **Pipeline metrics**: Total pairs generated, pairs above medium threshold, group statistics
+- **Global cap detection**: Identifies when pair generation limits are hit
+- **Disposition summary**: Complete disposition breakdown for analysis
+
+### Code Quality & Testing
+- **All linting issues fixed**: Ruff, Black, and MyPy compliance
+- **Enhanced test coverage**: Added tests for new functionality
+- **Pandas stubs installed**: Better type checking support
+- **No regressions**: All existing tests continue to pass
+
+## Phase 1.9 Blacklist Improvements & Centralized I/O
+
+### Safer Blacklist Matching (`src/disposition.py`)
+- **Word-boundary regex**: Single-word tokens use `\b(?:token1|token2)\b` pattern
+- **Substring matching**: Multi-word phrases use case-insensitive substring check
+- **Caching**: Manual blacklist terms loaded once per pipeline run
+- **Performance**: Compiled regex patterns for efficient matching
+
+### Centralized Manual I/O (`src/manual_io.py`)
+- **Single source of truth**: All manual file operations in one module
+- **Atomic writes**: Temporary file + rename to prevent corruption
+- **Robust error handling**: Graceful fallback for malformed files
+- **Backward compatibility**: Supports existing file formats
+
+### Audit Snapshots (`src/cleaning.py`)
+- **Run metadata**: Timestamps, thresholds, counts written to `review_meta.json`
+- **Git tracking**: Best-effort git commit capture
+- **Statistics**: Blacklist counts, override counts, alias stats
+- **Lightweight**: Minimal overhead, comprehensive information
+
+### Streamlit Pipeline Launcher (`app/main.py`)
+- **Command generator**: Lists CSV files in `data/raw/`, generates pipeline commands
+- **Copy functionality**: Copy-to-clipboard for easy terminal execution
+- **File selection**: Dropdown with files sorted by modification time
+- **No subprocess**: Avoids security risks, maintains UI responsiveness
+
+## Phase 1.8 Blacklist Visibility & Filter Improvements
+
+### Blacklist Transparency (`app/main.py`)
+- **Three-pane view**: Built-in (read-only), Manual (editable), Effective (union) blacklist terms
+- **Compact layout**: Single sidebar expander with clear sections and dividers
+- **Counts displayed**: Show term counts for each blacklist type
+- **Helper function**: `get_blacklist_terms()` in `src/disposition.py` for built-in terms
+
+### Filter Improvements (`app/main.py`)
+- **Tooltips added**: Clear explanations for "Show Suffix Mismatches Only" and "Has Aliases"
+- **Robust functionality**: Enhanced alias filter with fallback to `alias_candidates` column
+- **Null-safe checks**: Better handling of missing or empty columns
+
+### Sorting Enhancements (`app/main.py`)
+- **Account Name sorting**: New options for groups by primary record's Account Name (ascending/descending)
+- **Enhanced logic**: Group statistics now include primary record's name for sorting
+- **Consistent behavior**: Maintains existing sorting options while adding new ones
+
+### Technical Implementation
+- **Helper function**: `get_blacklist_terms()` returns copy of built-in BLACKLIST
+- **Filter logic**: Improved alias detection with multiple column support
+- **Group stats**: Enhanced calculation to include primary record information
+
 ## Phase 1.7 Review UX & Manual Controls
 
 ### Streamlit UX (`app/main.py`)

@@ -20,6 +20,16 @@ similarity:
     punctuation_mismatch: 3
   max_alias_pairs: 100000
 
+grouping:
+  edge_gating:
+    enabled: true
+    require_high_to_primary: false
+    allow_medium_plus_shared_token: true
+    shared_token_source: "name_core_tokens"  # exclude stop tokens
+    canopy_bound:
+      enabled: true
+      max_without_high_edge: 8
+
 llm:
   enabled: false
   delete_threshold: 85

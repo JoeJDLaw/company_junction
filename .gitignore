@@ -31,3 +31,14 @@ pipeline.log
 
 # Test cache
 .pytest_cache/
+
+
+# Artifacts / review bundles
+*.tar.gz
+
+# Cursor-related
+.cursorignore
+
+# Coverage / reports
+htmlcov/
+.coverage

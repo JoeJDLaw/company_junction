@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-08-27
+
+### Added
+- **Performance logging infrastructure**: `log_perf` context manager with timing and memory tracking
+- **Enhanced token filtering**: Improved problematic pattern detection with case-insensitive matching
+- **Stop token logic**: Smart blocking strategy to avoid common suffixes (inc, llc, ltd) as blocking keys
+- **Block visibility**: Top-10 token distribution logging and block statistics file generation
+- **Performance summary**: `perf_summary.json` with key pipeline metrics and disposition statistics
+- **Memory safety**: Better filtering reduces memory usage and prevents exhaustion
+
+### Changed
+- Performance logging integrated throughout all major pipeline stages
+- Enhanced filtering patterns account for normalization changes (e.g., "n/a" → "n a")
+- Blocking strategy improved with stop tokens and fallback logic
+- Pipeline generates comprehensive performance metrics and audit information
+
+### Technical
+- New `log_perf` context manager in `src/utils.py` with `tracemalloc` integration
+- Enhanced filtering logic in `src/cleaning.py` with better regex patterns
+- Stop token implementation in `src/similarity.py` for improved blocking efficiency
+- Block statistics written to `data/interim/block_top_tokens.csv`
+- Performance summary generation with global cap detection
+
+## [1.4.0] - 2025-08-27
+
+### Added
+- **Safer blacklist matching**: Word-boundary regex for single-word tokens, substring matching for phrases
+- **Centralized manual I/O**: Single `src/manual_io.py` module for all manual file operations
+- **Audit snapshots**: Run metadata with thresholds, counts, and git commit tracking
+- **Pipeline command generator**: Copy-to-clipboard functionality for easy pipeline execution
+- **Atomic file writes**: Prevents corruption during manual file updates
+
+### Changed
+- Blacklist matching now uses compiled regex patterns for better performance
+- Manual file operations consolidated with robust error handling
+- Manual overrides use centralized I/O functions with atomic writes
+- Audit information written to `data/processed/review_meta.json` on each run
+
+### Technical
+- New `src/manual_io.py` module with atomic write operations
+- Enhanced blacklist regex compilation with word boundaries
+- Improved manual file loading with backward compatibility
+- Audit snapshot generation with git commit tracking
+
+## [1.3.0] - 2025-08-27
+
+### Added
+- **Blacklist transparency**: Three-pane view showing built-in, manual, and effective blacklist terms
+- **Filter tooltips**: Clear explanations for "Show Suffix Mismatches Only" and "Has Aliases" filters
+- **Account Name sorting**: New sorting options for groups by primary record's Account Name (ascending/descending)
+- **Robust filtering**: Improved alias filter with fallback to `alias_candidates` column
+
+### Changed
+- Blacklist management consolidated into single expander with clear sections
+- Filter functionality enhanced with better null-safe checks
+- Sorting logic updated to include primary record's Account Name for group sorting
+
+### Technical
+- New `get_blacklist_terms()` helper function in `src/disposition.py`
+- Enhanced filter logic with fallback column support
+- Improved group statistics calculation for sorting
+
 ## [1.2.0] - 2025-08-27
 
 ### Added
@@ -53,6 +115,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - README.md and cursor_rules.md updated to reflect Phase 1 rules
+
+## [1.12.0] - 2024-12-19
+
+### Changed
+- **Utils package structure**: Refactored `src/utils.py` into logical modules under `src/utils/`
+- **Import paths**: Updated all imports to use absolute paths rooted at `src`
+- **Module organization**: 
+  - `src/utils/logging_utils.py` - `setup_logging`
+  - `src/utils/path_utils.py` - `get_project_root`, `ensure_directory_exists`, `get_data_paths`
+  - `src/utils/validation_utils.py` - `validate_dataframe`
+  - `src/utils/io_utils.py` - `get_file_info`, `list_data_files`, `load_settings`, `load_relationship_ranks`
+  - `src/utils/perf_utils.py` - `log_perf`
+  - `src/utils/hash_utils.py` - `config_hash`, `stable_group_id`, `_compute_config_hash`
+  - `src/utils/dtypes.py` - Memory optimization utilities (existing)
+- **Hash utilities**: Moved `config_hash` and `stable_group_id` from `src/grouping.py` to `src/utils/hash_utils.py`
+- **Performance utilities**: Moved `_compute_config_hash` from `src/performance.py` to `src/utils/hash_utils.py`
+
+### Removed
+- **src/utils.py**: Deleted after successful refactor and import updates
+
+### Technical Details
+- **No backward compatibility**: All imports updated directly, no shims created
+- **Import clarity**: Absolute imports eliminate ambiguity between `src/utils.py` and `src/utils/` package
+- **Function preservation**: All functions maintain identical behavior and API
+- **Test coverage**: All 81 tests pass after refactor
 
 ## [Unreleased]
 
