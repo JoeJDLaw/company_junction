@@ -114,9 +114,7 @@ class TestNormalize(unittest.TestCase):
         # Excel serial 44197 = 2021-01-01
         result = excel_serial_to_datetime(44197)
         self.assertIsInstance(result, pd.Timestamp)
-        self.assertIsNotNone(result)
-        if result is not None:
-            self.assertEqual(result.date(), pd.Timestamp("2021-01-01").date())
+        self.assertEqual(result.date(), pd.Timestamp("2021-01-01").date())
 
         # Test None/NaN
         result = excel_serial_to_datetime(None)

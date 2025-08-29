@@ -10,7 +10,7 @@ This module handles:
 
 import subprocess
 import logging
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class SalesforceCLI:
         except (subprocess.CalledProcessError, FileNotFoundError):
             raise RuntimeError("Salesforce CLI not found. Please install it first.")
 
-    def _run_command(self, command: List[str]) -> Dict[str, Any]:
+    def _run_command(self, command: List[str]) -> Dict:
         """
         Run a Salesforce CLI command.
 
@@ -61,20 +61,18 @@ class SalesforceCLI:
                 "return_code": e.returncode,
             }
 
-    def list_orgs(self) -> Dict[str, Any]:
+    def list_orgs(self) -> Dict:
         """List available Salesforce orgs."""
         return self._run_command(["sf", "org", "list"])
 
-    def get_org_info(self) -> Dict[str, Any]:
+    def get_org_info(self) -> Dict:
         """Get information about the current/default org."""
         command = ["sf", "org", "display"]
         if self.org_alias:
             command.extend(["--target-org", self.org_alias])
         return self._run_command(command)
 
-    def update_record(
-        self, object_type: str, record_id: str, fields: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def update_record(self, object_type: str, record_id: str, fields: Dict) -> Dict:
         """
         Update a single Salesforce record.
 
@@ -101,7 +99,7 @@ class SalesforceCLI:
 
         return {"success": True, "message": "Update operation simulated"}
 
-    def delete_record(self, object_type: str, record_id: str) -> Dict[str, Any]:
+    def delete_record(self, object_type: str, record_id: str) -> Dict:
         """
         Delete a Salesforce record.
 
@@ -117,9 +115,7 @@ class SalesforceCLI:
 
         return {"success": True, "message": "Delete operation simulated"}
 
-    def batch_update(
-        self, object_type: str, records: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def batch_update(self, object_type: str, records: List[Dict]) -> Dict:
         """
         Perform batch update of multiple records.
 
@@ -141,7 +137,7 @@ class SalesforceCLI:
 
 def sync_cleaned_data_to_salesforce(
     cleaned_df: pd.DataFrame, object_type: str, org_alias: Optional[str] = None
-) -> Dict[str, Any]:
+) -> Dict:
     """
     Sync cleaned and merged data back to Salesforce.
 
@@ -161,37 +157,33 @@ def sync_cleaned_data_to_salesforce(
     # Filter for records to delete (duplicates)
     duplicate_records = cleaned_df[cleaned_df["_is_duplicate"]].copy()
 
-    updates_count = 0
-    deletes_count = 0
-    errors: List[str] = []
+    results = {"updates": 0, "deletes": 0, "errors": []}
 
     # Process master record updates
     for _, record in master_records.iterrows():
         # Remove internal columns
-        update_fields: Dict[str, Any] = {
-            str(col): val
+        update_fields = {
+            col: val
             for col, val in record.items()
-            if not str(col).startswith("_") and pd.notna(val)
+            if not col.startswith("_") and pd.notna(val)
         }
 
         if "Id" in update_fields:
-            record_id = str(update_fields.pop("Id"))
+            record_id = update_fields.pop("Id")
             result = sf_cli.update_record(object_type, record_id, update_fields)
             if result["success"]:
-                updates_count += 1
+                results["updates"] += 1
             else:
-                errors.append(f"Failed to update record {record_id}")
+                results["errors"].append(f"Failed to update record {record_id}")
 
     # Process duplicate record deletions
     for _, record in duplicate_records.iterrows():
         if "Id" in record and pd.notna(record["Id"]):
-            result = sf_cli.delete_record(object_type, str(record["Id"]))
+            result = sf_cli.delete_record(object_type, record["Id"])
             if result["success"]:
-                deletes_count += 1
+                results["deletes"] += 1
             else:
-                errors.append(f"Failed to delete record {record['Id']}")
-
-    results = {"updates": updates_count, "deletes": deletes_count, "errors": errors}
+                results["errors"].append(f"Failed to delete record {record['Id']}")
 
     logger.info(
         f"Sync completed: {results['updates']} updates, {results['deletes']} deletes"

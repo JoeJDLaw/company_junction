@@ -10,7 +10,7 @@ This module handles:
 
 import pandas as pd
 import re
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -53,9 +53,7 @@ BLACKLIST_PHRASES = [
 BLACKLIST = BLACKLIST_TOKENS + BLACKLIST_PHRASES
 
 
-def classify_disposition(
-    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any]
-) -> str:
+def classify_disposition(row: pd.Series, group_meta: Dict, settings: Dict) -> str:
     """
     Classify disposition for a single record.
 
@@ -155,7 +153,7 @@ def get_blacklist_terms() -> List[str]:
     return BLACKLIST.copy()
 
 
-def _compile_blacklist_regex() -> re.Pattern[str]:
+def _compile_blacklist_regex():
     """
     Compile word-boundary regex for single-word tokens.
 
@@ -170,9 +168,7 @@ def _compile_blacklist_regex() -> re.Pattern[str]:
     return re.compile(pattern, re.IGNORECASE)
 
 
-def _is_blacklisted_improved(
-    name: str, manual_terms: Optional[set[str]] = None
-) -> bool:
+def _is_blacklisted_improved(name: str, manual_terms: Optional[set] = None) -> bool:
     """
     Improved blacklist checking with word-boundary matching for tokens.
 
@@ -311,7 +307,7 @@ def _is_mostly_punctuation_or_stopwords(name: str) -> bool:
     return False
 
 
-def _is_suspicious_singleton(row: pd.Series, settings: Dict[str, Any]) -> bool:
+def _is_suspicious_singleton(row: pd.Series, settings: Dict) -> bool:
     """
     Check if a singleton record is suspicious.
 
@@ -348,7 +344,7 @@ def _is_suspicious_singleton(row: pd.Series, settings: Dict[str, Any]) -> bool:
     return False
 
 
-def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict[str, Any]]:
+def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict]:
     """
     Compute metadata for each group.
 
@@ -389,9 +385,7 @@ def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict[str, Any]]
     return group_metadata
 
 
-def apply_dispositions(
-    df_groups: pd.DataFrame, settings: Dict[str, Any]
-) -> pd.DataFrame:
+def apply_dispositions(df_groups: pd.DataFrame, settings: Dict) -> pd.DataFrame:
     """
     Apply disposition classification to all records.
 
@@ -423,9 +417,8 @@ def apply_dispositions(
         record_id = str(idx)
         if record_id in manual_overrides:
             override = manual_overrides[record_id]
-            mask = result_df.index == idx
-            result_df.loc[mask, "Disposition"] = override
-            result_df.loc[mask, "disposition_reason"] = f"manual_override:{override}"
+            result_df.loc[idx, "Disposition"] = override
+            result_df.loc[idx, "disposition_reason"] = f"manual_override:{override}"
             continue
 
         group_id = row["group_id"]
@@ -443,9 +436,8 @@ def apply_dispositions(
         disposition = classify_disposition(row, group_meta, settings)
         reason = get_disposition_reason(row, group_meta, settings)
 
-        mask = result_df.index == idx
-        result_df.loc[mask, "Disposition"] = disposition
-        result_df.loc[mask, "disposition_reason"] = reason
+        result_df.loc[idx, "Disposition"] = disposition
+        result_df.loc[idx, "disposition_reason"] = reason
 
     # Log disposition summary
     disposition_counts = result_df["Disposition"].value_counts()
@@ -485,9 +477,7 @@ def load_dispositions(input_path: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def get_disposition_reason(
-    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any]
-) -> str:
+def get_disposition_reason(row: pd.Series, group_meta: Dict, settings: Dict) -> str:
     """
     Get the reason for a disposition classification.
 
@@ -512,7 +502,7 @@ def get_disposition_reason(
     # Check for alias matches
     alias_cross_refs = row.get("alias_cross_refs", [])
     if alias_cross_refs:
-        sources = list(set([str(ref.get("source", "")) for ref in alias_cross_refs]))
+        sources = list(set([ref.get("source", "") for ref in alias_cross_refs]))
         return f"alias_matches_{len(alias_cross_refs)}_groups_via_{sources}"
 
     # Check for suffix mismatch

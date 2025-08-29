@@ -124,14 +124,22 @@ def load_manual_overrides(
 
         # Convert list to dict if needed (backward compatibility)
         if isinstance(overrides, list):
-            override_dict = {}
+            override_dict: Dict[str, Dict[str, Any]] = {}
             for override in overrides:
-                record_id = override.get("record_id")
-                if record_id:
-                    override_dict[record_id] = override
+                if isinstance(override, dict):
+                    record_id = override.get("record_id")
+                    if record_id:
+                        override_dict[record_id] = override
             return override_dict
 
-        return overrides
+        # Ensure it's a dict
+        if isinstance(overrides, dict):
+            return overrides
+        else:
+            logger.warning(
+                f"Invalid overrides format in {path}: expected dict or list, got {type(overrides)}"
+            )
+            return {}
 
     except Exception as e:
         logger.warning(f"Could not load manual overrides from {path}: {e}")

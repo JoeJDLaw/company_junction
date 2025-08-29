@@ -8,8 +8,7 @@ comprehensive performance summaries for pipeline runs.
 import json
 import tracemalloc
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
-import pandas as pd
+from typing import Dict, Any, List
 import logging
 import subprocess
 
@@ -24,13 +23,13 @@ logger = logging.getLogger(__name__)
 class PerformanceTracker:
     """Tracks performance metrics throughout the pipeline."""
 
-    def __init__(self) -> None:
-        self.start_time: Optional[datetime] = None
-        self.end_time: Optional[datetime] = None
-        self.timings: Dict[str, float] = {}
-        self.memory_snapshots: List[Any] = []
-        self.peak_memory: float = 0.0
-        self.config_hash: Optional[str] = None
+    def __init__(self):
+        self.start_time = None
+        self.end_time = None
+        self.timings = {}
+        self.memory_snapshots = []
+        self.peak_memory = 0
+        self.config_hash = None
 
     def start_run(self, config_dict: Dict[str, Any]) -> None:
         """Start tracking performance for a pipeline run."""
@@ -144,7 +143,7 @@ def save_performance_summary(
         raise
 
 
-def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
+def compute_group_size_histogram(groups_df) -> Dict[str, int]:
     """
     Compute group size histogram from groups dataframe.
 
@@ -176,9 +175,7 @@ def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
     return histogram
 
 
-def compute_block_top_tokens(
-    blocks_df: pd.DataFrame, top_n: int = 10
-) -> List[Dict[str, Any]]:
+def compute_block_top_tokens(blocks_df, top_n: int = 10) -> List[Dict[str, Any]]:
     """
     Compute top tokens from blocking statistics.
 

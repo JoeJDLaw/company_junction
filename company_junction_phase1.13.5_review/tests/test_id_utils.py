@@ -77,7 +77,7 @@ class TestSfid15To18:
         """Test that invalid inputs raise appropriate errors."""
         # Wrong type
         with pytest.raises(TypeError, match="must be a string"):
-            sfid15_to_18(123)  # type: ignore[arg-type]
+            sfid15_to_18(123)
 
         # Wrong length
         with pytest.raises(ValueError, match="exactly 15 characters"):

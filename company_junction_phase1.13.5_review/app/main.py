@@ -101,11 +101,7 @@ def parse_alias_cross_refs(cross_refs_str: Any) -> List[Any]:
     try:
         import ast
 
-        result = ast.literal_eval(cross_refs_str)
-        if isinstance(result, list):
-            return result
-        else:
-            return []
+        return ast.literal_eval(cross_refs_str)
     except (ValueError, SyntaxError):
         return []
 
@@ -137,11 +133,7 @@ def parse_merge_preview(preview_json: Any) -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        result = json.loads(preview_json)
-        if isinstance(result, dict):
-            return result
-        else:
-            return None
+        return json.loads(preview_json)
     except (ValueError, TypeError):
         return None
 
@@ -167,10 +159,10 @@ def main() -> None:
     settings = load_settings()
 
     # Import manual data functions
-    from app.manual_data import export_manual_data
+    from manual_data import export_manual_data
 
     # Import centralized manual I/O
-    from src.manual_io import (
+    from manual_io import (
         load_manual_blacklist as load_manual_blacklist_io,
         save_manual_blacklist,
         upsert_manual_override,
@@ -178,7 +170,7 @@ def main() -> None:
     )
 
     # Import disposition functions for blacklist
-    from src.disposition import get_blacklist_terms
+    from disposition import get_blacklist_terms
 
     if df is None:
         st.warning(
@@ -471,9 +463,7 @@ def main() -> None:
         {
             "Disposition": disposition_counts.index,
             "Count": disposition_counts.values,
-            "Percent": (
-                disposition_counts.values.astype(float) / len(filtered_df) * 100
-            ).round(1),
+            "Percent": (disposition_counts.values / len(filtered_df) * 100).round(1),
         }
     )
 

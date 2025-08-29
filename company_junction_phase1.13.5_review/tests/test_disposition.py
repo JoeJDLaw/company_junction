@@ -23,7 +23,7 @@ from src.normalize import normalize_dataframe
 class TestDisposition(unittest.TestCase):
     """Test cases for disposition logic."""
 
-    def setUp(self) -> None:
+    def setUp(self):
         """Set up test data."""
         self.test_data = pd.DataFrame(
             {

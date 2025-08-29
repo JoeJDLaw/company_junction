@@ -23,7 +23,7 @@ from src.normalize import normalize_dataframe
 class TestSimilarity(unittest.TestCase):
     """Test cases for similarity scoring."""
 
-    def setUp(self) -> None:
+    def setUp(self):
         """Set up test data."""
         self.test_data = pd.DataFrame(
             {
@@ -90,7 +90,7 @@ class TestSimilarity(unittest.TestCase):
         row_b = self.df_norm.iloc[2]  # 20 20 Plumbing & Heating Inc
 
         score_data = _compute_pair_score(
-            row_a, row_b, dict(self.settings["similarity"]["penalty"])  # type: ignore[call-overload]
+            row_a, row_b, self.settings["similarity"]["penalty"]
         )
 
         self.assertGreater(score_data["score"], 90)  # Should be high
@@ -104,7 +104,7 @@ class TestSimilarity(unittest.TestCase):
         row_b = self.df_norm.iloc[1]  # 20/20 Plumbing & Heating LLC
 
         score_data = _compute_pair_score(
-            row_a, row_b, dict(self.settings["similarity"]["penalty"])  # type: ignore[call-overload]
+            row_a, row_b, self.settings["similarity"]["penalty"]
         )
 
         self.assertFalse(score_data["suffix_match"])  # Different suffixes

@@ -6,11 +6,10 @@ import logging
 import time
 import tracemalloc
 from contextlib import contextmanager
-from typing import Iterator
 
 
 @contextmanager
-def log_perf(label: str) -> Iterator[None]:
+def log_perf(label: str):
     """
     Context manager for performance logging with timing and memory metrics.
 

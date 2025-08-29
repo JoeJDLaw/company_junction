@@ -11,7 +11,7 @@ This module handles:
 import re
 import pandas as pd
 from dataclasses import dataclass
-from typing import Optional, Tuple, List, Any
+from typing import Optional, Tuple, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -236,7 +236,7 @@ def _unify_numeric_style(text: str) -> str:
     # Pattern to match numbers with separators
     pattern = r"(\d+)[\-\/](\d+)"
 
-    def replace_numeric(match: re.Match[str]) -> str:
+    def replace_numeric(match):
         num1, num2 = match.groups()
         return f"{num1} {num2}"
 
@@ -399,7 +399,7 @@ def extract_suffix(name_base: str) -> Tuple[str, str]:
     return extract_suffix_from_tokens(tokens)
 
 
-def excel_serial_to_datetime(val: Any) -> Optional[pd.Timestamp]:
+def excel_serial_to_datetime(val) -> Optional[pd.Timestamp]:
     """
     Convert Excel serial number to datetime.
 
@@ -469,10 +469,7 @@ def normalize_dataframe(
         return df
 
     # Apply normalization
-    normalized_list = []
-    for val in df[name_column]:
-        normalized_list.append(normalize_name(str(val) if pd.notna(val) else None))
-    normalized = pd.Series(normalized_list, index=df.index)
+    normalized = df[name_column].apply(normalize_name)
 
     # Add normalized columns
     df = df.copy()

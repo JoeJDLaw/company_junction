@@ -29,12 +29,7 @@ def load_manual_dispositions() -> List[Dict[str, Any]]:
 
     try:
         with open(file_path, "r") as f:
-            data = json.load(f)
-            if isinstance(data, list):
-                return data
-            else:
-                st.error("Invalid manual dispositions format")
-                return []
+            return json.load(f)
     except Exception as e:
         st.error(f"Error loading manual dispositions: {e}")
         return []
@@ -98,12 +93,7 @@ def load_manual_blacklist() -> List[str]:
     try:
         with open(file_path, "r") as f:
             data = json.load(f)
-            terms = data.get("terms", [])
-            if isinstance(terms, list):
-                return terms
-            else:
-                st.error("Invalid blacklist format")
-                return []
+            return data.get("terms", [])
     except Exception as e:
         st.error(f"Error loading manual blacklist: {e}")
         return []

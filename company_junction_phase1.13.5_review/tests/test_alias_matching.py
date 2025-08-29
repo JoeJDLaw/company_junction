@@ -20,7 +20,7 @@ from src.alias_matching import (
 class TestAliasMatching(unittest.TestCase):
     """Test alias matching functionality."""
 
-    def setUp(self) -> None:
+    def setUp(self):
         """Set up test data."""
         self.settings = {
             "similarity": {"high": 92, "medium": 84, "max_alias_pairs": 100000}
@@ -80,7 +80,7 @@ class TestAliasMatching(unittest.TestCase):
         result = _normalize_alias("")
         self.assertEqual(result, "")
 
-        result = _normalize_alias(None)  # type: ignore[arg-type]
+        result = _normalize_alias(None)
         self.assertEqual(result, "")
 
     def test_compute_alias_matches(self) -> None:
@@ -88,8 +88,11 @@ class TestAliasMatching(unittest.TestCase):
         # Compute alias matches
         result = compute_alias_matches(self.df_norm, self.df_groups, self.settings)
 
-        # Handle return format (tuple of DataFrame and stats)
-        df_matches, stats = result
+        # Handle new return format (tuple of DataFrame and stats)
+        if isinstance(result, tuple) and len(result) == 2:
+            df_matches, stats = result
+        else:
+            df_matches, stats = result, {}
 
         # Should find matches between BYD Auto alias and BYD Auto Inc
         if not df_matches.empty:

@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def select_primary_records(
-    df_groups: pd.DataFrame,
-    relationship_ranks: Dict[str, int],
-    settings: Dict[str, Any],
+    df_groups: pd.DataFrame, relationship_ranks: Dict[str, int], settings: Dict
 ) -> pd.DataFrame:
     """
     Select primary records for each group based on relationship rank and tie-breakers.
@@ -68,9 +66,7 @@ def select_primary_records(
 
 
 def _select_primary_from_group(
-    group_data: pd.DataFrame,
-    relationship_ranks: Dict[str, int],
-    settings: Dict[str, Any],
+    group_data: pd.DataFrame, relationship_ranks: Dict[str, int], settings: Dict
 ) -> int:
     """
     Select primary record from a group using relationship rank and tie-breakers.
@@ -119,7 +115,7 @@ def _select_primary_from_group(
     group_data_sorted = group_data.sort_values(sort_columns)
     primary_idx = group_data_sorted.index[0]
 
-    return int(primary_idx)
+    return primary_idx
 
 
 def generate_merge_preview(
@@ -201,9 +197,9 @@ def _generate_group_merge_preview(
     primary_record = group_data[primary_mask].iloc[0]
     non_primary_records = group_data[~primary_mask]
 
-    preview: Dict[str, Any] = {
+    preview = {
         "primary_record": {
-            "index": int(str(primary_record.name)),
+            "index": int(primary_record.name),
             "account_id": primary_record.get("Account ID", ""),
             "account_name": primary_record.get("Account Name", ""),
             "relationship": primary_record.get("Relationship", ""),
@@ -241,7 +237,7 @@ def _generate_group_merge_preview(
     for _, record in non_primary_records.iterrows():
         preview["non_primary_records"].append(
             {
-                "index": int(str(record.name)),
+                "index": int(record.name),
                 "account_id": record.get("Account ID", ""),
                 "account_name": record.get("Account Name", ""),
                 "relationship": record.get("Relationship", ""),

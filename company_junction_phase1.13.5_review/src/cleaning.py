@@ -16,7 +16,7 @@ import logging
 import json
 import subprocess
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict
 import os
 from datetime import datetime
 
@@ -90,9 +90,7 @@ def _assert_pairs_cover_accounts(
         )
 
 
-def _create_audit_snapshot(
-    settings: Dict[str, Any], alias_stats: Dict[str, Any], output_dir: str
-) -> None:
+def _create_audit_snapshot(settings: Dict, alias_stats: Dict, output_dir: str) -> None:
     """
     Create an audit snapshot with run metadata.
 
@@ -347,14 +345,9 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
             # Add name_core_tokens column for edge-gating
             import json
 
-            def create_tokens(x: Any) -> str:
-                if pd.notna(x):
-                    x_str = str(x)
-                    if x_str.strip():
-                        return json.dumps(x_str.split())
-                return "[]"
-
-            df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
+            df_norm["name_core_tokens"] = df_norm["name_core"].apply(
+                lambda x: json.dumps(x.split()) if pd.notna(x) and x.strip() else "[]"
+            )
 
             perf_tracker.record_timing(
                 "clean_normalize", 0.0
@@ -492,7 +485,10 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
         with log_perf("alias_matching"):
             result = compute_alias_matches(df_norm, df_groups, settings)
 
-        df_alias_matches, alias_stats = result
+        if isinstance(result, tuple) and len(result) == 2:
+            df_alias_matches, alias_stats = result
+        else:
+            df_alias_matches, alias_stats = result, {}
 
         save_alias_matches(df_alias_matches, alias_matches_path)
 
@@ -572,7 +568,7 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
         raise
 
 
-def main() -> None:
+def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Company Junction Deduplication Pipeline"

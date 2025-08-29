@@ -5,7 +5,7 @@ Handles connected component grouping with edge-gating and stable group IDs.
 """
 
 import pandas as pd
-from typing import Dict, List, Tuple, Set, Any
+from typing import Dict, List, Tuple, Set
 import logging
 import json
 from collections import defaultdict
@@ -25,7 +25,7 @@ def can_join_group(
     candidate_id: str,
     edge_scores: Dict[Tuple[str, str], float],
     token_sets: Dict[str, Set[str]],
-    config: Dict[str, Any],
+    config: Dict,
     stop_tokens: Set[str],
 ) -> Tuple[bool, str, float]:
     """
@@ -81,7 +81,7 @@ def apply_canopy_bound(
     primary_id: str,
     candidate_id: str,
     edge_scores: Dict[Tuple[str, str], float],
-    config: Dict[str, Any],
+    config: Dict,
 ) -> bool:
     """
     Apply canopy bound to prevent oversized groups.
@@ -115,13 +115,13 @@ def apply_canopy_bound(
     edge_key_reverse = (candidate_id, primary_id)
     score = edge_scores.get(edge_key_forward, edge_scores.get(edge_key_reverse, 0.0))
 
-    return float(score) >= float(high_threshold)
+    return score >= high_threshold
 
 
 def create_groups_with_edge_gating(
     accounts_df: pd.DataFrame,
     candidate_pairs_df: pd.DataFrame,
-    config: Dict[str, Any],
+    config: Dict,
     stop_tokens: Set[str],
 ) -> pd.DataFrame:
     """
@@ -256,15 +256,15 @@ def create_groups_with_edge_gating(
                 token_sets[account_id] = set()
 
         # Initialize Union-Find structure
-        parent: Dict[str, str] = {}
-        rank: Dict[str, int] = {}
+        parent = {}
+        rank = {}
 
-        def find(x: str) -> str:
+        def find(x):
             if parent[x] != x:
                 parent[x] = find(parent[x])
             return parent[x]
 
-        def union(x: str, y: str) -> None:
+        def union(x, y):
             px, py = find(x), find(y)
             if px == py:
                 return
@@ -283,8 +283,8 @@ def create_groups_with_edge_gating(
             rank[account_id] = 0
 
         # Group membership tracking
-        group_members: Dict[str, List[str]] = defaultdict(list)
-        explain_metadata: Dict[str, Dict[str, Any]] = {}
+        group_members = defaultdict(list)
+        explain_metadata = {}
 
         # Process candidate pairs in score order (highest first)
         sorted_pairs = candidate_pairs_df.sort_values("score", ascending=False)
@@ -353,7 +353,7 @@ def create_groups_with_edge_gating(
             }
 
         # Build final groups dataframe
-        groups_data: List[Dict[str, Any]] = []
+        groups_data = []
 
         for account_id in accounts_df["account_id"]:
             group_root = find(account_id)
@@ -398,7 +398,7 @@ def create_groups_with_edge_gating(
 
 
 def create_groups_standard(
-    accounts_df: pd.DataFrame, candidate_pairs_df: pd.DataFrame, config: Dict[str, Any]
+    accounts_df: pd.DataFrame, candidate_pairs_df: pd.DataFrame, config: Dict
 ) -> pd.DataFrame:
     """
     Create groups using standard connected components logic (fallback).
@@ -414,15 +414,15 @@ def create_groups_standard(
     logger.info("Creating groups using standard connected components")
 
     # Standard Union-Find implementation
-    parent: Dict[str, str] = {}
-    rank: Dict[str, int] = {}
+    parent = {}
+    rank = {}
 
-    def find(x: str) -> str:
+    def find(x):
         if parent[x] != x:
             parent[x] = find(parent[x])
         return parent[x]
 
-    def union(x: str, y: str) -> None:
+    def union(x, y):
         px, py = find(x), find(y)
         if px == py:
             return
@@ -461,8 +461,8 @@ def create_groups_standard(
         union(id1, id2)
 
     # Build groups
-    groups_data: List[Dict[str, Any]] = []
-    group_members: Dict[str, List[str]] = defaultdict(list)
+    groups_data = []
+    group_members = defaultdict(list)
 
     for account_id in accounts_df["account_id"]:
         group_root = find(account_id)

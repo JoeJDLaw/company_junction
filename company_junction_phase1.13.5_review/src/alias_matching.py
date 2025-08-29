@@ -7,15 +7,15 @@ across records without merging groups.
 
 import logging
 import pandas as pd
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple
 from rapidfuzz import fuzz
 
 logger = logging.getLogger(__name__)
 
 
 def compute_alias_matches(
-    df_norm: pd.DataFrame, df_groups: pd.DataFrame, settings: Dict[str, Any]
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    df_norm: pd.DataFrame, df_groups: pd.DataFrame, settings: Dict
+) -> Tuple[pd.DataFrame, Dict]:
     """
     Compute alias matches across records.
 
@@ -157,7 +157,7 @@ def _score_alias_against_records(
     df_norm: pd.DataFrame,
     df_groups: pd.DataFrame,
     high_threshold: int,
-) -> List[Dict[str, Any]]:
+) -> List[Dict]:
     """
     Score an alias against all other records' name_core.
 
@@ -203,9 +203,8 @@ def _score_alias_against_records(
 
         # Only keep high-confidence matches with suffix match
         if score >= high_threshold and suffix_match:
-            mask = df_groups.index == idx
             match_group_id = (
-                df_groups.loc[mask, "group_id"].iloc[0] if mask.any() else -1
+                df_groups.loc[idx, "group_id"] if idx in df_groups.index else -1
             )
 
             matches.append(
@@ -241,7 +240,7 @@ def create_alias_cross_refs(
         return df_norm
 
     # Group matches by record_id
-    cross_refs: Dict[str, List[Dict[str, Any]]] = {}
+    cross_refs: Dict[str, List[str]] = {}
     for _, match in df_alias_matches.iterrows():
         record_id = match["record_id"]
         if record_id not in cross_refs:

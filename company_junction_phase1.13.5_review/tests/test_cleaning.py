@@ -18,7 +18,7 @@ from pathlib import Path
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from src.cleaning import load_salesforce_data, validate_required_columns
+from cleaning import load_salesforce_data, validate_required_columns
 from src.utils.io_utils import load_settings
 from src.normalize import normalize_dataframe
 
@@ -26,7 +26,7 @@ from src.normalize import normalize_dataframe
 class TestCleaning(unittest.TestCase):
     """Test cases for data cleaning functionality."""
 
-    def setUp(self) -> None:
+    def setUp(self):
         """Set up test data."""
         self.sample_data = pd.DataFrame(
             {

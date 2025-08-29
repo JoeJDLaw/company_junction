@@ -10,7 +10,7 @@ This module handles:
 
 import pandas as pd
 from rapidfuzz import fuzz
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict
 import logging
 from itertools import combinations
 import re
@@ -57,9 +57,7 @@ def pair_scores(df_norm: pd.DataFrame, settings: Dict) -> pd.DataFrame:
     for idx_a, idx_b in candidate_pairs:
         try:
             score_data = _compute_pair_score(
-                df_norm.loc[idx_a:idx_a].iloc[0],
-                df_norm.loc[idx_b:idx_b].iloc[0],
-                penalties,
+                df_norm.loc[idx_a], df_norm.loc[idx_b], penalties
             )
             # Use actual account_id values instead of row indices
             # Handle both standardized and original column names
@@ -114,7 +112,7 @@ def _generate_candidate_pairs(df_norm: pd.DataFrame) -> List[Tuple[int, int]]:
         )
     else:
         # Use first token for blocking with stop token logic
-        def get_first_token(name: str) -> str:
+        def get_first_token(name):
             tokens = name.split()
             for token in tokens:
                 if token.lower() not in stop_tokens:
@@ -188,9 +186,7 @@ def _generate_candidate_pairs(df_norm: pd.DataFrame) -> List[Tuple[int, int]]:
     return unique_pairs
 
 
-def _compute_pair_score(
-    row_a: pd.Series, row_b: pd.Series, penalties: Dict[str, Any]
-) -> Dict[str, Any]:
+def _compute_pair_score(row_a: pd.Series, row_b: pd.Series, penalties: Dict) -> Dict:
     """
     Compute similarity score for a pair of records.
 
@@ -270,7 +266,7 @@ def _check_numeric_style_match(name_a: str, name_b: str) -> bool:
     """
 
     # Extract numeric patterns
-    def extract_numeric_pattern(text: str) -> set[str]:
+    def extract_numeric_pattern(text):
         # Find patterns like "20 20", "100 200", etc.
         pattern = r"\d+\s+\d+"
         matches = re.findall(pattern, text)

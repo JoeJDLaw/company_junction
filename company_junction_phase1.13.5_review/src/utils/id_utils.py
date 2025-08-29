@@ -8,7 +8,6 @@ This module provides functions to convert Salesforce 15-character IDs to their
 import re
 import pandas as pd
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -114,17 +113,22 @@ def normalize_sfid_series(series: pd.Series) -> pd.Series:
         logger.info(f"Passing through {is18.sum()} 18-character IDs unchanged")
 
     # Check for invalid IDs (only for non-empty values)
-    bad_count = (~(is15 | is18)).sum()
-    if bad_count > 0:
-        sample = s_filtered[~(is15 | is18)].head(5).tolist()
+    bad = non_empty & ~(is15 | is18)
+    if bad.any():
+        sample = s.loc[bad].head(5).tolist()
         raise ValueError(
-            f"Found {bad_count} non 15/18-char Salesforce IDs. " f"Sample: {sample}"
+            f"Found {bad.sum()} non 15/18-char Salesforce IDs. " f"Sample: {sample}"
         )
 
-    return out
+    # Validate all non-empty IDs are now 18 characters
+    non_empty_after = out != ""
+    if non_empty_after.any() and not (out.loc[non_empty_after].str.len() == 18).all():
+        raise ValueError("All non-empty IDs must be 18 characters after normalization")
+
+    return out  # type: ignore[unreachable]
 
 
-def validate_sfid_format(sfid: str | Any) -> bool:
+def validate_sfid_format(sfid: str) -> bool:
     """
     Validate that a string is a valid Salesforce ID format.
 
