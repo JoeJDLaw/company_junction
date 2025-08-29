@@ -44,3 +44,6 @@ htmlcov/
 .coverage
 # MyPy reports
 .mypy_report*.txt
+
+# Local review snapshots
+company_junction_phase1.*_review/
