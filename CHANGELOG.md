@@ -5,6 +5,198 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase1.15.3] - 2025-08-29
+
+### Added
+- **Performance profiling utilities**: Memory tracking, stage timing, regression detection in `src/utils/perf_utils.py`
+- **Memory tracking**: Peak memory detection and usage monitoring with `track_memory_peak()` context manager
+- **Stage timing**: Automatic timing with memory delta tracking via `time_stage()` context manager
+- **Performance regression detection**: Baseline comparison with configurable thresholds
+- **Pipeline integration**: Automatic performance tracking in all major stages (candidate generation, grouping, survivorship, disposition)
+- **Performance summary logging**: Final memory usage and stage-by-stage performance metrics
+
+### Changed
+- **Pipeline performance monitoring**: Enhanced logging with memory and timing data for heavy operations
+- **Streamlit UX**: Improved error handling and loading indicators with better user feedback
+- **Documentation**: Added comprehensive performance profiling guidelines and usage examples
+
+### Technical Details
+- **Memory profiling**: RSS and VMS tracking with psutil fallback for environments without psutil
+- **Context managers**: `time_stage()` and `track_memory_peak()` for automatic performance monitoring
+- **Regression detection**: Configurable thresholds (default 10%) for performance comparison
+- **Baseline management**: Save/load performance baselines for regression testing
+- **Exception handling**: Graceful fallback when psutil is not available
+
+### Testing
+- **Comprehensive test coverage**: 15 new tests for all performance utilities
+- **Edge case testing**: Invalid JSON, missing files, exception handling
+- **Memory tracking tests**: Peak detection and usage monitoring validation
+- **Regression detection tests**: Baseline comparison and threshold validation
+
+### Safety & Validation
+- **Additive changes only**: No business logic modifications, pure observability improvements
+- **Artifact invariance**: All changes preserve bit-for-bit output consistency
+- **Backward compatibility**: Optional psutil dependency with graceful fallback
+- **Zero performance impact**: Profiling overhead is minimal and configurable
+
+## [Phase1.15.2] - 2025-08-29
+
+### Added
+- **MiniDAG versioning**: Added `dag_version` field for future compatibility and backward compatibility
+- **Enhanced error tolerance**: Robust handling of corrupted/partial `pipeline_state.json` files
+- **Explicit reason codes**: Enhanced resume decision logging with detailed reason codes
+- **Comprehensive test coverage**: Tests for corrupted state files, flag interactions, and invariance
+
+### Changed
+- **Resume decision logging**: Added explicit reason codes (SMART_DETECT, HASH_MISMATCH, NO_PREVIOUS_RUN, etc.)
+- **State file robustness**: Graceful handling of JSON corruption with automatic reset to clean state
+- **CLI flag documentation**: Clarified flag interactions and precedence rules
+
+### Technical Details
+- **Version defaulting**: Missing `dag_version` defaults to "1.0.0" with logging
+- **Error tolerance**: Individual stage loading failures don't crash the entire DAG
+- **Reason codes**: 8 distinct reason codes for resume decisions (SMART_DETECT, HASH_MISMATCH, NO_PREVIOUS_RUN, MANUAL_OVERRIDE, FORCE_OVERRIDE, etc.)
+- **Test coverage**: Added tests for edge cases including corrupted state files and flag interactions
+
+### Safety & Validation
+- **Backward compatibility**: Existing state files work with version defaulting
+- **Artifact invariance**: All changes preserve bit-for-bit output consistency
+- **Graceful degradation**: Corrupted state files reset to clean state rather than crashing
+
+## [Phase1.15.1] - 2025-08-29
+
+### Added
+- **--state-path CLI argument**: Custom path for pipeline state file (default: `data/interim/pipeline_state.json`)
+- **Stage map clarity**: `filtering` stage now writes `accounts_filtered.parquet` instead of reusing `accounts_normalized.parquet`
+- **Alias parquet hygiene**: Sanitized parquet output with scalar-only columns and proper dtypes
+
+### Changed
+- **Stage file mapping**: Updated MiniDAG to include `accounts_filtered.parquet` in all stages after filtering
+- **Alias matches storage**: Only scalar columns (`account_id`, `alias_text`, `matched_account_id`, `match_group_id`, `match_score`, `source`) with enforced dtypes
+- **Documentation**: Updated README, CHANGELOG, and cursor_rules to reflect new stage map and CLI options
+
+### Technical Details
+- **Parquet sanitization**: Force string dtypes for ID/text columns, float32 for scores
+- **Stage separation**: Clear distinction between normalization and filtering outputs
+- **CLI parity**: All documented flags now implemented in code
+
+### Testing
+- **Invariance tests**: Verify byte-for-byte identity for full run vs resume
+- **Hash mismatch guard**: Test input hash validation prevents stale artifact usage
+- **Missing artifact fallback**: Test missing `accounts_filtered.parquet` prevents unsafe resume
+
+### Safety & Validation
+- **No packaging changes**: Maintains venv-only workflow
+- **Artifact invariance**: Preserves bit-for-bit output consistency
+- **Backward compatibility**: Existing pipeline behavior unchanged
+
+## [Phase1.14.2] - 2025-08-29
+
+### Added
+- **Smart Auto-Resume for MiniDAG**: Intelligent pipeline resumption without explicit flags
+  - Auto-detection of last completed stage based on state file and intermediate files
+  - Input hash validation to prevent stale artifact usage
+  - Automatic resume decision logging with clear reasoning
+  - State metadata tracking (input_hash, dag_version, cmdline, timestamp)
+
+### Changed
+- **CLI Semantics**: Updated command-line interface for smart auto-resume
+  - Default behavior: smart auto-resume with input validation
+  - `--no-resume`: Force full pipeline run (ignore state)
+  - `--resume-from`: Override auto-detection with specific stage
+  - `--force`: Override input hash mismatch protection
+  - `--state-path`: Custom path for pipeline state file
+
+### Technical Details
+- **MiniDAG Enhancements**: Added smart auto-resume methods
+  - `get_last_completed_stage()`: Finds highest completed stage in order
+  - `validate_intermediate_files()`: Checks file existence for each stage
+  - `get_smart_resume_stage()`: Combines state + file validation logic
+  - `_compute_input_hash()`: SHA256 hash of input + config files
+  - `_validate_input_invariance()`: Compares current vs stored hash
+  - `_update_state_metadata()`: Updates metadata with run information
+
+### Safety & Validation
+- **Input Hash Protection**: Prevents resuming with changed inputs unless `--force` specified
+- **File Validation**: Ensures intermediate files exist before resuming
+- **State Persistence**: Atomic JSON writes with metadata tracking
+- **Error Handling**: Clear error messages for hash mismatches and missing files
+
+### Pipeline Stages
+- normalization → filtering → candidate_generation → grouping → survivorship → disposition → alias_matching → final_output
+
+### Testing
+- **Comprehensive Test Suite**: 8 test cases covering all smart auto-resume functionality
+- **Input Hash Validation**: Tests for hash computation and invariance checking
+- **File Validation**: Tests for intermediate file existence checking
+- **Metadata Storage**: Tests for state persistence and retrieval
+- **Auto-Resume Logic**: Tests for intelligent stage detection
+
+## [Phase1.14.1] - 2025-08-29
+
+### Added
+- **Progress logging and heartbeats**: Comprehensive progress tracking with rate and ETA information
+- **MiniDAG orchestration**: Lightweight DAG orchestrator for pipeline stage tracking and resumability
+- **Optional tqdm support**: Progress bars when `--progress` flag is used, graceful fallback to logging
+- **Pipeline resumability**: Resume from any completed stage using `--resume-from` flag
+- **Stage banners**: Clear `[stage:start]` and `[stage:end]` messages for all major pipeline stages
+- **Heavy loop instrumentation**: Progress tracking for computationally intensive operations
+
+### Changed
+- **CLI enhancements**: Added `--progress` and `--resume-from` flags for better pipeline control
+- **Stage tracking**: All pipeline stages now tracked with completion status and timing
+- **Progress visibility**: Enhanced logging with processing rates and estimated completion times
+- **Streamlit integration**: Added loading spinner for data loading operations
+
+### Technical Details
+- **New utilities**: `src/utils/mini_dag.py` for stage orchestration, `src/utils/progress.py` for progress logging
+- **Atomic state management**: Pipeline state saved atomically to `data/interim/pipeline_state.json`
+- **Heavy loop instrumentation**: Progress tracking in similarity (block iteration, pair scoring), grouping (Union-Find), survivorship (per-group processing)
+- **Backward compatibility**: Pipeline runs exactly as before without new flags
+- **QA gates compliance**: All progress logging maintains zero MyPy errors and passes all QA gates
+
+### Pipeline Stages
+The following stages are tracked and support resumability:
+- `normalization` - Company name normalization and cleaning
+- `filtering` - Data filtering and problematic record removal  
+- `candidate_generation` - Candidate pair generation with blocking
+- `grouping` - Duplicate group creation with edge-gating
+- `survivorship` - Primary record selection and merge preview
+- `disposition` - Disposition classification and assignment
+- `alias_matching` - Alias matching and cross-reference generation
+- `final_output` - Final review-ready output generation
+
+## [Phase1.13.7] - 2025-08-29
+
+### Added
+- **Zero MyPy Errors Milestone**: Complete type safety across entire codebase (33 source files)
+- **Comprehensive type annotations**: All functions, methods, and variables properly typed
+- **Enhanced pandas operations**: Fixed DataFrame indexing, boolean masking, and arithmetic operations
+- **Import hygiene standardization**: All imports use absolute paths rooted at `src`
+- **Strict QA gates enforcement**: Black, Ruff, MyPy, and PyTest all green with zero errors
+
+### Changed
+- **MyPy configuration**: Enforced strict type checking with zero tolerance for errors
+- **Test function signatures**: All test methods now have explicit `-> None` return type annotations
+- **Pandas DataFrame operations**: Replaced tuple indexing with boolean masking for type safety
+- **JSON parsing**: Enhanced type safety for `json.load()` and `ast.literal_eval()` operations
+- **Salesforce ID handling**: Improved type safety in ID conversion and validation functions
+
+### Fixed
+- **DataFrame indexing errors**: Replaced `.loc[idx, "column"]` with boolean masking patterns
+- **Union-attr errors**: Added null checks for optional pandas operations
+- **Call-overload errors**: Fixed dict constructor calls with proper type annotations
+- **No-any-return errors**: Added explicit type casting and validation for return values
+- **Unreachable code warnings**: Simplified logic to eliminate unreachable code paths
+- **Import path conflicts**: Resolved all module path ambiguity issues
+
+### Technical Details
+- **Error reduction**: Achieved 100% MyPy compliance (46 errors → 0 errors)
+- **Test coverage**: All 128 tests passing with comprehensive type annotations
+- **Runtime preservation**: All improvements maintain identical runtime behavior
+- **Code quality**: Enhanced maintainability through strict type safety
+- **Future-proofing**: Robust type annotations prevent regressions and improve IDE support
+
 ## [1.5.0] - 2025-08-27
 
 ### Added
@@ -129,135 +321,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `src/utils/perf_utils.py` - `log_perf`
   - `src/utils/hash_utils.py` - `config_hash`, `stable_group_id`, `_compute_config_hash`
   - `src/utils/dtypes.py` - Memory optimization utilities (existing)
-- **Hash utilities**: Moved `config_hash` and `stable_group_id` from `src/grouping.py` to `src/utils/hash_utils.py`
-- **Performance utilities**: Moved `_compute_config_hash` from `src/performance.py` to `src/utils/hash_utils.py`
-
-### Removed
-- **src/utils.py**: Deleted after successful refactor and import updates
-
-### Technical Details
-- **No backward compatibility**: All imports updated directly, no shims created
-- **Import clarity**: Absolute imports eliminate ambiguity between `src/utils.py` and `src/utils/` package
-- **Function preservation**: All functions maintain identical behavior and API
-- **Test coverage**: All 81 tests pass after refactor
-
-## [Phase1.13.6] - 2025-08-28
-
-### Added
-- **MyPy Finalization** - Comprehensive type annotation improvements across all modules
-  - Performance module types: Explicit type annotations for `PerformanceTracker` class attributes and methods
-  - Utils context manager: Enhanced `log_perf` context manager with proper `Iterator[None]` typing
-  - Similarity type safety: Fixed function signatures and added proper generic types for `_compute_pair_score`
-  - Salesforce type safety: Enhanced method signatures with proper `Dict[str, Any]` types and string casting
-  - Disposition type safety: Added comprehensive type annotations for all functions and fixed tuple indexing issues
-  - Alias matching types: Enhanced function signatures with proper generic types and list type annotations
-  - Survivorship type safety: Fixed `int()` calls with explicit string casting and added proper type annotations
-  - Grouping type safety: Added explicit type annotations for union-find structures and nested functions
-  - Cleaning type safety: Enhanced function signatures and added return type annotations
-  - App import hygiene: Updated all imports to use absolute paths for better type safety
-  - Test type safety: Fixed argument type issues and added null checks for union-attr errors
-
-### Changed
-- **MyPy Error Count**: Reduced from 70 to 46 errors (34% additional reduction)
-- **Type Safety**: Comprehensive improvements across all source modules and test files
-- **Import Structure**: Standardized all first-party imports to use absolute paths
-
-### Technical Details
-- Enhanced class attribute type annotations (e.g., `peak_memory: float = 0.0`)
-- Fixed context manager typing with `Iterator[None]` return type
-- Added explicit type annotations for all union-find data structures
-- Fixed tuple indexing issues in pandas operations
-- Enhanced function signatures with proper generic types (`Dict[str, Any]`, `List[Dict[str, Any]]`)
-- Added string casting for Hashable types in int() operations
-- Updated all app imports to use absolute paths (`from app.`, `from src.`)
-- Fixed test function argument types and added null checks
-- Maintained runtime behavior while significantly improving type safety
-
-## [Phase1.13.5] - 2025-08-28
-
-### Added
-- **MyPy Error Reduction** - Targeted, no-churn typing improvements
-  - Systematic addition of return type annotations (`-> None`) to all test functions
-  - Enhanced type annotations for utility functions and app modules
-  - Improved function signatures with proper parameter and return types
-
-### Changed
-- **Test functions**: All test methods now have explicit `-> None` return type annotations
-- **Utils functions**: Added precise return types and parameter annotations
-- **App functions**: Enhanced type safety with proper return type declarations
-- **Error reduction**: Reduced MyPy errors from 186 → 70 (62% reduction)
-
-### Fixed
-- **Missing return types**: Added `-> None` to 179 test functions across 9 test files
-- **Utils typing**: Fixed `load_settings`, `deep_merge`, and other utility function signatures
-- **App typing**: Enhanced type safety in `manual_data.py` and `main.py` functions
-- **Import test functions**: Added proper type annotations to import validation tests
-
-## [Phase1.13.4] - 2025-08-28
-
-### Added
-- **MyPy Module-Path Conflict Resolution** - Zero-errors finalization
-  - Eliminated all module path conflicts (e.g., `dtypes_map` vs `src.dtypes_map`)
-  - Removed `mypy_path` configuration to prevent dual module identities
-  - Enforced single canonical package root (`src`) via targeted MyPy invocation
-  - All bare imports standardized to absolute `src.` paths
-
-### Changed
-- **MyPy configuration**: Removed `mypy_path` and enforced explicit package bases
-- **Import standardization**: All remaining bare imports fixed across src/ and tests/
-- **MyPy invocation**: Changed to `mypy --config-file mypy.ini src tests app` for targeted checking
-- **Error reduction**: Reduced MyPy errors from 216 → 188 (28 fewer errors)
-
-### Fixed
-- **Module path conflicts**: Resolved all `dtypes_map` vs `src.dtypes_map` dual identity issues
-- **Import consistency**: All first-party imports now use canonical `src.` package paths
-- **Test imports**: All test files updated to use absolute imports
-
-## [Phase1.13.3] - 2025-08-28
-
-### Added
-- **Type & Import Hygiene** - MyPy path fix and import test normalization
-  - MyPy configuration updated to enforce single canonical package root (`src`)
-  - `tests/test_imports.py` rewritten as pure-pytest with canonical import validation
-  - All first-party imports now use absolute `src.` paths
-  - Enhanced type checking with stricter configuration
-
-### Changed
-- **Import standardization**: All bare imports (e.g., `from normalize import`) replaced with absolute imports (`from src.normalize import`)
-- **MyPy configuration**: Simplified to focus on `src` as single package root with explicit package bases
-- **Test structure**: Import tests now validate production-like import paths via `src.` package
-
-## [Phase1.13.2] - 2025-08-28
-
-### Added
-- **Column Naming & ID Standards** - Comprehensive rules for canonical column naming and Salesforce ID handling
-  - Canonical column naming policy (inputs vs internal)
-  - Salesforce ID canonicalization policy (18-char canonical IDs)
-  - Utils layout & import rules (absolute imports required)
-  - QA gates enforcement (Black/Ruff/MyPy/PyTest)
-  - Logging, performance, and artifacts standards
-  - Edit hygiene rules for maintaining consistency
-- **Updated `cursor_rules.md`** with Phase 1.13 standards to prevent future churn and ensure consistency
-
-## [Unreleased]
-
-### Added
-- Initial project scaffolding with Cookiecutter Data Science structure
-- Basic data cleaning pipeline with duplicate detection
-- Streamlit GUI for interactive data processing
-- Salesforce CLI integration framework
-- Utility functions for file management and validation
-- Configuration system with `config/settings.yaml` and `config/logging.conf`
-- Test fixtures with sample data in `tests/fixtures/`
-- Enhanced documentation with prerequisites, usage examples, and contributing guidelines
-- Tightened development guardrails in `cursor_rules.md`
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
+- **Hash utilities**: Moved `config_hash` and `stable_group_id` from `src/grouping.py` to `

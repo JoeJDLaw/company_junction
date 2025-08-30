@@ -23,7 +23,7 @@ DTYPES = {
     # Similarity and grouping fields
     "group_id": "string",
     "score": "float32",
-    "score_to_primary": "float32",
+    "weakest_edge_to_primary": "float32",
     "is_primary": "boolean",
     "group_size": "int16",
     "group_rank": "int16",
@@ -32,7 +32,6 @@ DTYPES = {
     "block_size": "int32",
     # Edge-gating fields
     "group_join_reason": "category",
-    "weakest_edge_to_primary": "float32",
     "shared_tokens_count": "int16",
     # Disposition fields
     "disposition": "category",
@@ -159,7 +158,7 @@ def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
                 "group_id",
                 "name_core",
                 "suffix_class",
-                "score_to_primary",
+                "weakest_edge_to_primary",
                 "is_primary",
                 "group_size",
                 "group_rank",

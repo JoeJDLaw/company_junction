@@ -14,6 +14,7 @@ from typing import List, Tuple, Dict, Any
 import logging
 from itertools import combinations
 import re
+from src.utils.progress import ProgressLogger
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,9 @@ def get_stop_tokens() -> set:
     return {"inc", "llc", "ltd"}
 
 
-def pair_scores(df_norm: pd.DataFrame, settings: Dict) -> pd.DataFrame:
+def pair_scores(
+    df_norm: pd.DataFrame, settings: Dict, enable_progress: bool = False
+) -> pd.DataFrame:
     """
     Generate candidate pairs and compute similarity scores.
 
@@ -46,7 +49,7 @@ def pair_scores(df_norm: pd.DataFrame, settings: Dict) -> pd.DataFrame:
     penalties = settings.get("similarity", {}).get("penalty", {})
 
     # Generate candidate pairs using blocking
-    candidate_pairs = _generate_candidate_pairs(df_norm)
+    candidate_pairs = _generate_candidate_pairs(df_norm, enable_progress)
 
     if not candidate_pairs:
         logger.info("No candidate pairs found")
@@ -54,7 +57,17 @@ def pair_scores(df_norm: pd.DataFrame, settings: Dict) -> pd.DataFrame:
 
     # Compute similarity scores for each pair
     scores = []
-    for idx_a, idx_b in candidate_pairs:
+
+    # Add progress logging for pair scoring
+    progress = ProgressLogger(
+        total=len(candidate_pairs),
+        label="pair-scoring",
+        step_every=10_000,
+        secs_every=5.0,
+        enable_tqdm=enable_progress,
+    )
+
+    for idx_a, idx_b in progress.wrap(candidate_pairs):
         try:
             score_data = _compute_pair_score(
                 df_norm.loc[idx_a:idx_a].iloc[0],
@@ -83,7 +96,9 @@ def pair_scores(df_norm: pd.DataFrame, settings: Dict) -> pd.DataFrame:
     return pairs_df
 
 
-def _generate_candidate_pairs(df_norm: pd.DataFrame) -> List[Tuple[int, int]]:
+def _generate_candidate_pairs(
+    df_norm: pd.DataFrame, enable_progress: bool = False
+) -> List[Tuple[int, int]]:
     """
     Generate candidate pairs using blocking strategy.
 
@@ -155,7 +170,16 @@ def _generate_candidate_pairs(df_norm: pd.DataFrame) -> List[Tuple[int, int]]:
     except Exception as e:
         logger.warning(f"Failed to write block statistics: {e}")
 
-    for block_key in unique_blocks:
+    # Add progress logging for block iteration
+    block_progress = ProgressLogger(
+        total=len(unique_blocks),
+        label="blocks→pairs",
+        step_every=500,
+        secs_every=5.0,
+        enable_tqdm=enable_progress,
+    )
+
+    for block_key in block_progress.wrap(unique_blocks):
         if pd.isna(block_key) or block_key == "":
             continue
 

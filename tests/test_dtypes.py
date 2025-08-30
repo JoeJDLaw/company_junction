@@ -266,7 +266,7 @@ class TestSchemaDetection:
             "group_id",
             "name_core",
             "suffix_class",
-            "score_to_primary",
+            "weakest_edge_to_primary",
             "is_primary",
             "group_size",
             "group_rank",

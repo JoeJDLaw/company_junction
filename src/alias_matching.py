@@ -48,7 +48,11 @@ def compute_alias_matches(
         alias_candidates = record.get("alias_candidates", [])
         alias_sources = record.get("alias_sources", [])
 
-        if not alias_candidates:
+        # Handle numpy arrays properly
+        if hasattr(alias_candidates, "size"):
+            if alias_candidates.size == 0:
+                continue
+        elif not alias_candidates:
             continue
 
         # Normalize aliases
@@ -205,7 +209,7 @@ def _score_alias_against_records(
         if score >= high_threshold and suffix_match:
             mask = df_groups.index == idx
             match_group_id = (
-                df_groups.loc[mask, "group_id"].iloc[0] if mask.any() else -1
+                df_groups.loc[mask, "group_id"].iloc[0] if mask.any() else ""
             )
 
             matches.append(
@@ -271,8 +275,37 @@ def save_alias_matches(df_alias_matches: pd.DataFrame, output_path: str) -> None
         df_alias_matches: DataFrame with alias matches
         output_path: Output file path
     """
-    df_alias_matches.to_parquet(output_path, index=False)
-    logger.info(f"Saved alias matches to {output_path}")
+    # Sanitize to parquet-friendly columns only
+    sanitized_columns = [
+        "account_id",
+        "alias_text",
+        "matched_account_id",
+        "match_group_id",
+        "match_score",
+        "source",
+    ]
+
+    # Keep only columns that exist
+    available_columns = [
+        col for col in sanitized_columns if col in df_alias_matches.columns
+    ]
+    df_sanitized = df_alias_matches[available_columns].copy()
+
+    # Force proper dtypes
+    for col in df_sanitized.columns:
+        if col in [
+            "account_id",
+            "alias_text",
+            "matched_account_id",
+            "match_group_id",
+            "source",
+        ]:
+            df_sanitized[col] = df_sanitized[col].astype("string")
+        elif col == "match_score":
+            df_sanitized[col] = df_sanitized[col].astype("float32")
+
+    df_sanitized.to_parquet(output_path, index=False)
+    logger.info(f"Saved {len(df_sanitized)} alias matches to {output_path}")
 
 
 def load_alias_matches(input_path: str) -> pd.DataFrame:

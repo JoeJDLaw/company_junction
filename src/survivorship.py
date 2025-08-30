@@ -14,8 +14,10 @@ import logging
 
 try:
     from src.normalize import excel_serial_to_datetime
+    from src.utils.progress import ProgressLogger
 except ImportError:
     from src.normalize import excel_serial_to_datetime
+    from src.utils.progress import ProgressLogger
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,7 @@ def select_primary_records(
     df_groups: pd.DataFrame,
     relationship_ranks: Dict[str, int],
     settings: Dict[str, Any],
+    enable_progress: bool = False,
 ) -> pd.DataFrame:
     """
     Select primary records for each group based on relationship rank and tie-breakers.
@@ -41,7 +44,18 @@ def select_primary_records(
     result_df = df_groups.copy()
 
     # Process each group
-    for group_id in result_df["group_id"].unique():
+    unique_groups = result_df["group_id"].unique()
+
+    # Add progress logging for group processing
+    group_progress = ProgressLogger(
+        total=len(unique_groups),
+        label="survivorship",
+        step_every=2_000,
+        secs_every=5.0,
+        enable_tqdm=enable_progress,
+    )
+
+    for group_id in group_progress.wrap(unique_groups):
         if group_id == -1:  # Skip unassigned records
             continue
 
@@ -246,7 +260,7 @@ def _generate_group_merge_preview(
                 "account_name": record.get("Account Name", ""),
                 "relationship": record.get("Relationship", ""),
                 "relationship_rank": record.get("relationship_rank", 60),
-                "score_to_primary": record.get("score_to_primary", 0.0),
+                "weakest_edge_to_primary": record.get("weakest_edge_to_primary", 0.0),
             }
         )
 

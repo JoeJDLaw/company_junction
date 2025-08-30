@@ -13,8 +13,10 @@ from collections import defaultdict
 try:
     from src.utils.perf_utils import log_perf
     from src.utils.hash_utils import stable_group_id
+    from src.utils.progress import ProgressLogger
 except ImportError:
     from src.utils.perf_utils import log_perf
+    from src.utils.progress import ProgressLogger
 from src.utils.hash_utils import stable_group_id
 
 logger = logging.getLogger(__name__)
@@ -123,6 +125,7 @@ def create_groups_with_edge_gating(
     candidate_pairs_df: pd.DataFrame,
     config: Dict[str, Any],
     stop_tokens: Set[str],
+    enable_progress: bool = False,
 ) -> pd.DataFrame:
     """
     Create groups using edge-gating logic.
@@ -305,7 +308,16 @@ def create_groups_with_edge_gating(
                 "Candidate pairs DataFrame must have either 'account_id_1'/'account_id_2' or 'id_a'/'id_b' columns"
             )
 
-        for _, row in sorted_pairs.iterrows():
+        # Add progress logging for pair processing
+        pair_progress = ProgressLogger(
+            total=len(sorted_pairs),
+            label="grouping",
+            step_every=50_000,
+            secs_every=5.0,
+            enable_tqdm=enable_progress,
+        )
+
+        for _, row in pair_progress.wrap(sorted_pairs.iterrows()):
             id1, id2 = row[id_col1], row[id_col2]
             # score = row["score"]  # Not used in standard grouping
 

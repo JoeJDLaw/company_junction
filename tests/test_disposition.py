@@ -190,7 +190,7 @@ class TestDisposition(unittest.TestCase):
         df_groups = self.df_norm.copy()
         df_groups["group_id"] = [0, 1, 2, 3, 4, 5, 6, 7]  # All singletons
         df_groups["is_primary"] = [True] * 8
-        df_groups["score_to_primary"] = [0.0] * 8
+        df_groups["weakest_edge_to_primary"] = [0.0] * 8
 
         # Create a group with suffix mismatch
         df_groups.loc[0, "group_id"] = 0
@@ -214,7 +214,7 @@ class TestDisposition(unittest.TestCase):
         df_groups = self.df_norm.copy()
         df_groups["group_id"] = [0, 1, 2, 3, 4, 5, 6, 7]  # All singletons
         df_groups["is_primary"] = [True] * 8
-        df_groups["score_to_primary"] = [0.0] * 8
+        df_groups["weakest_edge_to_primary"] = [0.0] * 8
 
         # Apply dispositions
         df_dispositions = apply_dispositions(df_groups, self.settings)
@@ -238,7 +238,7 @@ class TestDisposition(unittest.TestCase):
         df_groups = self.df_norm.copy()
         df_groups["group_id"] = [0, 1, 2, 3, 4, 5, 6, 7]
         df_groups["is_primary"] = [True] * 8
-        df_groups["score_to_primary"] = [0.0] * 8
+        df_groups["weakest_edge_to_primary"] = [0.0] * 8
 
         # Add multiple names flag
         df_groups.loc[0, "has_multiple_names"] = True
@@ -265,7 +265,7 @@ class TestDisposition(unittest.TestCase):
                 "group_id": [1, 1],
                 "Account Name": ["Acme Corp Inc", "Acme Corp Inc"],
                 "is_primary": [True, False],
-                "score_to_primary": [100, 95],
+                "weakest_edge_to_primary": [100, 95],
                 "suffix_class": ["INC", "INC"],
                 "has_multiple_names": [False, False],
             }
@@ -381,7 +381,7 @@ class TestDisposition(unittest.TestCase):
         df_groups = self.df_norm.copy()
         df_groups["group_id"] = [0, 1, 2, 3, 4, 5, 6, 7]
         df_groups["is_primary"] = [True] * 8
-        df_groups["score_to_primary"] = [0.0] * 8
+        df_groups["weakest_edge_to_primary"] = [0.0] * 8
 
         df_dispositions = apply_dispositions(df_groups, self.settings)
 
@@ -410,7 +410,7 @@ class TestDisposition(unittest.TestCase):
         df_groups = self.df_norm.copy()
         df_groups["group_id"] = [0, 0, 2, 3, 4, 5, 6, 7]  # First two in same group
         df_groups["is_primary"] = [True, False] + [True] * 6
-        df_groups["score_to_primary"] = [0.0, 95.0] + [0.0] * 6
+        df_groups["weakest_edge_to_primary"] = [0.0, 95.0] + [0.0] * 6
 
         # Apply dispositions
         df_dispositions = apply_dispositions(df_groups, self.settings)
@@ -425,7 +425,7 @@ class TestDisposition(unittest.TestCase):
         df_groups = self.df_norm.copy()
         df_groups["group_id"] = [0, 0, 2, 3, 4, 5, 6, 7]  # First two in same group
         df_groups["is_primary"] = [True, False] + [True] * 6
-        df_groups["score_to_primary"] = [0.0, 95.0] + [0.0] * 6
+        df_groups["weakest_edge_to_primary"] = [0.0, 95.0] + [0.0] * 6
 
         # Force same suffix for the group
         df_groups.loc[0, "suffix_class"] = "INC"

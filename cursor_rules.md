@@ -27,7 +27,7 @@
 - Do **not** commit large data. Only small samples under `tests/fixtures/`.
 
 ## Development Workflow
-- Install from `requirements.txt` only.
+- Install from `requirements.txt` and install package in development mode: `pip install -e .`
 - All new features must include at least one test in `tests/`.
 - Update `CHANGELOG.md` for any significant changes
 - Keep dependencies minimal and well-documented
@@ -285,7 +285,7 @@
   - `mypy --config-file mypy.ini .`
   - `pytest -q`
 - **MyPy configuration** (in `mypy.ini` or `pyproject.toml`):
-  - `mypy_path = src`, `namespace_packages = True`, `ignore_missing_imports = False`
+  - `explicit_package_bases = True`, `namespace_packages = True`, `ignore_missing_imports = False`
   - Prefer **absolute imports** (`from src...`) to avoid module path conflicts (e.g., `dtypes_map` vs `src.dtypes_map`).
 - If third-party stubs are needed, add to `requirements-dev.txt` (e.g., `pandas-stubs`, `types-PyYAML`). "Stubs" supply type info only; they don't affect runtime.
 
@@ -301,3 +301,186 @@
 ### Edit Hygiene
 - Rules edits must be **idempotent**: if a rule exists, update/merge; do not duplicate.
 - Keep terminology consistent with existing sections (Phase labels, bullets, formatting).
+
+---
+
+## Phase 1.13.7 Type Safety & Code Quality Standards
+
+### Zero MyPy Errors Requirement
+- **Mandatory**: All code changes must maintain **0 MyPy errors** across the entire codebase
+- **Strict enforcement**: No exceptions or type ignores unless absolutely necessary
+- **Comprehensive coverage**: All 33 source files must pass MyPy validation
+- **Test functions**: All test methods must have explicit `-> None` return type annotations
+
+### Pandas DataFrame Operations
+- **Boolean masking**: Use boolean masks instead of tuple indexing for DataFrame assignments
+  - ✅ `mask = df.index == idx; df.loc[mask, "column"] = value`
+  - ❌ `df.loc[idx, "column"] = value` (causes Invalid index type errors)
+- **Arithmetic operations**: Cast pandas arrays to float before arithmetic operations
+  - ✅ `(values.astype(float) / total * 100).round(1)`
+  - ❌ `(values / total * 100).round(1)` (causes operator errors)
+- **Type safety**: Always validate DataFrame column types before operations
+- **Parquet hygiene**: Only write scalar, parquet-friendly columns to parquet files
+  - ✅ Sanitize DataFrames to scalar columns only before parquet write
+  - ✅ Force proper dtypes: string for IDs/text, float32 for scores
+  - ❌ Write list/dict/object columns to parquet (causes pyarrow errors)
+
+### JSON and AST Operations
+- **Type validation**: Always validate return types from `json.load()` and `ast.literal_eval()`
+  - ✅ `data = json.load(f); return data if isinstance(data, list) else []`
+  - ❌ `return json.load(f)` (returns Any, causes no-any-return errors)
+- **Explicit casting**: Use explicit type casting for Hashable types
+  - ✅ `str(col).startswith("_")` for DataFrame column names
+  - ❌ `col.startswith("_")` (causes attr-defined errors)
+
+### Import Standards
+- **Absolute imports only**: All imports must be absolute and rooted at `src`
+  - ✅ `from src.utils.id_utils import normalize_sfid_series`
+  - ❌ `from utils.id_utils import normalize_sfid_series`
+- **No module path conflicts**: Avoid dual module identities (e.g., `dtypes_map` vs `src.dtypes_map`)
+- **Test imports**: All test files must use absolute imports matching production code
+
+### QA Gates Enforcement
+- **Zero tolerance**: All QA gates must pass with zero errors:
+  - `black --check .` ✅
+  - `ruff check .` ✅  
+  - `mypy --config-file mypy.ini src tests app` ✅
+  - `pytest -q` ✅
+- **Test scope**: `pytest.ini` must be present with proper test discovery configuration
+- **Snapshot cleanup**: Archive/review snapshot directories (`company_junction_phase*review/`) must be ignored by Git
+
+### Type Annotation Standards
+- **Function signatures**: All functions must have complete type annotations
+- **Return types**: Explicit return types for all functions (use `-> None` for void functions)
+- **Variable annotations**: Use type annotations for complex variables and data structures
+- **Generic types**: Use proper generic types for collections (`List[str]`, `Dict[str, Any]`, etc.)
+
+### Documentation Updates
+- **Mandatory updates**: Every phase must update README.md, CHANGELOG.md, and cursor_rules.md
+- **Consistency**: Ensure all three documents are consistent and up-to-date
+- **Phase tracking**: Document all significant changes in CHANGELOG.md with proper semantic versioning
+- **Rule maintenance**: Keep cursor_rules.md as the authoritative source for development standards
+
+### Runtime Preservation
+- **No functional changes**: All type safety improvements must maintain identical runtime behavior
+- **Backward compatibility**: Preserve all existing APIs and function signatures
+- **Test validation**: All existing tests must continue to pass without modification
+- **Performance**: Type annotations should not impact runtime performance
+
+---
+
+## Phase 1.14 Progress, Heartbeats, and MiniDAG Orchestration
+
+### Stage Banners and Progress Tracking
+- **Stage boundaries**: Clear `[stage:start]` and `[stage:end]` messages for all major pipeline stages
+- **Progress heartbeats**: Periodic logging with rate and ETA information for long-running operations
+- **Optional tqdm**: Support for tqdm progress bars when `--progress` flag is used
+- **Fallback behavior**: Graceful fallback to logging-only heartbeats if tqdm is not installed
+
+### MiniDAG Orchestration & Smart Auto-Resume (Phase 1.14)
+- **Stage tracking**: Use `src/utils/mini_dag.py` for atomic stage completion tracking
+- **Smart auto-resume**: Automatically detect resume point based on last completed stage and file existence
+- **Input hash validation**: Compute SHA256 of input files to prevent stale artifact usage
+- **State file versioning**: Include `dag_version` field for backward compatibility (defaults to "1.0.0")
+- **Error tolerance**: Handle corrupted state files gracefully with automatic reset to clean state
+- **Resume decision logging**: Log explicit reason codes (SMART_DETECT, HASH_MISMATCH, NO_PREVIOUS_RUN, etc.)
+- **CLI flags**: `--resume-from <stage>`, `--no-resume`, `--force`, `--state-path <path>`
+- **Atomic writes**: Use `tempfile` + `os.replace` for state file updates
+
+### Progress Logging (`src/utils/progress.py`)
+- **Heavy loop instrumentation**: Wrap computationally intensive loops with `ProgressLogger`
+- **Configurable intervals**: Support both step-based and time-based logging intervals
+- **Rate and ETA calculation**: Provide processing rate and estimated time to completion
+- **Memory efficiency**: Minimal memory overhead with comprehensive progress visibility
+
+### Pipeline Stages
+The following stages are tracked and support resumability:
+- `normalization` - Company name normalization and cleaning
+- `filtering` - Data filtering and problematic record removal
+- `candidate_generation` - Candidate pair generation with blocking
+- `grouping` - Duplicate group creation with edge-gating
+- `survivorship` - Primary record selection and merge preview
+- `disposition` - Disposition classification and assignment
+- `alias_matching` - Alias matching and cross-reference generation
+- `final_output` - Final review-ready output generation
+
+### CLI Enhancements
+- **`--progress` flag**: Enable optional tqdm progress bars (default: logging-only)
+- **`--resume-from` flag**: Resume pipeline execution from specific stage
+- **Backward compatibility**: Pipeline runs exactly as before without new flags
+- **Error handling**: Graceful handling of missing intermediate files during resume
+
+### Heavy Loop Instrumentation
+- **Similarity module**: Progress tracking for block iteration and pair scoring
+- **Grouping module**: Progress tracking for Union-Find pair processing
+- **Survivorship module**: Progress tracking for per-group primary selection
+- **Configurable intervals**: Step-based (e.g., every 10,000 items) and time-based (e.g., every 5 seconds) logging
+
+### Streamlit Integration
+- **Minimal spinner**: Add loading spinner for data loading operations
+- **No heavy logic**: Keep all heavy computation in pipeline, not in Streamlit app
+- **User feedback**: Provide clear feedback during long-running operations
+
+### QA Gates Compliance
+- **Zero MyPy errors**: All progress logging code must maintain strict type safety
+- **Black/Ruff compliance**: All code must pass formatting and linting checks
+- **Test coverage**: Maintain comprehensive test coverage for all new functionality
+- **Performance preservation**: Progress logging must not significantly impact runtime performance
+
+### Documentation Requirements
+- **README updates**: Add progress and heartbeats section with usage examples
+- **CHANGELOG updates**: Document all new features and improvements
+- **Rule maintenance**: Keep cursor_rules.md as authoritative source for progress standards
+
+### Smart Auto-Resume (Phase 1.14.2)
+- **Auto-detection**: Intelligently determine resume point based on state file and intermediate files
+- **Input hash validation**: Compute SHA256 hash of input and config files to detect changes
+- **State metadata**: Track input paths, config files, command line, and timestamps in state file
+- **Safety protection**: Prevent resuming with changed inputs unless `--force` specified
+
+### Smart Auto-Resume CLI Semantics
+- **Default behavior**: Smart auto-resume with input validation (no flags needed)
+- **`--no-resume`**: Force full pipeline run, ignoring previous state
+- **`--resume-from`**: Override auto-detection with specific stage
+- **`--force`**: Override input hash mismatch protection
+- **`--state-path`**: Custom path for pipeline state file
+
+### Auto-Resume Decision Logging
+- **Clear reasoning**: Log auto-resume decisions with explicit reasoning
+- **Input hash status**: Include input hash validation results in decision logs
+- **Stage information**: Show last completed stage and suggested resume point
+- **Error conditions**: Clear error messages for hash mismatches and missing files
+
+### State File Structure
+- **Atomic writes**: Use temporary files and atomic replacement for state persistence
+- **Metadata tracking**: Store input_hash, dag_version, cmdline, and timestamp
+- **Stage information**: Track status, start_time, end_time for each stage
+- **Backward compatibility**: Maintain compatibility with existing state files
+
+### File Validation Logic
+- **Stage-specific files**: Define required intermediate files for each pipeline stage
+- **Existence checking**: Validate that required files exist before resuming
+- **Graceful degradation**: Clear error messages when files are missing
+- **Flexible paths**: Support custom interim directory paths
+
+### Safety and Validation
+- **Input invariance**: Ensure input and config files haven't changed since last run
+- **Force flag requirement**: Require explicit `--force` flag to override hash mismatches
+- **File integrity**: Validate intermediate file existence before resuming
+- **State corruption protection**: Atomic writes prevent state file corruption
+
+### Testing Requirements
+- **Comprehensive coverage**: Test all auto-resume scenarios and edge cases
+- **Input hash validation**: Test hash computation and invariance checking
+- **File validation**: Test intermediate file existence checking
+- **State persistence**: Test state file save/load operations
+- **CLI semantics**: Test all flag combinations and behaviors
+
+### Performance Profiling (Phase 1.15.3)
+- **Memory tracking**: Use `src/utils/perf_utils.py` for memory usage monitoring
+- **Stage timing**: Wrap heavy operations in `time_stage()` context managers
+- **Regression detection**: Compare against baselines with configurable thresholds
+- **Performance logging**: Log memory and timing data for all major stages
+- **Context managers**: Use `track_memory_peak()` for peak memory detection
+- **Baseline management**: Save/load performance baselines for regression testing
+- **Graceful fallback**: Handle missing psutil dependency with zero-value fallback

@@ -13,6 +13,14 @@
 
 **Phase 1.10 (Performance & Memory Hardening)**: Performance logging infrastructure, enhanced token filtering, stop token logic, block visibility, memory safety improvements.
 
+**Phase 1.12 (Utils Package Refactor)**: Eliminated import ambiguity by splitting `src/utils.py` into logical modules, standardized all imports to absolute `src.` paths.
+
+**Phase 1.13 (Type Safety & Code Quality)**: Comprehensive MyPy type annotations, pandas typing fixes, import hygiene, strict QA gates enforcement.
+
+**Phase 1.13.7 (Zero MyPy Errors)**: ✅ **Complete type safety** - 0 MyPy errors across entire codebase, all QA gates green (Black/Ruff/MyPy/PyTest), enhanced pandas operations, comprehensive test coverage.
+
+**Phase 1.14.1 (Progress Logging & MiniDAG)**: ✅ **Progress tracking and resumability** - Stage banners, progress heartbeats, optional tqdm support, MiniDAG orchestration with atomic state management, pipeline resumability from any stage.
+
 **Docs:** see `docs/DLaw_Company_Junction_Dedup_Plan.md` for the detailed plan and acceptance criteria.
 
 **Next:** Phase 2 (future) will add Split detection & parsing, optional LLM "real-company" classifier, and Salesforce sync steps.
@@ -34,6 +42,29 @@ python src/cleaning.py \
   --config config/settings.yaml
 ```
 
+#### Progress & Heartbeats
+The pipeline provides detailed progress tracking and heartbeats:
+
+**Log-only mode (default):**
+```bash
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml
+```
+
+**With tqdm progress bars (if installed):**
+```bash
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --progress
+```
+
+**Resume from specific stage:**
+```bash
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --resume-from final_output
+```
+
+**Monitor progress:**
+```bash
+tail -f pipeline.log | ts
+```
+
 ### 3) Review results in Streamlit (read-only)
 ```bash
 streamlit run app/main.py
@@ -46,11 +77,85 @@ streamlit run app/main.py
   - `groups.parquet`
   - `dispositions.parquet`
   - `alias_matches.parquet` (Phase 1.5)
+  - `pipeline_state.json` (stage tracking)
 - **Manual data:** `data/manual/` (Phase 1.7)
   - `manual_dispositions.json` (overrides)
   - `manual_blacklist.json` (pattern rules)
 - **Final review file:** `data/processed/review_ready.csv`
 - **Config:** `config/settings.yaml`, `config/relationship_ranks.csv`
+
+#### Pipeline Resumability with MiniDAG
+The pipeline tracks stage completion in `data/interim/pipeline_state.json` and supports resuming from any stage:
+
+**Available stages:**
+- `normalization` - Company name normalization
+- `filtering` - Data filtering and cleaning
+- `candidate_generation` - Candidate pair generation
+- `grouping` - Duplicate group creation
+- `survivorship` - Primary record selection
+- `disposition` - Disposition classification
+- `alias_matching` - Alias matching and cross-references
+- `final_output` - Final review-ready output generation
+
+**Resume example:**
+```bash
+# Resume from final_output stage (skip all previous stages)
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --resume-from final_output
+```
+
+#### Smart Auto-Resume (Phase 1.14.2)
+The pipeline now includes intelligent auto-resume functionality that automatically detects where to resume from based on previous runs and input validation:
+
+**Default behavior (smart auto-resume):**
+```bash
+# Automatically detects resume point and validates input hash
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml
+```
+
+**Force full pipeline run:**
+```bash
+# Ignore previous state and run full pipeline
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --no-resume
+```
+
+**Override auto-detection:**
+```bash
+# Force resume from specific stage
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --resume-from grouping
+```
+
+**Override input hash validation:**
+```bash
+# Force resume even if input/config files have changed
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --resume-from final_output --force
+```
+
+**Custom state file location:**
+```bash
+# Use custom path for pipeline state
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --state-path /custom/path/pipeline_state.json
+```
+
+**Auto-resume decision logging:**
+The pipeline logs its auto-resume decisions with explicit reason codes:
+```
+Auto-resume decision: resume_from='final_output' | last_completed='final_output' | input_hash=PASS | reason=SMART_DETECT
+Auto-resume decision: input_hash=FAIL - forcing full run due to input/config changes | reason=HASH_MISMATCH
+Auto-resume decision: no previous run found - starting fresh | reason=NO_PREVIOUS_RUN
+Manual resume decision: resume_from='grouping' | input_hash=PASS | reason=MANUAL_OVERRIDE
+```
+
+**Flag interactions:**
+- `--resume-from` + `--force`: Override input hash validation
+- `--no-resume` + `--resume-from`: `--no-resume` takes precedence
+- `--state-path`: Custom location for pipeline state file (default: `data/interim/pipeline_state.json`)
+
+**Safety features:**
+- **Input hash validation**: Prevents resuming with changed input files unless `--force` specified
+- **File validation**: Ensures intermediate files exist before resuming
+- **State metadata**: Tracks input paths, config files, command line, and timestamps
+- **Atomic writes**: State file updates are atomic to prevent corruption
+- **Stage map clarity**: `normalization` writes `accounts_normalized.parquet`, `filtering` writes `accounts_filtered.parquet`
 
 ---
 
@@ -76,9 +181,11 @@ This project provides a mini data pipeline with a Streamlit GUI for cleaning Sal
 - **cursor_rules.md**: Lean source of truth for Cursor  
 
 ## Getting Started
-1. Install dependencies: `pip install -r requirements.txt`  
-2. Run the Streamlit app: `streamlit run app/main.py`  
-3. Upload your Salesforce CSV and review results interactively.  
+1. Activate your virtual environment: `source .venv/bin/activate`
+2. Install dependencies: `pip install -r requirements.txt`  
+3. Install the package in development mode: `pip install -e .`
+4. Run the Streamlit app: `streamlit run app/main.py`  
+5. Upload your Salesforce CSV and review results interactively.  
 
 ## Prerequisites
 - Python 3.10+
@@ -87,7 +194,7 @@ This project provides a mini data pipeline with a Streamlit GUI for cleaning Sal
 ## Usage Examples
 ```bash
 # Run cleaning pipeline directly
-python src/cleaning.py --input data/raw/my_export.csv --output data/interim/cleaned.csv
+python src/cleaning.py --input data/raw/my_export.csv --outdir data/processed --config config/settings.yaml
 
 # Run Streamlit app
 streamlit run app/main.py
@@ -127,6 +234,9 @@ The `src/utils/` package contains logically organized utility modules:
   - `apply_dtypes()` - Apply dtype mapping to DataFrame
   - `assert_no_unexpected_object_columns()` - Validate object columns
   - `drop_intermediate_columns()` - Remove temporary processing columns
+- **`src/utils/id_utils.py`** - Salesforce ID utilities (Phase 1.13.1+)
+  - `sfid15_to_18()` - Convert 15-char Salesforce IDs to 18-char canonical form
+  - `normalize_sfid_series()` - Normalize pandas Series of Salesforce IDs
 
 ### Adding New Utilities
 When adding new utility functions:
@@ -186,6 +296,83 @@ When adding new utility functions:
 - **Modular organization**: Utilities organized by function (logging, paths, I/O, validation, performance, hashing, dtypes)
 - **No backward compatibility**: Direct import updates with no shims or compatibility layers
 - **Enhanced maintainability**: Smaller, focused modules with clear responsibilities
+
+### Phase 1.13 Highlights
+- **Salesforce ID canonicalization**: All IDs converted to 18-char canonical form for consistency
+- **Type safety improvements**: Comprehensive MyPy type annotations across all modules
+- **Import hygiene**: Standardized all imports to absolute paths, eliminated module path conflicts
+- **Code quality enforcement**: Strict QA gates (Black/Ruff/MyPy/PyTest) with zero tolerance for errors
+
+### Phase 1.13.7 Highlights
+- **Zero MyPy errors**: Complete type safety across entire codebase (33 source files)
+- **Pandas typing fixes**: Resolved DataFrame indexing issues, boolean masking, arithmetic operations
+- **Enhanced test coverage**: All 128 tests passing with comprehensive type annotations
+- **Strict QA gates**: Black, Ruff, MyPy, and PyTest all green with zero errors
+- **Import standardization**: All imports use absolute paths rooted at `src`
+- **Runtime preservation**: All improvements maintain identical runtime behavior
+
+## Performance Profiling
+
+The pipeline includes comprehensive performance profiling utilities to monitor memory usage, timing, and detect performance regressions.
+
+### Memory Tracking
+Track memory usage across pipeline stages with automatic peak detection:
+```python
+from src.utils.perf_utils import track_memory_peak, log_memory_usage
+
+# Track peak memory during a stage
+with track_memory_peak("my_stage", logger):
+    # Your code here
+    pass
+
+# Log current memory usage
+log_memory_usage("checkpoint", logger)
+```
+
+### Stage Timing
+Automatically time pipeline stages with memory delta tracking:
+```python
+from src.utils.perf_utils import time_stage
+
+# Time a stage with automatic logging
+with time_stage("my_stage", logger):
+    # Your code here
+    pass
+```
+
+### Performance Regression Detection
+Compare current performance against baseline to detect regressions:
+```python
+from src.utils.perf_utils import (
+    save_performance_baseline,
+    detect_performance_regression
+)
+
+# Save baseline performance
+baseline_data = {"time": 100.0, "memory": 50.0}
+save_performance_baseline(baseline_data, "baseline.json")
+
+# Detect regressions (10% threshold)
+current_metrics = {"time": 120.0, "memory": 60.0}
+is_regression = detect_performance_regression(
+    "baseline.json", current_metrics, threshold=0.1
+)
+```
+
+### Pipeline Integration
+Performance tracking is automatically integrated into all major pipeline stages:
+- **Candidate Generation**: Memory and timing for pair generation
+- **Grouping**: Peak memory tracking for group creation
+- **Survivorship**: Performance monitoring for primary selection
+- **Disposition**: Timing for classification processing
+
+### Performance Summary
+The pipeline automatically logs performance summaries including:
+- Final memory usage (RSS and VMS)
+- Stage-by-stage timing and memory deltas
+- Peak memory usage during heavy operations
+
+---
 
 ## License
 MIT License - see LICENSE file for details.

@@ -47,3 +47,16 @@ htmlcov/
 
 # Local review snapshots
 company_junction_phase1.*_review/
+
+# Build & packaging artifacts
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+
+# Cursor prompt drafts
+prompts/*.md

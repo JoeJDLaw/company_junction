@@ -16,7 +16,7 @@ import logging
 import json
 import subprocess
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import os
 from datetime import datetime
 
@@ -24,6 +24,12 @@ from datetime import datetime
 from src.normalize import normalize_dataframe, excel_serial_to_datetime
 from src.similarity import pair_scores, save_candidate_pairs, get_stop_tokens
 from src.grouping import create_groups_with_edge_gating
+from src.utils.mini_dag import MiniDAG
+from src.utils.perf_utils import (
+    time_stage,
+    track_memory_peak,
+    log_performance_summary,
+)
 
 # Import ID utilities for Salesforce ID canonicalization
 try:
@@ -273,7 +279,16 @@ def validate_required_columns(df: pd.DataFrame) -> bool:
     return True
 
 
-def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
+def run_pipeline(
+    input_path: str,
+    output_dir: str,
+    config_path: str,
+    enable_progress: bool = False,
+    resume_from: Optional[str] = None,
+    no_resume: bool = False,
+    force: bool = False,
+    state_path: str = "data/interim/pipeline_state.json",
+) -> None:
     """
     Run the complete deduplication pipeline.
 
@@ -295,14 +310,172 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
     perf_tracker = PerformanceTracker()
     perf_tracker.start_run(settings)
 
+    # Initialize MiniDAG for stage tracking
+    dag = MiniDAG(Path(state_path))
+
+    # Register pipeline stages
+    stages = [
+        "normalization",
+        "filtering",
+        "candidate_generation",
+        "grouping",
+        "survivorship",
+        "disposition",
+        "alias_matching",
+        "final_output",
+    ]
+
+    for stage in stages:
+        dag.register(stage)
+
     # Ensure output directories exist
     ensure_directory_exists(output_dir)
     ensure_directory_exists("data/interim")
+
+    # Smart auto-resume logic with enhanced logging
+    if resume_from is None:
+        # Auto-detect resume point
+        auto_resume_stage = dag.get_smart_resume_stage()
+        if auto_resume_stage:
+            # Validate input hash invariance
+            input_path_obj = Path(input_path)
+            config_path_obj = Path(config_path)
+
+            if dag._validate_input_invariance(input_path_obj, config_path_obj):
+                resume_from = auto_resume_stage
+                logger.info(
+                    f"Auto-resume decision: resume_from='{resume_from}' | last_completed='{dag.get_last_completed_stage()}' | input_hash=PASS | reason=SMART_DETECT"
+                )
+            else:
+                logger.info(
+                    "Auto-resume decision: input_hash=FAIL - forcing full run due to input/config changes | reason=HASH_MISMATCH"
+                )
+                resume_from = None
+        else:
+            logger.info(
+                "Auto-resume decision: no previous run found - starting fresh | reason=NO_PREVIOUS_RUN"
+            )
+            resume_from = None
+    else:
+        # Manual resume-from specified - validate input hash
+        input_path_obj = Path(input_path)
+        config_path_obj = Path(config_path)
+
+        if not dag._validate_input_invariance(input_path_obj, config_path_obj):
+            if force:  # Use force flag instead of enable_progress
+                logger.warning(
+                    "Input hash mismatch detected but --force specified - proceeding with resume | reason=FORCE_OVERRIDE"
+                )
+            else:
+                logger.error(
+                    "Input hash mismatch detected. Use --force to override or run without --resume-from | reason=HASH_MISMATCH_NO_FORCE"
+                )
+                sys.exit(1)
+        else:
+            logger.info(
+                f"Manual resume decision: resume_from='{resume_from}' | input_hash=PASS | reason=MANUAL_OVERRIDE"
+            )
+
+    # Update state metadata with current run
+    cmdline = f"python src/cleaning.py --input {input_path} --outdir {output_dir} --config {config_path}"
+    dag._update_state_metadata(Path(input_path), Path(config_path), cmdline)
 
     try:
         # Step 1: Load and validate data
         logger.info(f"Loading data from {input_path}")
         df = load_salesforce_data(input_path)
+
+        # If resuming from a later stage, load intermediate data
+        if resume_from and resume_from != "normalization":
+            logger.info(f"Resuming from stage: {resume_from}")
+            interim_format = settings.get("io", {}).get("interim_format", "parquet")
+
+            # Load normalized data
+            normalized_path = f"data/interim/accounts_normalized.{interim_format}"
+            if Path(normalized_path).exists():
+                logger.info(f"Loading normalized data from {normalized_path}")
+                if interim_format == "parquet":
+                    df_norm = pd.read_parquet(normalized_path)
+                else:
+                    df_norm = pd.read_csv(normalized_path)
+                logger.info(f"Loaded {len(df_norm)} normalized records")
+            else:
+                raise FileNotFoundError(
+                    f"Required intermediate file not found: {normalized_path}"
+                )
+
+            # Load candidate pairs if needed
+            if resume_from in [
+                "grouping",
+                "survivorship",
+                "disposition",
+                "alias_matching",
+                "final_output",
+            ]:
+                pairs_path = f"data/interim/candidate_pairs.{interim_format}"
+                if Path(pairs_path).exists():
+                    logger.info(f"Loading candidate pairs from {pairs_path}")
+                    pairs_df = pd.read_parquet(pairs_path)
+                    logger.info(f"Loaded {len(pairs_df)} candidate pairs")
+                else:
+                    raise FileNotFoundError(
+                        f"Required intermediate file not found: {pairs_path}"
+                    )
+
+            # Load groups if needed
+            if resume_from in [
+                "survivorship",
+                "disposition",
+                "alias_matching",
+                "final_output",
+            ]:
+                groups_path = f"data/interim/groups.{interim_format}"
+                if Path(groups_path).exists():
+                    logger.info(f"Loading groups from {groups_path}")
+                    df_groups = pd.read_parquet(groups_path)
+                    logger.info(f"Loaded {len(df_groups)} group records")
+                else:
+                    raise FileNotFoundError(
+                        f"Required intermediate file not found: {groups_path}"
+                    )
+
+            # Load survivorship results if needed
+            if resume_from in ["disposition", "alias_matching", "final_output"]:
+                survivorship_path = f"data/interim/survivorship.{interim_format}"
+                if Path(survivorship_path).exists():
+                    logger.info(
+                        f"Loading survivorship results from {survivorship_path}"
+                    )
+                    df_primary = pd.read_parquet(survivorship_path)
+                    logger.info(f"Loaded {len(df_primary)} survivorship records")
+                else:
+                    raise FileNotFoundError(
+                        f"Required intermediate file not found: {survivorship_path}"
+                    )
+
+            # Load dispositions if needed
+            if resume_from in ["alias_matching", "final_output"]:
+                dispositions_path = f"data/interim/dispositions.{interim_format}"
+                if Path(dispositions_path).exists():
+                    logger.info(f"Loading dispositions from {dispositions_path}")
+                    df_dispositions = pd.read_parquet(dispositions_path)
+                    logger.info(f"Loaded {len(df_dispositions)} disposition records")
+                else:
+                    raise FileNotFoundError(
+                        f"Required intermediate file not found: {dispositions_path}"
+                    )
+
+            # Load alias matches if needed
+            if resume_from == "final_output":
+                alias_matches_path = f"data/interim/alias_matches.{interim_format}"
+                if Path(alias_matches_path).exists():
+                    logger.info(f"Loading alias matches from {alias_matches_path}")
+                    df_alias_matches = pd.read_parquet(alias_matches_path)
+                    logger.info(f"Loaded {len(df_alias_matches)} alias matches")
+                else:
+                    raise FileNotFoundError(
+                        f"Required intermediate file not found: {alias_matches_path}"
+                    )
 
         # Validate required columns
         validate_required_columns(df)
@@ -339,30 +512,43 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
         logger.info(f"Loaded {len(df)} records")
 
         # Step 2: Normalize data
-        logger.info("Normalizing company names")
-        name_column = "account_name"  # Use standardized column name
-        with log_perf("normalization"):
-            df_norm = normalize_dataframe(df, name_column)
+        if not resume_from or resume_from == "normalization":
+            logger.info("[stage:start] normalization")
+            dag.start("normalization")
 
-            # Add name_core_tokens column for edge-gating
-            import json
+            logger.info("Normalizing company names")
+            name_column = "account_name"  # Use standardized column name
+            with log_perf("normalization"):
+                df_norm = normalize_dataframe(df, name_column)
 
-            def create_tokens(x: Any) -> str:
-                if pd.notna(x):
-                    x_str = str(x)
-                    if x_str.strip():
-                        return json.dumps(x_str.split())
-                return "[]"
+                # Add name_core_tokens column for edge-gating
+                import json
 
-            df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
+                def create_tokens(x: Any) -> str:
+                    if pd.notna(x):
+                        x_str = str(x)
+                        if x_str.strip():
+                            return json.dumps(x_str.split())
+                    return "[]"
 
-            perf_tracker.record_timing(
-                "clean_normalize", 0.0
-            )  # Will be updated by log_perf
+                df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
+
+                perf_tracker.record_timing(
+                    "clean_normalize", 0.0
+                )  # Will be updated by log_perf
+
+            dag.complete("normalization")
+            logger.info("[stage:end] normalization")
+        elif resume_from and resume_from != "normalization":
+            logger.info("Skipping normalization stage (resuming from {resume_from})")
 
         # Step 2.5: Filter out problematic records for similarity analysis
-        logger.info("Filtering data for similarity analysis")
-        initial_count = len(df_norm)
+        if not resume_from or resume_from == "filtering":
+            logger.info("[stage:start] filtering")
+            dag.start("filtering")
+
+            logger.info("Filtering data for similarity analysis")
+            initial_count = len(df_norm)
 
         # Filter out records with empty or problematic name_core
         df_norm = df_norm[df_norm["name_core"].str.strip() != ""].copy()
@@ -399,21 +585,29 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
                 "No valid company names found after filtering. Check your data quality."
             )
 
-        # Save normalized data
+        # Save filtered data
         interim_format = settings.get("io", {}).get("interim_format", "parquet")
-        normalized_path = f"data/interim/accounts_normalized.{interim_format}"
+        filtered_path = f"data/interim/accounts_filtered.{interim_format}"
         if interim_format == "parquet":
-            df_norm.to_parquet(normalized_path, index=False)
+            df_norm.to_parquet(filtered_path, index=False)
         else:
-            df_norm.to_csv(normalized_path, index=False)
-        logger.info(f"Saved normalized data to {normalized_path}")
+            df_norm.to_csv(filtered_path, index=False)
+        logger.info(f"Saved filtered data to {filtered_path}")
+
+        dag.complete("filtering")
+        logger.info("[stage:end] filtering")
 
         # Step 3: Generate candidate pairs
-        logger.info("Generating candidate pairs")
-        with log_perf("candidate_generation"):
-            pairs_df = pair_scores(df_norm, settings)
-            perf_tracker.record_timing("blocking", 0.0)  # Blocking phase
-            perf_tracker.record_timing("scoring", 0.0)  # Scoring phase
+        if not resume_from or resume_from == "candidate_generation":
+            logger.info("[stage:start] candidate_generation")
+            dag.start("candidate_generation")
+
+            logger.info("Generating candidate pairs")
+            with time_stage("candidate_generation", logger):
+                with track_memory_peak("candidate_generation", logger):
+                    pairs_df = pair_scores(df_norm, settings, enable_progress)
+                    perf_tracker.record_timing("blocking", 0.0)  # Blocking phase
+                    perf_tracker.record_timing("scoring", 0.0)  # Scoring phase
 
         # Apply memory optimization to pairs
         pairs_df = optimize_dataframe_memory(pairs_df, "candidate_pairs")
@@ -430,22 +624,34 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
         pairs_path = f"data/interim/candidate_pairs.{interim_format}"
         save_candidate_pairs(pairs_df, pairs_path)
 
+        dag.complete("candidate_generation")
+        logger.info("[stage:end] candidate_generation")
+
         # Step 4: Build groups with edge-gating
-        logger.info("Building duplicate groups with edge-gating")
+        if not resume_from or resume_from == "grouping":
+            logger.info("[stage:start] grouping")
+            dag.start("grouping")
+
+            logger.info("Building duplicate groups with edge-gating")
 
         # Get stop tokens for edge-gating
         stop_tokens = get_stop_tokens()
         logger.info(f"Stop tokens: {stop_tokens}")
 
-        with log_perf("grouping"):
-            logger.info("About to call create_groups_with_edge_gating")
-            df_groups = create_groups_with_edge_gating(
-                df_norm, pairs_df, settings, stop_tokens
-            )
-            logger.info(f"create_groups_with_edge_gating returned: {type(df_groups)}")
-            if df_groups is not None:
-                logger.info(f"df_groups shape: {df_groups.shape}")
-            perf_tracker.record_timing("grouping", 0.0)  # Will be updated by log_perf
+        with time_stage("grouping", logger):
+            with track_memory_peak("grouping", logger):
+                logger.info("About to call create_groups_with_edge_gating")
+                df_groups = create_groups_with_edge_gating(
+                    df_norm, pairs_df, settings, stop_tokens, enable_progress
+                )
+                logger.info(
+                    f"create_groups_with_edge_gating returned: {type(df_groups)}"
+                )
+                if df_groups is not None:
+                    logger.info(f"df_groups shape: {df_groups.shape}")
+                perf_tracker.record_timing(
+                    "grouping", 0.0
+                )  # Will be updated by log_perf
 
         # Apply memory optimization to groups
         df_groups = optimize_dataframe_memory(df_groups, "groups")
@@ -455,17 +661,27 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
         df_groups.to_parquet(groups_path, index=False)
         logger.info(f"Saved groups to {groups_path}")
 
+        dag.complete("grouping")
+        logger.info("[stage:end] grouping")
+
         # Step 5: Select primary records
-        logger.info("Selecting primary records")
+        if not resume_from or resume_from == "survivorship":
+            logger.info("[stage:start] survivorship")
+            dag.start("survivorship")
+
+            logger.info("Selecting primary records")
         logger.info(f"df_groups shape: {df_groups.shape}")
         logger.info(f"df_groups columns: {list(df_groups.columns)}")
         logger.info(f"df_groups sample: {df_groups.head(2).to_dict()}")
 
-        with log_perf("survivorship"):
-            df_primary = select_primary_records(df_groups, relationship_ranks, settings)
-            perf_tracker.record_timing(
-                "survivorship", 0.0
-            )  # Will be updated by log_perf
+        with time_stage("survivorship", logger):
+            with track_memory_peak("survivorship", logger):
+                df_primary = select_primary_records(
+                    df_groups, relationship_ranks, settings, enable_progress
+                )
+                perf_tracker.record_timing(
+                    "survivorship", 0.0
+                )  # Will be updated by log_perf
 
         # Generate merge preview
         df_primary = generate_merge_preview(df_primary)
@@ -474,20 +690,35 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
         survivorship_path = f"data/interim/survivorship.{interim_format}"
         save_survivorship_results(df_primary, survivorship_path)
 
+        dag.complete("survivorship")
+        logger.info("[stage:end] survivorship")
+
         # Step 6: Apply dispositions
-        logger.info("Applying disposition classification")
-        with log_perf("disposition"):
-            df_dispositions = apply_dispositions(df_primary, settings)
-            perf_tracker.record_timing(
-                "disposition", 0.0
-            )  # Will be updated by log_perf
+        if not resume_from or resume_from == "disposition":
+            logger.info("[stage:start] disposition")
+            dag.start("disposition")
+
+            logger.info("Applying disposition classification")
+        with time_stage("disposition", logger):
+            with track_memory_peak("disposition", logger):
+                df_dispositions = apply_dispositions(df_primary, settings)
+                perf_tracker.record_timing(
+                    "disposition", 0.0
+                )  # Will be updated by log_perf
 
         # Save dispositions
         dispositions_path = f"data/interim/dispositions.{interim_format}"
         save_dispositions(df_dispositions, dispositions_path)
 
+        dag.complete("disposition")
+        logger.info("[stage:end] disposition")
+
         # Step 7: Compute alias matches and cross-references
-        logger.info("Computing alias matches and cross-references")
+        if not resume_from or resume_from == "alias_matching":
+            logger.info("[stage:start] alias_matching")
+            dag.start("alias_matching")
+
+            logger.info("Computing alias matches and cross-references")
         alias_matches_path = f"data/interim/alias_matches.{interim_format}"
         with log_perf("alias_matching"):
             result = compute_alias_matches(df_norm, df_groups, settings)
@@ -496,11 +727,18 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
 
         save_alias_matches(df_alias_matches, alias_matches_path)
 
+        dag.complete("alias_matching")
+        logger.info("[stage:end] alias_matching")
+
         # Add alias cross-references to dispositions
         df_dispositions = create_alias_cross_refs(df_dispositions, df_alias_matches)
 
         # Step 8: Create final review-ready output with explain metadata
-        logger.info("Creating review-ready output with explain metadata")
+        if not resume_from or resume_from == "final_output":
+            logger.info("[stage:start] final_output")
+            dag.start("final_output")
+
+            logger.info("Creating review-ready output with explain metadata")
 
         # Add explain metadata to final output
         df_final = df_dispositions.copy()
@@ -559,13 +797,22 @@ def run_pipeline(input_path: str, output_dir: str, config_path: str) -> None:
         perf_tracker.end_run()
         perf_tracker.record_timing("export_ui", 0.0)  # Export phase
 
+        # Log performance summary
+        log_performance_summary(logger)
+
         # Create audit snapshot
         _create_audit_snapshot(settings, alias_stats, output_dir)
 
         # Create comprehensive performance summary
-        _create_performance_summary_enhanced(
-            perf_tracker, df_norm, pairs_df, df_groups, df_final, output_dir
-        )
+        try:
+            _create_performance_summary_enhanced(
+                perf_tracker, df_norm, pairs_df, df_groups, df_final, output_dir
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create enhanced performance summary: {e}")
+
+        dag.complete("final_output")
+        logger.info("[stage:end] final_output")
 
     except Exception:
         logger.exception("Pipeline failed with exception:")
@@ -582,6 +829,25 @@ def main() -> None:
     parser.add_argument(
         "--config", default="config/settings.yaml", help="Configuration file path"
     )
+    parser.add_argument(
+        "--progress", action="store_true", help="Enable tqdm progress bars"
+    )
+    parser.add_argument("--resume-from", help="Resume pipeline from specific stage")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force resume even if input/config hash mismatch",
+    )
+    parser.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Force a full pipeline run, ignoring resume",
+    )
+    parser.add_argument(
+        "--state-path",
+        default="data/interim/pipeline_state.json",
+        help="Path to pipeline state file",
+    )
 
     args = parser.parse_args()
 
@@ -592,7 +858,16 @@ def main() -> None:
 
     # Run pipeline
     try:
-        run_pipeline(args.input, args.outdir, args.config)
+        run_pipeline(
+            args.input,
+            args.outdir,
+            args.config,
+            args.progress,
+            args.resume_from,
+            args.force,
+            args.no_resume,
+            args.state_path,
+        )
     except Exception:
         sys.exit(87)  # Exit with code 87 after full traceback has been printed
 

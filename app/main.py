@@ -48,50 +48,55 @@ streamlit run app/main.py --server.headless true --server.port 8501
 
 import streamlit as st
 import pandas as pd
-import sys
-from pathlib import Path
 import json
 import os
+from pathlib import Path
 from typing import Optional, Dict, List, Any
-
-# Add src directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.utils.logging_utils import setup_logging
 
 
 def load_review_data() -> Optional[pd.DataFrame]:
-    """Load review-ready data from pipeline output."""
-    # Try Parquet first (native types for alias fields)
-    parquet_path = "data/processed/review_ready.parquet"
-    csv_path = "data/processed/review_ready.csv"
+    """Load review-ready data from pipeline output with enhanced error handling."""
+    try:
+        with st.spinner("Loading review data..."):
+            # Try Parquet first (native types for alias fields)
+            parquet_path = "data/processed/review_ready.parquet"
+            csv_path = "data/processed/review_ready.csv"
 
-    if os.path.exists(parquet_path):
-        try:
-            df = pd.read_parquet(parquet_path)
-            st.success(f"Loaded {len(df)} records from Parquet file")
-            return df
-        except Exception as e:
-            st.warning(f"Parquet load failed: {e}, falling back to CSV")
+            if os.path.exists(parquet_path):
+                try:
+                    df = pd.read_parquet(parquet_path)
+                    st.success(f"Loaded {len(df)} records from Parquet file")
+                    return df
+                except Exception as e:
+                    st.warning(f"Parquet load failed: {e}, falling back to CSV")
 
-    # Fallback to CSV
-    if os.path.exists(csv_path):
-        try:
-            df = pd.read_csv(csv_path)
+            # Fallback to CSV
+            if os.path.exists(csv_path):
+                try:
+                    df = pd.read_csv(csv_path)
 
-            # Parse alias_cross_refs if it exists (CSV stores as string)
-            if "alias_cross_refs" in df.columns:
-                df["alias_cross_refs"] = df["alias_cross_refs"].apply(
-                    parse_alias_cross_refs
-                )
+                    # Parse alias_cross_refs if it exists (CSV stores as string)
+                    if "alias_cross_refs" in df.columns:
+                        df["alias_cross_refs"] = df["alias_cross_refs"].apply(
+                            parse_alias_cross_refs
+                        )
 
-            st.success(f"Loaded {len(df)} records from CSV file")
-            return df
-        except Exception as e:
-            st.error(f"Error loading review data: {e}")
+                    st.success(f"Loaded {len(df)} records from CSV file")
+                    return df
+                except Exception as e:
+                    st.error(f"Error loading review data: {e}")
+                    return None
+
+            # No files found
+            st.error("No review data files found")
+            st.info("Please run the pipeline first to generate review data.")
             return None
-
-    return None
+    except Exception as e:
+        st.error(f"Error loading review data: {str(e)}")
+        st.info("Please ensure the pipeline has completed successfully.")
+        return None
 
 
 def parse_alias_cross_refs(cross_refs_str: Any) -> List[Any]:
@@ -297,7 +302,7 @@ def main() -> None:
 
     # Min score filter
     min_score = st.sidebar.slider(
-        "Minimum Score to Primary", min_value=0.0, max_value=100.0, value=0.0, step=1.0
+        "Minimum Edge to Primary", min_value=0.0, max_value=100.0, value=0.0, step=1.0
     )
 
     # Disposition filter
@@ -403,7 +408,7 @@ def main() -> None:
     filtered_df = df.copy()
 
     if min_score > 0:
-        filtered_df = filtered_df[filtered_df["score_to_primary"] >= min_score]
+        filtered_df = filtered_df[filtered_df["weakest_edge_to_primary"] >= min_score]
 
     if selected_dispositions:
         filtered_df = filtered_df[
@@ -459,7 +464,8 @@ def main() -> None:
         st.metric("Primary Records", filtered_df["is_primary"].sum())
     with col4:
         st.metric(
-            "Avg Score to Primary", f"{filtered_df['score_to_primary'].mean():.1f}"
+            "Avg Edge to Primary",
+            f"{filtered_df['weakest_edge_to_primary'].mean():.1f}",
         )
 
     # Display disposition summary
@@ -517,14 +523,14 @@ def main() -> None:
     group_stats = []
     for group_id in filtered_df["group_id"].unique():
         group_data = filtered_df[filtered_df["group_id"] == group_id]
-        max_score = group_data["score_to_primary"].max()
+        max_score = group_data["weakest_edge_to_primary"].max()
         # Get primary record's account name for sorting
         primary_record = (
             group_data[group_data["is_primary"]].iloc[0]
             if group_data["is_primary"].any()
             else group_data.iloc[0]
         )
-        primary_name = primary_record.get("Account Name", "")
+        primary_name = primary_record.get("account_name", "")
         group_stats.append(
             {
                 "group_id": group_id,
@@ -608,7 +614,7 @@ def main() -> None:
         )
 
         with st.expander(
-            f"Group {group_id}: {primary_record['Account Name']} ({len(group_data)} records)"
+            f"Group {group_id}: {primary_record['account_name']} ({len(group_data)} records)"
         ):
             # Group Info at the top
             col1, col2, col3 = st.columns([2, 1, 1])
@@ -623,7 +629,7 @@ def main() -> None:
 
                 # Blacklist hits
                 blacklist_hits = (
-                    group_data["Account Name"]
+                    group_data["account_name"]
                     .str.lower()
                     .str.contains(
                         "|".join(
@@ -690,23 +696,23 @@ def main() -> None:
             # Display group table below
             st.write("**Records:**")
             display_cols = [
-                "Account Name",
-                "Account ID",
-                "Relationship",
+                "account_name",
+                "account_id",
+                "relationship",
                 "Disposition",
                 "is_primary",
-                "score_to_primary",
+                "weakest_edge_to_primary",
                 "suffix_class",
             ]
             display_cols = [col for col in display_cols if col in group_data.columns]
 
             # Configure column display for better readability
             column_config = {
-                "Account Name": st.column_config.TextColumn(
+                "account_name": st.column_config.TextColumn(
                     "Account Name", width="large", help="Company name", max_chars=None
                 ),
-                "Account ID": st.column_config.TextColumn("Account ID", width="medium"),
-                "Relationship": st.column_config.TextColumn(
+                "account_id": st.column_config.TextColumn("Account ID", width="medium"),
+                "relationship": st.column_config.TextColumn(
                     "Relationship", width="medium"
                 ),
                 "Disposition": st.column_config.SelectboxColumn(
@@ -715,8 +721,8 @@ def main() -> None:
                     options=["Keep", "Update", "Delete", "Verify"],
                 ),
                 "is_primary": st.column_config.CheckboxColumn("Primary", width="small"),
-                "score_to_primary": st.column_config.NumberColumn(
-                    "Score", width="small", format="%.1f"
+                "weakest_edge_to_primary": st.column_config.NumberColumn(
+                    "Edge Score", width="small", format="%.1f"
                 ),
                 "suffix_class": st.column_config.TextColumn("Suffix", width="small"),
             }
@@ -752,14 +758,14 @@ def main() -> None:
 
                     if explain_cols:
                         explain_data = group_data[
-                            ["Account Name"] + explain_cols
+                            ["account_name"] + explain_cols
                         ].copy()
                         st.dataframe(
                             explain_data,
                             width="stretch",
                             hide_index=True,
                             column_config={
-                                "Account Name": st.column_config.TextColumn(
+                                "account_name": st.column_config.TextColumn(
                                     "Account Name", width="large"
                                 ),
                                 "group_join_reason": st.column_config.TextColumn(
