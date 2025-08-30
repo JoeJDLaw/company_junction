@@ -26,12 +26,76 @@
 - Validate data at each step of the pipeline
 - Do **not** commit large data. Only small samples under `tests/fixtures/`.
 
+
 ## Development Workflow
 - Install from `requirements.txt` and install package in development mode: `pip install -e .`
 - All new features must include at least one test in `tests/`.
 - Update `CHANGELOG.md` for any significant changes
 - Keep dependencies minimal and well-documented
 - Document any configuration requirements
+
+## Environment & Execution (macOS + .venv is mandatory)
+
+- **Always activate the project virtual environment before any command** (tests, type checks, running the pipeline, Streamlit, or ad‑hoc scripts). Do **not** install or run against the global interpreter.
+- **Activation (bash/zsh):**
+  - `source .venv/bin/activate`
+  - Verify with: `which python` ⇒ should resolve inside `.venv/`
+  - Install deps with: `python -m pip install -r requirements.txt`
+- **Never** run `pip install` without the `python -m` prefix and **never** outside the venv.
+- **Do not create or publish a distribution package** as part of any phase; this repository is executed directly via the venv.
+
+### macOS hardware assumptions (for sensible defaults)
+- Target machine: Apple Silicon (Apple M‑series), SSD storage, **14 logical cores**, **24 GB RAM** (auto-detected via `os.cpu_count()` and `psutil` where available).
+- **Parallelism guideline** (when adding concurrency):
+  - Default workers: `min(os.cpu_count(), max(1, os.cpu_count()-2))`
+  - Memory guard: if `psutil` available, keep estimated **RSS per worker × workers ≤ 0.75 × total RAM**
+  - Provide a CLI/config override: `--workers N`, `--no-parallel` to force single‑process.
+  - Ensure all parallel code **degrades to sequential** if resources are constrained or library not available.
+
+### Project path reference (source of truth)
+- **Pipeline entrypoint:** `src/cleaning.py`
+- **MiniDAG / Smart resume:** `src/utils/mini_dag.py`
+- **Performance utilities:** `src/utils/perf_utils.py`
+- **Progress logger:** `src/utils/progress.py`
+- **Similarity / Grouping / Survivorship / Disposition / Aliases:**
+  - `src/similarity.py`, `src/grouping.py`, `src/survivorship.py`, `src/disposition.py`, `src/alias_matching.py`
+- **Streamlit app:** `app/main.py`
+- **Config & ranks:** `config/settings.yaml`, `config/relationship_ranks.csv`
+- **Interim & processed artifacts:** under `data/interim/` and `data/processed/`
+
+### Commands (always inside .venv)
+- **Run pipeline:**
+  - `python src/cleaning.py --input data/raw/company_junction_range_01.csv --outdir data/processed --config config/settings.yaml`
+- **Run Streamlit:**
+  - `streamlit run app/main.py`
+- **QA gates:**
+  - `black --check .`
+  - `ruff check .`
+  - `mypy --config-file mypy.ini src tests app`
+  - `pytest -q`
+- **Import sanity (tests use absolute imports):**
+  - `pytest tests/test_imports.py -q`
+
+### Indexing & Cursor behavior
+- Respect `.cursorignore` (authoritative for Cursor indexing). Current entries include:
+  - `data/interim/`, `data/raw/company_junction_range_01.csv`, `*.tar.gz`, `.venv/`
+- Do not propose edits that rely on files excluded from indexing.
+- When searching the codebase, prefer the **paths listed above** to avoid scanning build artefacts or caches.
+
+### Caching & artifact retention (Phase 1.16+ preparation)
+- **Do not overwrite prior run outputs by default.** When adding caching or per-run outputs:
+  - Use run-scoped directories: `data/interim/{run_id}/...` and `data/processed/{run_id}/...`
+  - Maintain a stable `latest` symlink or copy for the most recent successful run
+  - **MiniDAG state** should carry `run_id`, `input_hash`, `config_hash`, and `dag_version`
+  - Provide `--keep-runs N` (GC policy) and `--run-id <str>` overrides
+- All caching must preserve **artifact invariance** for fixed inputs/configs and pass all QA gates.
+
+### Prohibited actions
+- Do **not**:
+  - Install requirements globally or modify the system Python
+  - Introduce packaging/`setup.py` build & publish steps
+  - Change CLI flags or defaults without updating README.md and CHANGELOG.md
+  - Commit large datasets or intermediate artefacts (honor `.gitignore`)
 
 ## Critical Review
 - Be critical of prompts: if unclear, provide feedback before executing
@@ -278,18 +342,16 @@
 - Survivorship tie-breakers use canonical `account_id` for lexicographic comparison (after relationship rank and created date). Never compare using `account_id_src`.
 - Disposition logic and UI explanations should reference canonical ID, with `account_id_src` shown as original where helpful.
 
-### QA Gates: Black / Ruff / MyPy (must run at phase end)
 - At the end of every Phase prompt/PR, run and require **all to pass**:
   - `black --check .`
   - `ruff .`
-  - `mypy --config-file mypy.ini .`
+  - `mypy --config-file mypy.ini src tests app`
   - `pytest -q`
 - **MyPy configuration** (in `mypy.ini` or `pyproject.toml`):
   - `explicit_package_bases = True`, `namespace_packages = True`, `ignore_missing_imports = False`
   - Prefer **absolute imports** (`from src...`) to avoid module path conflicts (e.g., `dtypes_map` vs `src.dtypes_map`).
 - If third-party stubs are needed, add to `requirements-dev.txt` (e.g., `pandas-stubs`, `types-PyYAML`). "Stubs" supply type info only; they don't affect runtime.
 
-### Logging, Perf, and Artifacts
 - Use `log_perf` (from `src/utils/perf_utils.py`) around each major stage.
 - Keep run summaries clear: distinguish **hard duplicate rows removed** (same canonical `account_id`) vs **deduplication groups** (different `account_id`s believed to be same company).
 - Artifacts:
@@ -297,6 +359,8 @@
   - `data/processed/review_ready.*` (final for UI)
   - `data/processed/review_meta.json` (metadata)
   - `data/interim/block_top_tokens.csv` (blocking stats)
+  - Performance profiling hooks must **not** change outputs; they are strictly observational.
+  - Parallel execution must be **opt-in** via config/CLI and **auto-cap** workers per the Environment & Execution rules above.
 
 ### Edit Hygiene
 - Rules edits must be **idempotent**: if a rule exists, update/merge; do not duplicate.
@@ -484,3 +548,82 @@ The following stages are tracked and support resumability:
 - **Context managers**: Use `track_memory_peak()` for peak memory detection
 - **Baseline management**: Save/load performance baselines for regression testing
 - **Graceful fallback**: Handle missing psutil dependency with zero-value fallback
+
+---
+
+## Phase 1.16 Performance & Caching Standards
+
+### Parallel Execution Infrastructure
+- **Joblib integration**: Use `src/utils/parallel_utils.py` for parallel execution with joblib
+- **Backend support**: Default to loky (processes), fallback to threading if processes unavailable
+- **Worker optimization**: Automatic worker count calculation based on CPU and memory constraints
+- **Resource monitoring**: Use `src/utils/resource_monitor.py` for system resource tracking
+- **Deterministic outputs**: Ensure identical results regardless of parallelization
+
+### Parallel Execution Targets
+- **Candidate generation**: Parallelize by blocking key with deterministic chunking
+- **Similarity scoring**: Parallelize pair scoring in batches with configurable chunk sizes
+- **Grouping**: Keep serial (Union-Find operations are inherently sequential)
+- **Other stages**: Evaluate parallelization potential based on embarrassingly parallel operations
+
+### Resource Guardrails
+- **Memory cap**: Limit total memory usage to 75% of available RAM across all workers
+- **Worker count formula**: `min(os.cpu_count(), max(1, os.cpu_count()-2))` with memory-based reduction
+- **Small input guard**: Auto-switch to sequential for datasets < 10k records (configurable)
+- **Disk space monitoring**: Warn if free space < 20% and respect `--keep-runs` pruning
+- **Graceful fallback**: Automatic fallback to sequential execution on parallel failures
+
+### Versioned Run Caching
+- **Run ID format**: `{input_hash[:8]}_{config_hash[:8]}_{YYYYMMDDHHMMSS}`
+- **Cache directories**: `data/interim/{run_id}/` and `data/processed/{run_id}/`
+- **Run index**: `data/run_index.json` with metadata and status tracking
+- **Latest pointer**: Symlink `data/processed/latest` and JSON backup `data/processed/latest.json`
+- **Pruning policy**: Keep last N completed runs (default: 10) with `--keep-runs` override
+
+### CLI Flags & Configuration
+- **`--workers N`**: Number of parallel workers (None for auto-detection)
+- **`--no-parallel`**: Force sequential execution
+- **`--chunk-size N`**: Batch size for parallel processing (default: 1000)
+- **`--parallel-backend {loky,threading}`**: Backend choice (default: loky)
+- **`--run-id STR`**: Custom run ID (auto-generated if not specified)
+- **`--keep-runs N`**: Number of completed runs to keep (default: 10)
+- **Config precedence**: CLI flags take precedence over `config/settings.yaml` values
+
+### macOS Compatibility
+- **Spawn method**: Use spawn method for multiprocessing (required for macOS)
+- **Process isolation**: Ensure all imports and dependencies available in worker processes
+- **Fallback handling**: Graceful fallback to threading if process creation fails
+- **Resource monitoring**: psutil integration with graceful fallback when not available
+
+### Determinism Requirements
+- **Bit-for-bit identical**: Outputs must be identical regardless of worker count or backend
+- **Canonical sorting**: Sort all parallel outputs by (id_a, id_b, score) before writing
+- **No random sources**: Fix any random seeds and document deterministic behavior
+- **Test validation**: Add tests comparing `--workers 1` vs `--workers N` outputs
+
+### Cache Management
+- **Atomic operations**: Use temporary files and atomic replacement for cache updates
+- **Run isolation**: Complete isolation between runs to prevent cross-contamination
+- **Status tracking**: Track run status (running, complete, failed) in run index
+- **Cleanup policies**: Automatic cleanup of failed runs and old completed runs
+- **Latest pointer**: Maintain stable latest pointer for UI and downstream tools
+
+### Performance Optimization
+- **Memory efficiency**: Automatic worker count reduction based on available memory
+- **Chunk size tuning**: Configurable chunk sizes for optimal memory usage
+- **Progress tracking**: Maintain progress logging in parallel execution
+- **Error isolation**: Worker failures don't affect other workers
+- **Resource monitoring**: Real-time monitoring of CPU, memory, and disk usage
+
+### Testing Requirements
+- **Determinism tests**: Verify identical outputs across different parallel configurations
+- **Resource monitoring tests**: Test memory estimation and worker count optimization
+- **Cache management tests**: Test run ID generation, pruning, and latest pointer handling
+- **Error handling tests**: Test parallel execution failures and fallbacks
+- **macOS compatibility tests**: Test spawn method and process isolation
+
+### Documentation Standards
+- **README updates**: Document all new CLI flags and cache directory structure
+- **CHANGELOG updates**: Comprehensive documentation of performance improvements
+- **Usage examples**: Provide clear examples for parallel execution and run management
+- **macOS caveats**: Document multiprocessing limitations and fallback behavior

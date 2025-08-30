@@ -52,6 +52,23 @@ salesforce:
   max_retries: 3
   retry_delay: 5
 
+# Parallelism Configuration
+parallelism:
+  # Default number of workers (None for auto-detection)
+  workers: null
+  
+  # Backend to use ('loky' for processes, 'threading' for threads)
+  backend: "loky"
+  
+  # Chunk size for parallel processing
+  chunk_size: 1000
+  
+  # Threshold for auto-switching to sequential execution
+  small_input_threshold: 10000
+  
+  # Memory cap percentage (0.75 = 75% of total RAM)
+  memory_cap_percent: 75.0
+
 # Logging Configuration
 logging:
   level: "INFO"

@@ -60,17 +60,55 @@ def load_review_data() -> Optional[pd.DataFrame]:
     """Load review-ready data from pipeline output with enhanced error handling."""
     try:
         with st.spinner("Loading review data..."):
-            # Try Parquet first (native types for alias fields)
+            # Phase 1.16: Try to get latest run ID
+            from src.utils.cache_utils import get_latest_run_id
+
+            latest_run_id = get_latest_run_id()
+
+            if latest_run_id:
+                # Try latest run directory first
+                latest_parquet_path = (
+                    f"data/processed/{latest_run_id}/review_ready.parquet"
+                )
+                latest_csv_path = f"data/processed/{latest_run_id}/review_ready.csv"
+
+                if os.path.exists(latest_parquet_path):
+                    try:
+                        df = pd.read_parquet(latest_parquet_path)
+                        st.success(
+                            f"Loaded {len(df)} records from latest run ({latest_run_id})"
+                        )
+                        return df
+                    except Exception as e:
+                        st.warning(f"Latest run Parquet load failed: {e}, trying CSV")
+
+                if os.path.exists(latest_csv_path):
+                    try:
+                        df = pd.read_csv(latest_csv_path)
+                        if "alias_cross_refs" in df.columns:
+                            df["alias_cross_refs"] = df["alias_cross_refs"].apply(
+                                parse_alias_cross_refs
+                            )
+                        st.success(
+                            f"Loaded {len(df)} records from latest run ({latest_run_id})"
+                        )
+                        return df
+                    except Exception as e:
+                        st.warning(
+                            f"Latest run CSV load failed: {e}, falling back to legacy paths"
+                        )
+
+            # Fallback to legacy paths
             parquet_path = "data/processed/review_ready.parquet"
             csv_path = "data/processed/review_ready.csv"
 
             if os.path.exists(parquet_path):
                 try:
                     df = pd.read_parquet(parquet_path)
-                    st.success(f"Loaded {len(df)} records from Parquet file")
+                    st.success(f"Loaded {len(df)} records from legacy Parquet file")
                     return df
                 except Exception as e:
-                    st.warning(f"Parquet load failed: {e}, falling back to CSV")
+                    st.warning(f"Legacy Parquet load failed: {e}, falling back to CSV")
 
             # Fallback to CSV
             if os.path.exists(csv_path):
@@ -83,7 +121,7 @@ def load_review_data() -> Optional[pd.DataFrame]:
                             parse_alias_cross_refs
                         )
 
-                    st.success(f"Loaded {len(df)} records from CSV file")
+                    st.success(f"Loaded {len(df)} records from legacy CSV file")
                     return df
                 except Exception as e:
                     st.error(f"Error loading review data: {e}")

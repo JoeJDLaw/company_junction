@@ -17,3 +17,16 @@ def setup_logging(level: str = "INFO") -> None:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[logging.StreamHandler(), logging.FileHandler("pipeline.log")],
     )
+
+
+def get_logger(name: str) -> logging.Logger:
+    """
+    Get a logger instance for the specified module.
+
+    Args:
+        name: Logger name (typically __name__)
+
+    Returns:
+        Configured logger instance
+    """
+    return logging.getLogger(name)

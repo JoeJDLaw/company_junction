@@ -6,15 +6,17 @@ This module handles:
 - Similarity scoring using rapidfuzz
 - Composite score calculation with penalties
 - Suffix and numeric style matching
+- Parallel execution support
 """
 
 import pandas as pd
 from rapidfuzz import fuzz
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 import logging
 from itertools import combinations
 import re
 from src.utils.progress import ProgressLogger
+from src.utils.parallel_utils import ParallelExecutor, ensure_deterministic_order
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,11 @@ def get_stop_tokens() -> set:
 
 
 def pair_scores(
-    df_norm: pd.DataFrame, settings: Dict, enable_progress: bool = False
+    df_norm: pd.DataFrame,
+    settings: Dict,
+    enable_progress: bool = False,
+    parallel_executor: Optional[ParallelExecutor] = None,
+    interim_dir: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Generate candidate pairs and compute similarity scores.
@@ -38,6 +44,8 @@ def pair_scores(
     Args:
         df_norm: DataFrame with normalized name columns
         settings: Configuration settings
+        enable_progress: Enable progress logging
+        parallel_executor: Optional parallel executor for parallel processing
 
     Returns:
         DataFrame with candidate pairs and scores
@@ -49,55 +57,37 @@ def pair_scores(
     penalties = settings.get("similarity", {}).get("penalty", {})
 
     # Generate candidate pairs using blocking
-    candidate_pairs = _generate_candidate_pairs(df_norm, enable_progress)
+    candidate_pairs = _generate_candidate_pairs(
+        df_norm, enable_progress, parallel_executor, interim_dir
+    )
 
     if not candidate_pairs:
         logger.info("No candidate pairs found")
         return pd.DataFrame()
 
     # Compute similarity scores for each pair
-    scores = []
-
-    # Add progress logging for pair scoring
-    progress = ProgressLogger(
-        total=len(candidate_pairs),
-        label="pair-scoring",
-        step_every=10_000,
-        secs_every=5.0,
-        enable_tqdm=enable_progress,
+    scores = _compute_similarity_scores_parallel(
+        df_norm, candidate_pairs, penalties, enable_progress, parallel_executor
     )
-
-    for idx_a, idx_b in progress.wrap(candidate_pairs):
-        try:
-            score_data = _compute_pair_score(
-                df_norm.loc[idx_a:idx_a].iloc[0],
-                df_norm.loc[idx_b:idx_b].iloc[0],
-                penalties,
-            )
-            # Use actual account_id values instead of row indices
-            # Handle both standardized and original column names
-            account_id_col = (
-                "account_id" if "account_id" in df_norm.columns else "Account ID"
-            )
-            account_id_a = df_norm.loc[idx_a, account_id_col]
-            account_id_b = df_norm.loc[idx_b, account_id_col]
-            scores.append({"id_a": account_id_a, "id_b": account_id_b, **score_data})
-        except KeyError as e:
-            logger.warning(f"Skipping pair ({idx_a}, {idx_b}): index not found - {e}")
-            continue
 
     # Create DataFrame and filter by medium threshold
     pairs_df = pd.DataFrame(scores)
     if not pairs_df.empty:
         pairs_df = pairs_df[pairs_df["score"] >= medium_threshold].copy()
-        pairs_df = pairs_df.sort_values("score", ascending=False)
+        # Ensure deterministic ordering
+        pairs_df = pairs_df.sort_values(
+            ["id_a", "id_b", "score"], ascending=[True, True, False]
+        )
 
     logger.info(f"Generated {len(pairs_df)} candidate pairs above medium threshold")
     return pairs_df
 
 
 def _generate_candidate_pairs(
-    df_norm: pd.DataFrame, enable_progress: bool = False
+    df_norm: pd.DataFrame,
+    enable_progress: bool = False,
+    parallel_executor: Optional[ParallelExecutor] = None,
+    interim_dir: Optional[str] = None,
 ) -> List[Tuple[int, int]]:
     """
     Generate candidate pairs using blocking strategy.
@@ -165,8 +155,12 @@ def _generate_candidate_pairs(
             block_stats.append({"token": block_key, "count": block_size})
 
         block_df = pd.DataFrame(block_stats)
-        block_df.to_csv("data/interim/block_top_tokens.csv", index=False)
-        logger.info("Block statistics written to data/interim/block_top_tokens.csv")
+        if interim_dir:
+            block_stats_path = f"{interim_dir}/block_top_tokens.csv"
+        else:
+            block_stats_path = "data/interim/block_top_tokens.csv"
+        block_df.to_csv(block_stats_path, index=False)
+        logger.info(f"Block statistics written to {block_stats_path}")
     except Exception as e:
         logger.warning(f"Failed to write block statistics: {e}")
 
@@ -375,3 +369,86 @@ def _check_punctuation_mismatch(row_a: pd.Series, row_b: pd.Series) -> bool:
         return True
 
     return False
+
+
+def _compute_similarity_scores_parallel(
+    df_norm: pd.DataFrame,
+    candidate_pairs: List[Tuple[int, int]],
+    penalties: Dict[str, Any],
+    enable_progress: bool = False,
+    parallel_executor: Optional[ParallelExecutor] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Compute similarity scores for candidate pairs using parallel execution.
+
+    Args:
+        df_norm: DataFrame with normalized name columns
+        candidate_pairs: List of (idx_a, idx_b) tuples
+        penalties: Penalty configuration
+        enable_progress: Enable progress logging
+        parallel_executor: Optional parallel executor for parallel processing
+
+    Returns:
+        List of score dictionaries
+    """
+    if not candidate_pairs:
+        return []
+
+    # Handle both standardized and original column names
+    account_id_col = "account_id" if "account_id" in df_norm.columns else "Account ID"
+
+    def score_pair(pair: Tuple[int, int]) -> Optional[Dict[str, Any]]:
+        """Score a single pair of records."""
+        try:
+            idx_a, idx_b = pair
+            score_data = _compute_pair_score(
+                df_norm.loc[idx_a:idx_a].iloc[0],
+                df_norm.loc[idx_b:idx_b].iloc[0],
+                penalties,
+            )
+            account_id_a = df_norm.loc[idx_a, account_id_col]
+            account_id_b = df_norm.loc[idx_b, account_id_col]
+            return {"id_a": account_id_a, "id_b": account_id_b, **score_data}
+        except KeyError as e:
+            logger.warning(f"Skipping pair {pair}: index not found - {e}")
+            return None
+
+    if parallel_executor and parallel_executor.should_use_parallel(
+        len(candidate_pairs)
+    ):
+        # Use parallel execution
+        logger.info(
+            f"Computing similarity scores in parallel for {len(candidate_pairs)} pairs"
+        )
+
+        # Process pairs in parallel
+        results = parallel_executor.execute(
+            score_pair, candidate_pairs, operation_name="similarity_scoring"
+        )
+
+        # Filter out None results and ensure deterministic ordering
+        scores = [result for result in results if result is not None]
+        scores = ensure_deterministic_order(scores, lambda x: (x["id_a"], x["id_b"]))
+
+    else:
+        # Use sequential execution with progress logging
+        logger.info(
+            f"Computing similarity scores sequentially for {len(candidate_pairs)} pairs"
+        )
+
+        scores = []
+        progress = ProgressLogger(
+            total=len(candidate_pairs),
+            label="pair-scoring",
+            step_every=10_000,
+            secs_every=5.0,
+            enable_tqdm=enable_progress,
+        )
+
+        for pair in progress.wrap(candidate_pairs):
+            result = score_pair(pair)
+            if result is not None:
+                scores.append(result)
+
+    logger.info(f"Computed scores for {len(scores)} pairs")
+    return scores

@@ -21,6 +21,8 @@
 
 **Phase 1.14.1 (Progress Logging & MiniDAG)**: ✅ **Progress tracking and resumability** - Stage banners, progress heartbeats, optional tqdm support, MiniDAG orchestration with atomic state management, pipeline resumability from any stage.
 
+**Phase 1.16 (Performance & Caching)**: ✅ **Parallel execution and versioned caching** - Joblib-based parallel processing for candidate generation and similarity scoring, run_id-based cache directories, resource monitoring, automatic worker optimization, deterministic outputs.
+
 **Docs:** see `docs/DLaw_Company_Junction_Dedup_Plan.md` for the detailed plan and acceptance criteria.
 
 **Next:** Phase 2 (future) will add Split detection & parsing, optional LLM "real-company" classifier, and Salesforce sync steps.
@@ -156,6 +158,73 @@ Manual resume decision: resume_from='grouping' | input_hash=PASS | reason=MANUAL
 - **State metadata**: Tracks input paths, config files, command line, and timestamps
 - **Atomic writes**: State file updates are atomic to prevent corruption
 - **Stage map clarity**: `normalization` writes `accounts_normalized.parquet`, `filtering` writes `accounts_filtered.parquet`
+
+#### Parallel Execution & Caching (Phase 1.16)
+The pipeline now supports parallel execution and versioned caching for improved performance and run isolation:
+
+**Basic parallel execution:**
+```bash
+# Auto-detect optimal worker count
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml
+
+# Specify worker count
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --workers 4
+
+# Force sequential execution
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --no-parallel
+```
+
+**Advanced parallel options:**
+```bash
+# Use threading backend instead of processes
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --parallel-backend threading
+
+# Custom chunk size for parallel processing
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --chunk-size 500
+```
+
+**Run management:**
+```bash
+# Custom run ID
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --run-id my_custom_run
+
+# Keep only last 5 completed runs
+python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml --keep-runs 5
+```
+
+**Cache directory structure:**
+```
+data/
+├── interim/
+│   ├── {run_id}/
+│   │   ├── accounts_filtered.parquet
+│   │   ├── candidate_pairs.parquet
+│   │   ├── groups.parquet
+│   │   ├── dispositions.parquet
+│   │   └── alias_matches.parquet
+│   └── run_index.json
+├── processed/
+│   ├── {run_id}/
+│   │   ├── review_ready.csv
+│   │   ├── review_ready.parquet
+│   │   ├── review_meta.json
+│   │   └── perf_summary.json
+│   ├── latest -> {run_id}/
+│   └── latest.json
+└── run_index.json
+```
+
+**Performance features:**
+- **Automatic worker optimization**: Based on CPU count and available memory
+- **Resource monitoring**: Memory and disk space tracking with automatic worker reduction
+- **Deterministic outputs**: Identical results regardless of parallelization
+- **Small input optimization**: Automatic sequential execution for datasets < 10k records
+- **Graceful fallback**: Automatic fallback to sequential execution on errors
+
+**macOS compatibility:**
+- Uses spawn method for multiprocessing (required for macOS)
+- Automatic fallback to threading if process creation fails
+- Resource monitoring with psutil (optional dependency)
 
 ---
 
