@@ -30,6 +30,16 @@ from src.utils.perf_utils import (
     track_memory_peak,
     log_performance_summary,
 )
+from src.utils.cache_utils import (
+    generate_run_id,
+    create_cache_directories,
+    add_run_to_index,
+    update_run_status,
+    create_latest_pointer,
+    prune_old_runs,
+)
+from src.utils.parallel_utils import create_parallel_executor
+from src.utils.resource_monitor import log_resource_summary
 
 # Import ID utilities for Salesforce ID canonicalization
 try:
@@ -167,6 +177,7 @@ def _create_performance_summary_enhanced(
     df_groups: pd.DataFrame,
     df_final: pd.DataFrame,
     output_dir: str,
+    run_id: Optional[str] = None,
 ) -> None:
     """
     Create comprehensive performance summary with the required schema.
@@ -216,12 +227,25 @@ def _create_performance_summary_enhanced(
             dataset_stats, candidate_stats, group_stats, block_stats
         )
 
-        # Save performance summary
-        save_performance_summary(summary, os.path.join(output_dir, "perf_summary.json"))
+        # Add run_id to summary if provided
+        if run_id:
+            summary["run_id"] = run_id
 
-        logger.info(
-            f"Enhanced performance summary written to: {output_dir}/perf_summary.json"
-        )
+        # Save performance summary
+        perf_summary_path = os.path.join(output_dir, "perf_summary.json")
+        save_performance_summary(summary, perf_summary_path)
+
+        # Also save a copy to the legacy location for backward compatibility
+        legacy_perf_path = "data/processed/perf_summary.json"
+        try:
+            save_performance_summary(summary, legacy_perf_path)
+            logger.info(
+                f"Performance summary also saved to legacy location: {legacy_perf_path}"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save legacy performance summary: {e}")
+
+        logger.info(f"Enhanced performance summary written to: {perf_summary_path}")
 
     except Exception as e:
         logger.warning(f"Failed to create enhanced performance summary: {e}")
@@ -288,6 +312,12 @@ def run_pipeline(
     no_resume: bool = False,
     force: bool = False,
     state_path: str = "data/interim/pipeline_state.json",
+    workers: Optional[int] = None,
+    no_parallel: bool = False,
+    chunk_size: int = 1000,
+    parallel_backend: str = "loky",
+    run_id: Optional[str] = None,
+    keep_runs: int = 10,
 ) -> None:
     """
     Run the complete deduplication pipeline.
@@ -298,6 +328,23 @@ def run_pipeline(
         config_path: Path to configuration file
     """
     logger.info("Starting Company Junction deduplication pipeline")
+
+    # Phase 1.16: Generate run ID and setup cache directories
+    if run_id is None:
+        run_id = generate_run_id([input_path], [config_path])
+    logger.info(f"Using run_id: {run_id}")
+
+    # Create cache directories for this run
+    interim_dir, processed_dir = create_cache_directories(run_id)
+
+    # Add run to index
+    add_run_to_index(run_id, [input_path], [config_path], "running")
+
+    # Prune old runs
+    prune_old_runs(keep_runs)
+
+    # Log resource summary
+    log_resource_summary()
 
     # Load configuration
     settings = load_settings(config_path)
@@ -310,8 +357,9 @@ def run_pipeline(
     perf_tracker = PerformanceTracker()
     perf_tracker.start_run(settings)
 
-    # Initialize MiniDAG for stage tracking
-    dag = MiniDAG(Path(state_path))
+    # Initialize MiniDAG for stage tracking with run-scoped state file
+    run_scoped_state_path = f"{interim_dir}/pipeline_state.json"
+    dag = MiniDAG(Path(run_scoped_state_path), run_id)
 
     # Register pipeline stages
     stages = [
@@ -328,12 +376,28 @@ def run_pipeline(
     for stage in stages:
         dag.register(stage)
 
+    # Phase 1.16: Initialize parallel executor
+    parallel_executor = create_parallel_executor(
+        workers=workers,
+        backend=parallel_backend,
+        chunk_size=chunk_size,
+        small_input_threshold=settings.get("parallelism", {}).get(
+            "small_input_threshold", 10000
+        ),
+        disable_parallel=no_parallel,
+    )
+
     # Ensure output directories exist
     ensure_directory_exists(output_dir)
     ensure_directory_exists("data/interim")
 
     # Smart auto-resume logic with enhanced logging
-    if resume_from is None:
+    if no_resume:
+        logger.info(
+            "Auto-resume decision: --no-resume specified - forcing full run | reason=NO_RESUME_FLAG"
+        )
+        resume_from = None
+    elif resume_from is None:
         # Auto-detect resume point
         auto_resume_stage = dag.get_smart_resume_stage()
         if auto_resume_stage:
@@ -587,7 +651,7 @@ def run_pipeline(
 
         # Save filtered data
         interim_format = settings.get("io", {}).get("interim_format", "parquet")
-        filtered_path = f"data/interim/accounts_filtered.{interim_format}"
+        filtered_path = f"{interim_dir}/accounts_filtered.{interim_format}"
         if interim_format == "parquet":
             df_norm.to_parquet(filtered_path, index=False)
         else:
@@ -605,7 +669,13 @@ def run_pipeline(
             logger.info("Generating candidate pairs")
             with time_stage("candidate_generation", logger):
                 with track_memory_peak("candidate_generation", logger):
-                    pairs_df = pair_scores(df_norm, settings, enable_progress)
+                    pairs_df = pair_scores(
+                        df_norm,
+                        settings,
+                        enable_progress,
+                        parallel_executor,
+                        interim_dir,
+                    )
                     perf_tracker.record_timing("blocking", 0.0)  # Blocking phase
                     perf_tracker.record_timing("scoring", 0.0)  # Scoring phase
 
@@ -621,7 +691,7 @@ def run_pipeline(
         _assert_pairs_cover_accounts(pairs_df, df_norm, id_col="account_id")
 
         # Save candidate pairs
-        pairs_path = f"data/interim/candidate_pairs.{interim_format}"
+        pairs_path = f"{interim_dir}/candidate_pairs.{interim_format}"
         save_candidate_pairs(pairs_df, pairs_path)
 
         dag.complete("candidate_generation")
@@ -657,7 +727,7 @@ def run_pipeline(
         df_groups = optimize_dataframe_memory(df_groups, "groups")
 
         # Save groups
-        groups_path = f"data/interim/groups.{interim_format}"
+        groups_path = f"{interim_dir}/groups.{interim_format}"
         df_groups.to_parquet(groups_path, index=False)
         logger.info(f"Saved groups to {groups_path}")
 
@@ -687,7 +757,7 @@ def run_pipeline(
         df_primary = generate_merge_preview(df_primary)
 
         # Save survivorship results
-        survivorship_path = f"data/interim/survivorship.{interim_format}"
+        survivorship_path = f"{interim_dir}/survivorship.{interim_format}"
         save_survivorship_results(df_primary, survivorship_path)
 
         dag.complete("survivorship")
@@ -707,7 +777,7 @@ def run_pipeline(
                 )  # Will be updated by log_perf
 
         # Save dispositions
-        dispositions_path = f"data/interim/dispositions.{interim_format}"
+        dispositions_path = f"{interim_dir}/dispositions.{interim_format}"
         save_dispositions(df_dispositions, dispositions_path)
 
         dag.complete("disposition")
@@ -719,7 +789,7 @@ def run_pipeline(
             dag.start("alias_matching")
 
             logger.info("Computing alias matches and cross-references")
-        alias_matches_path = f"data/interim/alias_matches.{interim_format}"
+        alias_matches_path = f"{interim_dir}/alias_matches.{interim_format}"
         with log_perf("alias_matching"):
             result = compute_alias_matches(df_norm, df_groups, settings)
 
@@ -761,12 +831,12 @@ def run_pipeline(
         # Apply memory optimization to final output
         df_final = optimize_dataframe_memory(df_final, "review_ready")
 
-        review_path = os.path.join(output_dir, "review_ready.csv")
+        review_path = os.path.join(processed_dir, "review_ready.csv")
         df_final.to_csv(review_path, index=False)
 
         # Also write Parquet version for UI
         try:
-            parquet_path = os.path.join(output_dir, "review_ready.parquet")
+            parquet_path = os.path.join(processed_dir, "review_ready.parquet")
             df_final.to_parquet(parquet_path, index=False)
             logger.info(f"Also wrote Parquet review file: {parquet_path}")
         except Exception as e:
@@ -801,15 +871,26 @@ def run_pipeline(
         log_performance_summary(logger)
 
         # Create audit snapshot
-        _create_audit_snapshot(settings, alias_stats, output_dir)
+        _create_audit_snapshot(settings, alias_stats, processed_dir)
 
         # Create comprehensive performance summary
         try:
             _create_performance_summary_enhanced(
-                perf_tracker, df_norm, pairs_df, df_groups, df_final, output_dir
+                perf_tracker,
+                df_norm,
+                pairs_df,
+                df_groups,
+                df_final,
+                processed_dir,
+                run_id,
             )
         except Exception as e:
             logger.warning(f"Failed to create enhanced performance summary: {e}")
+
+        # Phase 1.16: Update run status and create latest pointer
+        update_run_status(run_id, "complete")
+        create_latest_pointer(run_id)
+        logger.info(f"Pipeline completed successfully with run_id: {run_id}")
 
         dag.complete("final_output")
         logger.info("[stage:end] final_output")
@@ -848,6 +929,39 @@ def main() -> None:
         default="data/interim/pipeline_state.json",
         help="Path to pipeline state file",
     )
+    # Phase 1.16: Parallel execution and caching arguments
+    parser.add_argument(
+        "--workers",
+        type=int,
+        help="Number of parallel workers (None for auto-detection)",
+    )
+    parser.add_argument(
+        "--no-parallel",
+        action="store_true",
+        help="Force sequential execution (disables parallel processing)",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=1000,
+        help="Chunk size for parallel processing",
+    )
+    parser.add_argument(
+        "--parallel-backend",
+        choices=["loky", "threading"],
+        default="loky",
+        help="Backend for parallel execution (loky=processes, threading=threads)",
+    )
+    parser.add_argument(
+        "--run-id",
+        help="Custom run ID (auto-generated if not specified)",
+    )
+    parser.add_argument(
+        "--keep-runs",
+        type=int,
+        default=10,
+        help="Number of completed runs to keep (default: 10)",
+    )
 
     args = parser.parse_args()
 
@@ -867,6 +981,12 @@ def main() -> None:
             args.force,
             args.no_resume,
             args.state_path,
+            args.workers,
+            args.no_parallel,
+            args.chunk_size,
+            args.parallel_backend,
+            args.run_id,
+            args.keep_runs,
         )
     except Exception:
         sys.exit(87)  # Exit with code 87 after full traceback has been printed

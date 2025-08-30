@@ -22,9 +22,10 @@ class Stage:
 
 
 class MiniDAG:
-    def __init__(self, state_file: Path) -> None:
-        """Initialize MiniDAG with state file path."""
+    def __init__(self, state_file: Path, run_id: str = "") -> None:
+        """Initialize MiniDAG with state file path and run_id."""
         self.state_file = state_file
+        self.run_id = run_id
         self._logger = logging.getLogger(__name__)
         self._stages: Dict[str, Stage] = {}
         self._metadata: Dict[str, Any] = {
@@ -32,6 +33,8 @@ class MiniDAG:
             "input_path": "",
             "config_path": "",
             "input_hash": "",
+            "config_hash": "",
+            "run_id": run_id,
             "cmdline": "",
             "ts": "",
         }
@@ -281,6 +284,10 @@ class MiniDAG:
         return self._metadata.get("input_hash")
 
     def _save(self) -> None:
+        # Ensure run_id is always populated in metadata
+        if self.run_id and not self._metadata.get("run_id"):
+            self._metadata["run_id"] = self.run_id
+
         data = {
             "stages": {
                 k: {
