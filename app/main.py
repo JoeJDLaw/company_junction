@@ -50,87 +50,65 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 
 from src.utils.logging_utils import setup_logging
 
 
-def load_review_data() -> Optional[pd.DataFrame]:
-    """Load review-ready data from pipeline output with enhanced error handling."""
+def load_review_data(run_id: str) -> Optional[pd.DataFrame]:
+    """Load review-ready data from a specific run with enhanced error handling."""
     try:
-        with st.spinner("Loading review data..."):
-            # Phase 1.16: Try to get latest run ID
-            from src.utils.cache_utils import get_latest_run_id
+        with st.spinner(f"Loading review data from run {run_id}..."):
+            # Get artifact paths for the run
+            from src.utils.ui_helpers import get_artifact_paths, validate_run_artifacts
 
-            latest_run_id = get_latest_run_id()
+            # Validate run artifacts
+            validation = validate_run_artifacts(run_id)
 
-            if latest_run_id:
-                # Try latest run directory first
-                latest_parquet_path = (
-                    f"data/processed/{latest_run_id}/review_ready.parquet"
-                )
-                latest_csv_path = f"data/processed/{latest_run_id}/review_ready.csv"
+            if not validation["run_exists"]:
+                st.error(f"Run {run_id} not found in run index")
+                return None
 
-                if os.path.exists(latest_parquet_path):
-                    try:
-                        df = pd.read_parquet(latest_parquet_path)
-                        st.success(
-                            f"Loaded {len(df)} records from latest run ({latest_run_id})"
-                        )
-                        return df
-                    except Exception as e:
-                        st.warning(f"Latest run Parquet load failed: {e}, trying CSV")
+            if validation["status"] == "failed":
+                st.error(f"Run {run_id} failed during execution")
+                return None
 
-                if os.path.exists(latest_csv_path):
-                    try:
-                        df = pd.read_csv(latest_csv_path)
-                        if "alias_cross_refs" in df.columns:
-                            df["alias_cross_refs"] = df["alias_cross_refs"].apply(
-                                parse_alias_cross_refs
-                            )
-                        st.success(
-                            f"Loaded {len(df)} records from latest run ({latest_run_id})"
-                        )
-                        return df
-                    except Exception as e:
-                        st.warning(
-                            f"Latest run CSV load failed: {e}, falling back to legacy paths"
-                        )
+            # Try to load from parquet first, then CSV
+            artifact_paths = get_artifact_paths(run_id)
 
-            # Fallback to legacy paths
-            parquet_path = "data/processed/review_ready.parquet"
-            csv_path = "data/processed/review_ready.csv"
-
-            if os.path.exists(parquet_path):
+            # Try parquet
+            if validation["has_review_ready_parquet"]:
                 try:
-                    df = pd.read_parquet(parquet_path)
-                    st.success(f"Loaded {len(df)} records from legacy Parquet file")
+                    df = pd.read_parquet(artifact_paths["review_ready_parquet"])
+                    st.success(f"Loaded {len(df)} records from run {run_id}")
                     return df
                 except Exception as e:
-                    st.warning(f"Legacy Parquet load failed: {e}, falling back to CSV")
+                    st.warning(f"Parquet load failed: {e}, trying CSV")
 
-            # Fallback to CSV
-            if os.path.exists(csv_path):
+            # Try CSV
+            if validation["has_review_ready_csv"]:
                 try:
-                    df = pd.read_csv(csv_path)
-
-                    # Parse alias_cross_refs if it exists (CSV stores as string)
+                    df = pd.read_csv(artifact_paths["review_ready_csv"])
                     if "alias_cross_refs" in df.columns:
                         df["alias_cross_refs"] = df["alias_cross_refs"].apply(
                             parse_alias_cross_refs
                         )
-
-                    st.success(f"Loaded {len(df)} records from legacy CSV file")
+                    st.success(f"Loaded {len(df)} records from run {run_id}")
                     return df
                 except Exception as e:
-                    st.error(f"Error loading review data: {e}")
+                    st.error(f"CSV load failed: {e}")
                     return None
 
-            # No files found
-            st.error("No review data files found")
-            st.info("Please run the pipeline first to generate review data.")
+            # No valid files found
+            missing_files = validation["missing_files"]
+            st.error(
+                f"Run {run_id} is missing required files: {', '.join(missing_files)}"
+            )
+            st.info("Please ensure the pipeline completed successfully for this run.")
             return None
+
     except Exception as e:
         st.error(f"Error loading review data: {str(e)}")
         st.info("Please ensure the pipeline has completed successfully.")
@@ -203,8 +181,552 @@ def main() -> None:
     # Setup logging
     setup_logging()
 
-    # Load review data
-    df = load_review_data()
+    # Phase 1.17.1: Run Picker and Stage Status
+    from src.utils.ui_helpers import (
+        list_runs,
+        get_default_run_id,
+        get_run_metadata,
+        load_stage_state,
+        format_run_display_name,
+        get_run_status_icon,
+        get_stage_status_icon,
+        get_artifact_paths,
+    )
+
+    # Initialize session state for run selection
+    if "selected_run_id" not in st.session_state:
+        st.session_state.selected_run_id = get_default_run_id()
+
+    if "cached_data" not in st.session_state:
+        st.session_state.cached_data = {}
+
+    if "cached_run_id" not in st.session_state:
+        st.session_state.cached_run_id = ""
+
+    # Run Picker in Sidebar
+    st.sidebar.header("Run Selection")
+
+    # Get available runs
+    runs = list_runs()
+
+    if not runs:
+        st.sidebar.error("No runs found in run index")
+        st.info("Please run the pipeline first to generate review data.")
+        return
+
+    # Create run selection options
+    run_options = []
+    run_display_names = []
+
+    for run in runs:
+        run_id = run["run_id"]
+        display_name = format_run_display_name(run_id, run)
+        status_icon = get_run_status_icon(run["status"])
+
+        # Mark latest run
+        if run_id == get_default_run_id():
+            display_name = f"🆕 {display_name} (Latest)"
+
+        run_options.append(run_id)
+        run_display_names.append(f"{status_icon} {display_name}")
+
+    # Run selection
+    selected_index = 0
+    if st.session_state.selected_run_id in run_options:
+        selected_index = run_options.index(st.session_state.selected_run_id)
+
+    selected_run_display = st.sidebar.selectbox(
+        "Select Run",
+        options=run_display_names,
+        index=selected_index,
+        help="Choose which pipeline run to review",
+    )
+
+    # Extract run ID from selection
+    selected_run_id = run_options[run_display_names.index(selected_run_display)]
+
+    # Update session state if run changed
+    if selected_run_id != st.session_state.selected_run_id:
+        st.session_state.selected_run_id = selected_run_id
+        st.rerun()
+
+    # Run Metadata Panel
+    run_metadata = get_run_metadata(selected_run_id)
+    if run_metadata:
+        with st.sidebar.expander("Run Metadata", expanded=False):
+            st.write(
+                f"**Status:** {get_run_status_icon(run_metadata['status'])} {run_metadata['status']}"
+            )
+            st.write(f"**Created:** {run_metadata['formatted_timestamp']}")
+
+            if run_metadata["input_paths"]:
+                input_file = Path(run_metadata["input_paths"][0]).name
+                st.write(f"**Input:** {input_file}")
+
+            if run_metadata["config_paths"]:
+                config_file = Path(run_metadata["config_paths"][0]).name
+                st.write(f"**Config:** {config_file}")
+
+            st.write(f"**DAG Version:** {run_metadata['dag_version']}")
+
+    # Stage Status (MiniDAG Lite)
+    stage_state = load_stage_state(selected_run_id)
+    if stage_state:
+        with st.sidebar.expander("Pipeline Stages", expanded=False):
+            stages = stage_state["stages"]
+
+            # Create stage status table
+            stage_data = []
+            for stage in stages:
+                status_icon = get_stage_status_icon(stage["status"])
+                stage_data.append(
+                    {
+                        "Stage": stage["name"].replace("_", " ").title(),
+                        "Status": f"{status_icon} {stage['status']}",
+                        "Duration": stage["duration_str"],
+                    }
+                )
+
+            if stage_data:
+                import pandas as pd
+
+                stage_df = pd.DataFrame(stage_data)
+                st.dataframe(stage_df, hide_index=True, width="stretch")
+            else:
+                st.write("No stage information available")
+    else:
+        with st.sidebar.expander("Pipeline Stages", expanded=False):
+            st.warning("Stage information not available for this run")
+
+    # Artifact Downloads
+    with st.sidebar.expander("Download Artifacts", expanded=False):
+        artifact_paths = get_artifact_paths(selected_run_id)
+
+        # Review ready files
+        if os.path.exists(artifact_paths["review_ready_csv"]):
+            with open(artifact_paths["review_ready_csv"], "r", encoding="utf-8") as f:
+                csv_data: str = f.read()
+            st.download_button(
+                "Download Review Ready (CSV)",
+                data=csv_data,
+                file_name=f"review_ready_{selected_run_id}.csv",
+                mime="text/csv",
+            )
+
+        if os.path.exists(artifact_paths["review_ready_parquet"]):
+            with open(artifact_paths["review_ready_parquet"], "rb") as f:  # type: ignore
+                parquet_data: bytes = f.read()  # type: ignore
+            st.download_button(
+                "Download Review Ready (Parquet)",
+                data=parquet_data,
+                file_name=f"review_ready_{selected_run_id}.parquet",
+                mime="application/octet-stream",
+            )
+
+        # Review meta
+        if os.path.exists(artifact_paths["review_meta"]):
+            with open(artifact_paths["review_meta"], "r", encoding="utf-8") as f:
+                meta_data: str = f.read()
+            st.download_button(
+                "Download Review Meta (JSON)",
+                data=meta_data,
+                file_name=f"review_meta_{selected_run_id}.json",
+                mime="application/json",
+            )
+
+    # Phase 1.17.2: CLI Command Builder
+    with st.sidebar.expander("Run Pipeline → CLI Builder", expanded=False):
+        from src.utils.cli_builder import (
+            get_available_input_files,
+            get_available_config_files,
+            validate_cli_args,
+            build_cli_command,
+            get_known_run_ids,
+        )
+
+        # Input & Output
+        st.write("**Input & Output**")
+        input_files = get_available_input_files()
+        if not input_files:
+            st.error("No CSV files found in data/raw/")
+            return
+
+        input_file = st.selectbox(
+            "Input CSV File",
+            options=input_files,
+            help="Select input CSV file from data/raw/",
+        )
+
+        config_files = get_available_config_files()
+        if not config_files:
+            st.error("No YAML files found in config/")
+            return
+
+        config_file = st.selectbox(
+            "Config File",
+            options=config_files,
+            index=(
+                config_files.index("settings.yaml")
+                if "settings.yaml" in config_files
+                else 0
+            ),
+            help="Select configuration file from config/",
+        )
+
+        st.write("**Output:** data/processed (fixed)")
+
+        # Parallelism
+        st.write("**Parallelism**")
+        no_parallel = st.checkbox(
+            "--no-parallel", value=False, help="Disable parallel execution"
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            workers = st.number_input(
+                "--workers",
+                min_value=1,
+                max_value=32,
+                value=4,
+                disabled=no_parallel,
+                help="Number of parallel workers",
+            )
+
+        with col2:
+            parallel_backend = st.selectbox(
+                "--parallel-backend",
+                options=["loky", "threading"],
+                index=0,
+                disabled=no_parallel,
+                help="Parallel execution backend",
+            )
+
+        chunk_size = st.number_input(
+            "--chunk-size",
+            min_value=1,
+            max_value=10000,
+            value=1000,
+            disabled=no_parallel,
+            help="Chunk size for parallel processing",
+        )
+
+        # Run Control
+        st.write("**Run Control**")
+        no_resume = st.checkbox(
+            "--no-resume", value=False, help="Disable resume functionality"
+        )
+        keep_runs = st.number_input(
+            "--keep-runs",
+            min_value=1,
+            max_value=100,
+            value=10,
+            help="Number of completed runs to keep",
+        )
+
+        # Advanced Options
+        with st.expander("Advanced Options", expanded=False):
+            st.warning(
+                "⚠️ Custom run ID will override timestamp uniqueness and may overwrite previous artifacts"
+            )
+
+            run_id_option = st.radio(
+                "Run ID",
+                options=["Auto-generate", "Custom"],
+                help="Choose run ID generation method",
+            )
+
+            if run_id_option == "Custom":
+                known_run_ids = get_known_run_ids()
+                if known_run_ids:
+                    run_id = st.selectbox(
+                        "Select existing run ID",
+                        options=known_run_ids,
+                        help="This will overwrite the selected run",
+                    )
+                else:
+                    run_id = st.text_input(
+                        "Custom run ID",
+                        help="Enter custom run ID (will overwrite if exists)",
+                    )
+            else:
+                run_id = None
+
+            extra_args = st.text_input(
+                "Extra Arguments",
+                help="Additional CLI arguments (space-separated)",
+            )
+
+        # Validation
+        validation_errors = validate_cli_args(
+            input_file=input_file,
+            config=config_file,
+            no_parallel=no_parallel,
+            workers=workers if not no_parallel else None,
+            parallel_backend=parallel_backend,
+            chunk_size=chunk_size if not no_parallel else None,
+            no_resume=no_resume,
+            run_id=run_id,
+            keep_runs=keep_runs,
+        )
+
+        # Show validation errors
+        if validation_errors:
+            st.error("**Validation Errors:**")
+            for field, error in validation_errors.items():
+                st.error(f"• {field}: {error}")
+
+        # Build command
+        command = build_cli_command(
+            input_file=input_file,
+            config=config_file,
+            no_parallel=no_parallel,
+            workers=workers if not no_parallel else None,
+            parallel_backend=parallel_backend,
+            chunk_size=chunk_size if not no_parallel else None,
+            no_resume=no_resume,
+            run_id=run_id,
+            keep_runs=keep_runs,
+            extra_args=extra_args,
+        )
+
+        # Command output
+        st.write("**Generated Command:**")
+        st.code(command, language="bash")
+
+        # Copy and download buttons
+        col1, col2 = st.columns(2)
+        with col1:
+            st.button(
+                "📋 Copy Command",
+                on_click=lambda: st.write("Command copied to clipboard!"),
+                disabled=bool(validation_errors),
+                help="Copy command to clipboard",
+            )
+
+        with col2:
+            # Create shell script
+            shell_script = f"#!/usr/bin/env bash\n\n{command}\n"
+            st.download_button(
+                "📥 Download .sh",
+                data=shell_script,
+                file_name=f"run_pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sh",
+                mime="text/plain",
+                disabled=bool(validation_errors),
+                help="Download as shell script",
+            )
+
+    # Phase 1.17.2: Run Maintenance
+    with st.sidebar.expander("Run Maintenance", expanded=False):
+        from src.utils.cache_utils import (
+            preview_delete_runs,
+            delete_runs,
+            list_runs_sorted,
+        )
+
+        # Destructive actions fuse
+        if "enable_destructive_actions" not in st.session_state:
+            st.session_state.enable_destructive_actions = False
+
+        st.session_state.enable_destructive_actions = st.checkbox(
+            "⚠️ Enable destructive actions",
+            value=st.session_state.enable_destructive_actions,
+            help="Required to perform run deletions",
+        )
+
+        if not st.session_state.enable_destructive_actions:
+            st.info("Check the box above to enable run maintenance features")
+            return
+
+        # Get runs for selection
+        runs_sorted = list_runs_sorted()
+        if not runs_sorted:
+            st.info("No runs available for maintenance")
+            return
+
+        # Run selection
+        st.write("**Select Runs to Delete:**")
+
+        # Create selection options
+        run_options = []
+        run_display_names = []
+
+        for run_id, run_data in runs_sorted:
+            status = run_data.get("status", "unknown")
+            status_icon = get_run_status_icon(status)
+            display_name = format_run_display_name(run_id, run_data)
+
+            # Disable running runs
+            if status == "running":
+                display_name = f"🚫 {display_name} (Running - cannot delete)"
+
+            run_options.append(run_id)
+            run_display_names.append(f"{status_icon} {display_name}")
+
+        selected_runs = st.multiselect(
+            "Runs to delete",
+            options=run_display_names,
+            help="Select one or more runs to delete",
+        )
+
+        # Extract run IDs
+        selected_run_ids = []
+        for display_name in selected_runs:
+            idx = run_display_names.index(display_name)
+            run_id = run_options[idx]
+            run_data = runs_sorted[idx][1]
+
+            # Skip running runs
+            if run_data.get("status") == "running":
+                continue
+
+            selected_run_ids.append(run_id)
+
+        # Preview button
+        if st.button("🔍 Preview Deletion", disabled=not selected_run_ids):
+            with st.spinner("Calculating deletion preview..."):
+                preview = preview_delete_runs(selected_run_ids)
+
+                if preview["runs_inflight"]:
+                    st.error(
+                        f"Cannot delete running runs: {', '.join(preview['runs_inflight'])}"
+                    )
+                    return
+
+                if preview["runs_not_found"]:
+                    st.warning(
+                        f"Runs not found: {', '.join(preview['runs_not_found'])}"
+                    )
+
+                if preview["runs_to_delete"]:
+                    st.write("**Runs to be deleted:**")
+                    total_bytes = 0
+                    for run_info in preview["runs_to_delete"]:
+                        run_id = run_info["run_id"]
+                        bytes_size = run_info["bytes"]
+                        file_count = len(run_info["files"])
+                        total_bytes += bytes_size
+
+                        st.write(
+                            f"• {run_id} ({file_count} files, {bytes_size:,} bytes)"
+                        )
+
+                    st.write(
+                        f"**Total:** {len(preview['runs_to_delete'])} runs, {total_bytes:,} bytes"
+                    )
+
+                    if preview["latest_affected"]:
+                        st.warning("⚠️ This will affect the latest pointer")
+
+                    # Store preview for deletion
+                    st.session_state.deletion_preview = preview
+                    st.session_state.preview_performed = True
+
+        # Delete button (only after preview)
+        if st.session_state.get("preview_performed", False) and selected_run_ids:
+            st.write("**Confirm Deletion:**")
+
+            # Confirmation checkbox
+            confirm_checkbox = st.checkbox(
+                "I understand this permanently deletes data",
+                value=False,
+                help="Required confirmation for deletion",
+            )
+
+            # Typed confirmation
+            if len(selected_run_ids) == 1:
+                confirmation_text = f"Type '{selected_run_ids[0]}' to confirm"
+                expected_confirmation = selected_run_ids[0]
+            else:
+                confirmation_text = "Type 'DELETE ALL' to confirm"
+                expected_confirmation = "DELETE ALL"
+
+            typed_confirmation = st.text_input(
+                confirmation_text,
+                help="Type the exact text to confirm deletion",
+            )
+
+            # Delete button
+            if confirm_checkbox and typed_confirmation == expected_confirmation:
+                if st.button("🗑️ Delete Selected Runs", type="primary"):
+                    with st.spinner("Deleting runs..."):
+                        results = delete_runs(selected_run_ids)
+
+                        if results["inflight_blocked"]:
+                            st.error(
+                                f"Cannot delete running runs: {', '.join(results['inflight_blocked'])}"
+                            )
+                        else:
+                            st.success(f"Deleted {len(results['deleted'])} runs")
+
+                            if results["latest_reassigned"]:
+                                st.info(
+                                    f"Latest pointer reassigned to: {results['new_latest']}"
+                                )
+
+                            if results["total_bytes_freed"] > 0:
+                                st.info(f"Freed {results['total_bytes_freed']:,} bytes")
+
+                            # Clear session state
+                            st.session_state.preview_performed = False
+                            st.session_state.deletion_preview = None
+
+                            # Invalidate cache to refresh run list
+                            st.session_state.cached_data = {}
+                            st.rerun()
+            else:
+                st.info(
+                    "Check the confirmation box and type the exact text to enable deletion"
+                )
+
+        # Quick actions
+        st.write("**Quick Actions:**")
+
+        # Get completed runs
+        completed_runs = [
+            run_id
+            for run_id, run_data in runs_sorted
+            if run_data.get("status") == "complete"
+        ]
+        latest_run = get_default_run_id()
+
+        if len(completed_runs) > 1 and latest_run in completed_runs:
+            if st.button("🗑️ Delete all except latest"):
+                runs_to_delete = [
+                    run_id for run_id in completed_runs if run_id != latest_run
+                ]
+                if runs_to_delete:
+                    with st.spinner("Deleting old runs..."):
+                        results = delete_runs(runs_to_delete)
+                        st.success(f"Deleted {len(results['deleted'])} old runs")
+                        st.session_state.cached_data = {}
+                        st.rerun()
+
+        if len(runs_sorted) > 1:
+            if st.button("🗑️ Delete all runs"):
+                all_run_ids = [run_id for run_id, _ in runs_sorted]
+                with st.spinner("Deleting all runs..."):
+                    results = delete_runs(all_run_ids)
+                    st.success(f"Deleted {len(results['deleted'])} runs")
+                    st.session_state.cached_data = {}
+                    st.rerun()
+
+    # Load review data with caching
+    if selected_run_id != st.session_state.cached_run_id:
+        # Clear cache and load new data
+        st.session_state.cached_data = {}
+        st.session_state.cached_run_id = selected_run_id
+
+    # Load data if not cached
+    if selected_run_id not in st.session_state.cached_data:
+        df = load_review_data(selected_run_id)
+        if df is not None:
+            st.session_state.cached_data[selected_run_id] = df
+        else:
+            st.error(f"Failed to load data for run {selected_run_id}")
+            return
+    else:
+        df = st.session_state.cached_data[selected_run_id]
+        st.success(f"Loaded {len(df)} records from cache (run {selected_run_id})")
 
     # Load settings for rules panel
     settings = load_settings()
@@ -225,8 +747,8 @@ def main() -> None:
 
     if df is None:
         st.warning(
-            """
-        ## No Review Data Found
+            f"""
+        ## No Review Data Found for Run {selected_run_id}
         
         Please run the pipeline first to generate review data:
         
@@ -234,7 +756,7 @@ def main() -> None:
         python src/cleaning.py --input data/raw/company_junction_range_01.csv --outdir data/processed --config config/settings.yaml
         ```
         
-        This will create `data/processed/review_ready.csv` for review.
+        This will create run-scoped artifacts under `data/processed/{{run_id}}/` for review.
         """
         )
         return
@@ -338,10 +860,7 @@ def main() -> None:
     # Sidebar filters
     st.sidebar.header("Filters")
 
-    # Min score filter
-    min_score = st.sidebar.slider(
-        "Minimum Edge to Primary", min_value=0.0, max_value=100.0, value=0.0, step=1.0
-    )
+    # Min score filter (removed duplicate - keeping the one near group size filter)
 
     # Disposition filter
     dispositions = df["Disposition"].unique()
@@ -445,14 +964,6 @@ def main() -> None:
     # Apply filters
     filtered_df = df.copy()
 
-    if min_score > 0:
-        filtered_df = filtered_df[filtered_df["weakest_edge_to_primary"] >= min_score]
-
-    if selected_dispositions:
-        filtered_df = filtered_df[
-            filtered_df["Disposition"].isin(selected_dispositions)
-        ]
-
     # Apply edge strength filter (Phase 1.11)
     if min_edge_strength > 0.0 and "weakest_edge_to_primary" in filtered_df.columns:
         # Filter for groups where any member has edge strength below threshold
@@ -462,6 +973,11 @@ def main() -> None:
             if group_data["weakest_edge_to_primary"].min() < min_edge_strength:
                 weak_edge_groups.append(group_id)
         filtered_df = filtered_df[filtered_df["group_id"].isin(weak_edge_groups)]
+
+    if selected_dispositions:
+        filtered_df = filtered_df[
+            filtered_df["Disposition"].isin(selected_dispositions)
+        ]
 
     if show_suffix_mismatch:
         # Filter for groups with suffix mismatches

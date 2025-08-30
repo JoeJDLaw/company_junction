@@ -154,12 +154,13 @@ def create_latest_pointer(run_id: str) -> None:
     try:
         if os.path.exists(latest_symlink):
             os.remove(latest_symlink)
-        os.symlink(run_id, latest_symlink)
+        # Use relative path for symlink
+        os.symlink(f"{run_id}", latest_symlink)
         logger.info(f"Created latest symlink: {latest_symlink} -> {run_id}")
     except OSError as e:
         logger.warning(f"Failed to create symlink: {e}")
 
-    # Create JSON pointer as backup
+    # Create JSON pointer as backup (always create this)
     try:
         with open(latest_json, "w") as f:
             json.dump({"run_id": run_id, "timestamp": datetime.now().isoformat()}, f)
@@ -173,14 +174,7 @@ def get_latest_run_id() -> Optional[str]:
     latest_symlink = "data/processed/latest"
     latest_json = "data/processed/latest.json"
 
-    # Try symlink first
-    if os.path.islink(latest_symlink):
-        try:
-            return os.readlink(latest_symlink)
-        except OSError:
-            pass
-
-    # Fallback to JSON
+    # Try JSON first (more reliable)
     if os.path.exists(latest_json):
         try:
             with open(latest_json, "r") as f:
@@ -190,6 +184,13 @@ def get_latest_run_id() -> Optional[str]:
                     if isinstance(run_id, str):
                         return run_id
         except (json.JSONDecodeError, IOError):
+            pass
+
+    # Fallback to symlink
+    if os.path.islink(latest_symlink):
+        try:
+            return os.readlink(latest_symlink)
+        except OSError:
             pass
 
     return None
@@ -249,3 +250,249 @@ def cleanup_failed_runs() -> None:
                         logger.warning(f"Failed to remove directory {directory}: {e}")
 
     save_run_index(run_index)
+
+
+def preview_delete_runs(run_ids: List[str]) -> Dict[str, Any]:
+    """Preview deletion of runs and return what would be removed.
+
+    Args:
+        run_ids: List of run IDs to preview deletion for
+
+    Returns:
+        Dict with deletion preview information
+    """
+    run_index = load_run_index()
+    preview: Dict[str, Any] = {
+        "runs_to_delete": [],
+        "runs_not_found": [],
+        "runs_inflight": [],
+        "total_bytes": 0,
+        "latest_affected": False,
+        "latest_run_id": get_latest_run_id(),
+    }
+
+    for run_id in run_ids:
+        if run_id not in run_index:
+            preview["runs_not_found"].append(run_id)
+            continue
+
+        run_data = run_index[run_id]
+        status = run_data.get("status", "unknown")
+
+        if status == "running":
+            preview["runs_inflight"].append(run_id)
+            continue
+
+        # Check if this run is the latest
+        if run_id == preview["latest_run_id"]:
+            preview["latest_affected"] = True
+
+        # Calculate directory sizes
+        interim_dir, processed_dir = get_cache_directories(run_id)
+        run_bytes = 0
+        run_files = []
+
+        for directory in [interim_dir, processed_dir]:
+            if os.path.exists(directory):
+                for root, dirs, files in os.walk(directory):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        try:
+                            file_size = os.path.getsize(file_path)
+                            run_bytes += file_size
+                            run_files.append(file_path)
+                        except OSError:
+                            pass
+
+        preview["runs_to_delete"].append(
+            {
+                "run_id": run_id,
+                "status": status,
+                "bytes": run_bytes,
+                "files": run_files,
+            }
+        )
+        preview["total_bytes"] += run_bytes
+
+    return preview
+
+
+def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
+    """Delete runs and their artifacts.
+
+    Args:
+        run_ids: List of run IDs to delete
+
+    Returns:
+        Dict with deletion results
+    """
+    run_index = load_run_index()
+    results: Dict[str, Any] = {
+        "deleted": [],
+        "not_found": [],
+        "inflight_blocked": [],
+        "errors": [],
+        "total_bytes_freed": 0,
+        "latest_reassigned": False,
+        "new_latest": None,
+    }
+
+    # Check for inflight runs first
+    for run_id in run_ids:
+        if run_id in run_index and run_index[run_id].get("status") == "running":
+            results["inflight_blocked"].append(run_id)
+            return results  # Block all deletions if any run is inflight
+
+    # Perform deletions
+    for run_id in run_ids:
+        if run_id not in run_index:
+            results["not_found"].append(run_id)
+            continue
+
+        # Remove from index
+        del run_index[run_id]
+
+        # Remove cache directories
+        interim_dir, processed_dir = get_cache_directories(run_id)
+        run_bytes_freed = 0
+
+        for directory in [interim_dir, processed_dir]:
+            if os.path.exists(directory):
+                try:
+                    # Calculate size before deletion
+                    for root, dirs, files in os.walk(directory):
+                        for file in files:
+                            try:
+                                run_bytes_freed += os.path.getsize(
+                                    os.path.join(root, file)
+                                )
+                            except OSError:
+                                pass
+
+                    shutil.rmtree(directory)
+                    logger.info(f"Deleted run directory: {directory}")
+                except OSError as e:
+                    error_msg = f"Failed to delete {directory}: {e}"
+                    logger.error(error_msg)
+                    results["errors"].append(error_msg)
+
+        results["deleted"].append(run_id)
+        results["total_bytes_freed"] += run_bytes_freed
+
+    # Save updated index
+    save_run_index(run_index)
+
+    # Recompute latest pointer if needed
+    current_latest = get_latest_run_id()
+    if current_latest and current_latest in run_ids:
+        new_latest = recompute_latest_pointer()
+        results["latest_reassigned"] = True
+        results["new_latest"] = new_latest
+    elif current_latest and current_latest in results["deleted"]:
+        # If the current latest was deleted, recompute
+        new_latest = recompute_latest_pointer()
+        results["latest_reassigned"] = True
+        results["new_latest"] = new_latest
+
+    # Log deletion audit
+    log_deletion_audit(run_ids, results["total_bytes_freed"])
+
+    return results
+
+
+def recompute_latest_pointer() -> Optional[str]:
+    """Recompute and update the latest pointer to the newest completed run.
+
+    Returns:
+        The new latest run ID, or None if no completed runs exist
+    """
+    run_index = load_run_index()
+
+    # Find the newest completed run
+    completed_runs = [
+        (run_id, run_data)
+        for run_id, run_data in run_index.items()
+        if run_data.get("status") == "complete"
+    ]
+
+    if not completed_runs:
+        # No completed runs, remove latest pointer
+        remove_latest_pointer()
+        return None
+
+    # Sort by timestamp and get the newest
+    completed_runs.sort(key=lambda x: x[1]["timestamp"], reverse=True)
+    new_latest = completed_runs[0][0]
+
+    # Update latest pointer
+    create_latest_pointer(new_latest)
+    logger.info(f"Recomputed latest pointer to: {new_latest}")
+
+    return new_latest
+
+
+def remove_latest_pointer() -> None:
+    """Remove the latest pointer (symlink and JSON)."""
+    latest_symlink = "data/processed/latest"
+    latest_json = "data/processed/latest.json"
+
+    # Remove symlink
+    if os.path.islink(latest_symlink):
+        try:
+            os.remove(latest_symlink)
+            logger.info(f"Removed latest symlink: {latest_symlink}")
+        except OSError as e:
+            logger.warning(f"Failed to remove symlink: {e}")
+
+    # Remove JSON pointer
+    if os.path.exists(latest_json):
+        try:
+            os.remove(latest_json)
+            logger.info(f"Removed latest JSON pointer: {latest_json}")
+        except OSError as e:
+            logger.warning(f"Failed to remove JSON pointer: {e}")
+
+
+def log_deletion_audit(run_ids: List[str], bytes_freed: int) -> None:
+    """Log deletion audit information to file."""
+    audit_log_path = "data/run_deletions.log"
+
+    audit_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "run_ids": run_ids,
+        "bytes_freed": bytes_freed,
+    }
+
+    try:
+        os.makedirs(os.path.dirname(audit_log_path), exist_ok=True)
+        with open(audit_log_path, "a") as f:
+            f.write(json.dumps(audit_entry) + "\n")
+        logger.info(f"Logged deletion audit: {len(run_ids)} runs, {bytes_freed} bytes")
+    except IOError as e:
+        logger.error(f"Failed to log deletion audit: {e}")
+
+
+def list_runs_sorted() -> List[Tuple[str, Dict[str, Any]]]:
+    """Get list of runs sorted by timestamp (newest first)."""
+    run_index = load_run_index()
+
+    runs = [(run_id, run_data) for run_id, run_data in run_index.items()]
+    runs.sort(key=lambda x: x[1]["timestamp"], reverse=True)
+
+    return runs
+
+
+def get_next_latest_run() -> Optional[str]:
+    """Get the next latest run ID after the current latest."""
+    current_latest = get_latest_run_id()
+    if not current_latest:
+        return None
+
+    runs = list_runs_sorted()
+
+    # Find the next completed run after current latest
+    for run_id, run_data in runs:
+        if run_data.get("status") == "complete" and run_id != current_latest:
+            return run_id
+
+    return None

@@ -300,6 +300,24 @@
   - Minimal additions for Phase 1.5: show an **alias badge** with a simple expander, and a **"Has aliases"** filter.
   - Defer the full settings/rules panel to Phase 2.
 
+### UI Standards (Phase 1.17.1+)
+- **Run Picker**: Implement in sidebar with run_id selection and metadata display
+- **Stage Status**: Show pipeline execution status with ✅/❌/⏳ indicators and durations
+- **Pure Helper Functions**: All UI logic must be in `src/utils/` with no Streamlit dependencies
+- **Session State Caching**: Use Streamlit session state to avoid unnecessary reloading
+- **Run-Scoped Only**: No global path fallbacks, all artifacts must be run-scoped
+- **Error Handling**: Clear messages for missing runs, failed runs, or incomplete artifacts
+- **Type Safety**: All helper functions must have comprehensive type annotations
+
+### UI Safety Standards (Phase 1.17.2+)
+- **Destructive Actions Fuse**: Require explicit enablement before any destructive operations
+- **Preview Mode**: Show exactly what will be affected before confirming actions
+- **Two-step Confirmation**: Checkbox + typed confirmation for all destructive operations
+- **In-flight Protection**: Prevent deletion of running or active resources
+- **Audit Logging**: Log all destructive operations with timestamps and details
+- **Atomic Operations**: Use temporary files and atomic rename for critical updates
+- **Latest Pointer Management**: Automatic recomputation and atomic updates of pointers
+
 - **Config (config/settings.yaml):**
   - Keep existing thresholds.
   - Ensure a small `similarity.penalty.punctuation_mismatch` (default `3`) remains conservative.

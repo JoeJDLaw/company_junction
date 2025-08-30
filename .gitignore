@@ -27,7 +27,7 @@ data/processed/*
 data/manual/*
 
 # Logs
-pipeline.log
+*.log
 
 # Test cache
 .pytest_cache/
@@ -59,4 +59,4 @@ dist/
 .ruff_cache/
 
 # Cursor prompt drafts
-prompts/*.md
+prompts/

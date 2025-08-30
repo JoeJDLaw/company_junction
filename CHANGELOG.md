@@ -5,6 +5,149 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase1.17.2] - 2025-01-27
+
+### Added
+- **CLI Command Builder**: Interactive builder for pipeline commands with real-time validation
+  - Input file selection from `data/raw/` directory with dropdown
+  - Config file selection from `config/` directory with default to `settings.yaml`
+  - Parallelism controls (workers, backend, chunk size, no-parallel)
+  - Run control options (no-resume, keep-runs, custom run ID)
+  - Real-time validation preventing invalid flag combinations
+  - Command export (copy to clipboard or download as shell script)
+- **Run Maintenance**: Safe deletion of pipeline runs with comprehensive safeguards
+  - Destructive actions fuse requiring explicit enablement
+  - Preview mode showing exactly what will be deleted
+  - Two-step confirmation (checkbox + typed confirmation)
+  - In-flight protection preventing deletion of running runs
+  - Latest pointer management with automatic recomputation
+  - Audit logging to `data/run_deletions.log`
+- **Quick Actions**: One-click helpers for common maintenance tasks
+  - "Delete all except latest" for cleaning old completed runs
+  - "Delete all runs" for complete cleanup (use with caution)
+- **Filters Polish**: UI cleanup removing duplicate "Minimum Edge to Primary" slider
+
+### Changed
+- **UI Safety**: Enhanced safety measures for destructive operations
+  - Session-level destructive actions fuse requiring checkbox enablement
+  - Preview before deletion showing file counts and byte sizes
+  - Typed confirmation requiring exact run ID or "DELETE ALL"
+  - Clear warnings about latest pointer effects
+- **Latest Pointer Management**: Improved atomic updates and reliability
+  - JSON pointer prioritized over symlink for better reliability
+  - Automatic recomputation when latest run is deleted
+  - Graceful handling of symlink creation failures
+  - Atomic updates using temporary files and rename operations
+
+### Technical Details
+- **CLI Builder**: Pure functions in `src/utils/cli_builder.py` for command generation
+  - `get_available_input_files()`: Discover CSV files in data/raw/
+  - `get_available_config_files()`: Discover YAML files in config/
+  - `validate_cli_args()`: Comprehensive validation with error messages
+  - `build_cli_command()`: Generate complete CLI command string
+  - `get_known_run_ids()`: Retrieve existing run IDs for custom run ID selection
+- **Run Maintenance**: Safe deletion utilities in `src/utils/cache_utils.py`
+  - `preview_delete_runs()`: Calculate deletion impact without performing deletion
+  - `delete_runs()`: Perform safe deletion with latest pointer management
+  - `recompute_latest_pointer()`: Atomic latest pointer recomputation
+  - `log_deletion_audit()`: Comprehensive audit logging
+- **Validation**: Real-time validation preventing invalid configurations
+  - File existence checking for input and config files
+  - Parallelism flag validation (no workers > 1 with --no-parallel)
+  - Run ID validation preventing empty or invalid IDs
+  - Clear error messages for each validation failure
+
+### Testing
+- **CLI Builder Tests**: 24 comprehensive tests for command generation and validation
+  - Test file discovery for input and config files
+  - Test validation logic for all CLI argument combinations
+  - Test command building with various flag combinations
+  - Test error handling and edge cases
+- **Run Maintenance Tests**: 8 comprehensive tests for deletion functionality
+  - Test preview functionality showing deletion impact
+  - Test actual deletion with latest pointer management
+  - Test latest pointer recomputation and atomic updates
+  - Test audit logging and error handling
+
+### Safety & Validation
+- **Destructive Actions Fuse**: Session-level protection requiring explicit enablement
+- **Preview Mode**: See exactly what will be deleted before confirming
+- **Two-step Confirmation**: Checkbox + typed confirmation for all deletions
+- **In-flight Protection**: Cannot delete runs with "running" status
+- **Audit Logging**: Complete audit trail of all deletion operations
+- **Atomic Operations**: Latest pointer updates use temporary files and atomic rename
+
+## [Phase1.17.1] - 2025-01-27
+
+### Added
+- **Run Picker**: Select any pipeline run from sidebar with run-scoped artifact loading
+  - Dropdown selection of all available runs sorted by timestamp (newest first)
+  - Clear "Latest" indicator for the most recent successful run
+  - Status icons (✅/⏳/❌) for run status visualization
+  - Automatic run metadata display (input file, config, timestamp, status)
+- **Stage Status (MiniDAG Lite)**: View pipeline execution status and timing for each stage
+  - Compact table showing stage name, status, and duration
+  - Status icons for visual indication (✅/⏳/❌/⏸️)
+  - Stage timing information with formatted duration display
+  - Graceful handling of missing stage information
+- **Artifact Downloads**: Download review files, metadata, and intermediate artifacts
+  - Review ready files (CSV and Parquet formats)
+  - Review metadata (JSON format)
+  - Run-scoped file naming with run_id in filename
+- **Session State Caching**: Efficient data loading with automatic cache invalidation
+  - Cache loaded data per run_id to avoid unnecessary reloading
+  - Automatic cache clearing when switching between runs
+  - Performance optimization for large datasets
+- **Pure Helper Functions**: All UI logic moved to testable `src/utils/ui_helpers.py`
+  - 15 comprehensive unit tests for all helper functions
+  - No Streamlit dependencies in helper functions
+  - Clean separation of concerns between UI and business logic
+
+### Changed
+- **UI Architecture**: Complete refactor to eliminate duplication and improve maintainability
+  - Removed all global path fallbacks (run-scoped only)
+  - Centralized run loading logic in pure helper functions
+  - Enhanced error handling with clear user guidance
+  - Improved session state management for better performance
+- **Error Handling**: Explicit messages for missing runs, failed runs, or incomplete artifacts
+  - Clear error messages when run artifacts are missing
+  - Guidance for failed runs and incomplete pipeline execution
+  - No silent fallbacks to legacy paths
+- **Data Loading**: Run-scoped artifact loading with validation
+  - Automatic validation of run artifacts before loading
+  - Support for both CSV and Parquet formats with proper fallback
+  - Enhanced error messages for missing or corrupted files
+
+### Technical Details
+- **Helper Functions**: Pure functions in `src/utils/ui_helpers.py` for all run management
+  - `list_runs()`: Get sorted list of all runs with metadata
+  - `get_run_metadata()`: Retrieve detailed run information
+  - `validate_run_artifacts()`: Check run completeness and file existence
+  - `load_stage_state()`: Parse MiniDAG state for stage status display
+  - `get_artifact_paths()`: Generate run-scoped artifact paths
+- **Session State**: Efficient caching with automatic invalidation
+  - Cache key: `selected_run_id` for current run selection
+  - Cache key: `cached_data` for loaded DataFrame per run
+  - Cache key: `cached_run_id` for tracking cache validity
+- **Error Handling**: Comprehensive validation and user guidance
+  - Run existence validation via run index
+  - Artifact completeness checking
+  - Clear error messages with actionable guidance
+
+### Testing
+- **Unit Tests**: 15 comprehensive tests for all UI helper functions
+  - Test run listing and metadata retrieval
+  - Test artifact validation and path generation
+  - Test stage state loading and parsing
+  - Test run display name formatting and status icons
+  - Mock-based testing without Streamlit dependencies
+
+### Safety & Validation
+- **Run-Scoped Only**: Complete elimination of global path fallbacks
+- **Pure Functions**: All helper functions are pure and easily testable
+- **Type Safety**: Comprehensive type annotations with MyPy validation
+- **Error Isolation**: Clear error boundaries with graceful degradation
+
 ## [Phase1.16] - 2025-01-27
 
 ### Added

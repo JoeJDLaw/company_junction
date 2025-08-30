@@ -380,6 +380,85 @@ When adding new utility functions:
 - **Import standardization**: All imports use absolute paths rooted at `src`
 - **Runtime preservation**: All improvements maintain identical runtime behavior
 
+### Phase 1.17.1 Highlights
+- **Run Picker**: Select any pipeline run from the sidebar with run-scoped artifact loading
+- **Stage Status**: View pipeline execution status and timing for each stage (MiniDAG Lite)
+- **Run Metadata**: Display input file, config, timestamp, and status information
+- **Artifact Downloads**: Download review files, metadata, and intermediate artifacts
+- **Session State Caching**: Efficient data loading with automatic cache invalidation
+- **Run-Scoped Only**: Complete elimination of global path fallbacks
+- **Pure Helper Functions**: All UI logic moved to testable `src/utils/ui_helpers.py`
+
+### Phase 1.17.2 Highlights
+- **CLI Command Builder**: Interactive builder for pipeline commands with real-time validation
+- **Run Maintenance**: Safe deletion of pipeline runs with preview and confirmation safeguards
+- **Destructive Actions Fuse**: Two-step confirmation required for any destructive operations
+- **Latest Pointer Management**: Automatic recomputation and atomic updates of latest run pointers
+- **Audit Logging**: Comprehensive logging of all deletion operations with timestamps and byte counts
+- **Quick Actions**: One-click helpers for common maintenance tasks (delete all except latest, delete all)
+- **Filters Polish**: Removed duplicate "Minimum Edge to Primary" slider for cleaner UI
+
+## CLI Command Builder
+
+The Streamlit UI includes an interactive CLI command builder that helps you construct pipeline commands with real-time validation.
+
+### Features
+- **Input Selection**: Dropdown of available CSV files from `data/raw/`
+- **Config Selection**: Dropdown of available YAML config files from `config/`
+- **Parallelism Controls**: Workers, backend, chunk size, and no-parallel options
+- **Run Control**: No-resume, keep-runs, and custom run ID options
+- **Real-time Validation**: Prevents invalid flag combinations and missing files
+- **Command Export**: Copy to clipboard or download as shell script
+
+### Usage
+1. Open the "Run Pipeline → CLI Builder" section in the sidebar
+2. Select your input file and configuration
+3. Configure parallelism and run control options
+4. Review the generated command in real-time
+5. Copy or download the command for execution
+
+### Validation Rules
+- Required fields: Input file and config file must be specified
+- Parallelism: Cannot specify workers > 1 when --no-parallel is enabled
+- File existence: Input and config files must exist
+- Run ID: Custom run IDs cannot be empty
+
+## Run Maintenance
+
+The Streamlit UI provides safe run maintenance capabilities for managing pipeline artifacts.
+
+### Safety Features
+- **Destructive Actions Fuse**: Must enable destructive actions before any deletion
+- **Preview Mode**: See exactly what will be deleted before confirming
+- **Two-step Confirmation**: Checkbox + typed confirmation required
+- **In-flight Protection**: Cannot delete runs with "running" status
+- **Latest Pointer Management**: Automatic recomputation of latest run pointers
+
+### Deletion Process
+1. Enable destructive actions in the "Run Maintenance" section
+2. Select one or more runs to delete
+3. Click "Preview Deletion" to see what will be removed
+4. Check "I understand this permanently deletes data"
+5. Type the exact run ID (or "DELETE ALL" for multiple runs)
+6. Click "Delete Selected Runs" to confirm
+
+### Quick Actions
+- **Delete all except latest**: Removes old completed runs, keeps the most recent
+- **Delete all runs**: Removes all runs (use with caution)
+
+### What Gets Deleted
+- `data/interim/{run_id}/` directory and all contents
+- `data/processed/{run_id}/` directory and all contents
+- Run entry from `data/run_index.json`
+- Latest pointer recomputation if needed
+
+### Audit Logging
+All deletion operations are logged to `data/run_deletions.log` with:
+- Timestamp of deletion
+- List of deleted run IDs
+- Total bytes freed
+- JSON format for easy parsing
+
 ## Performance Profiling
 
 The pipeline includes comprehensive performance profiling utilities to monitor memory usage, timing, and detect performance regressions.
