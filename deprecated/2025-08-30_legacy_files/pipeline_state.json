@@ -1,0 +1,70 @@
+{
+  "stages": {
+    "normalization": {
+      "name": "normalization",
+      "status": "completed",
+      "start_time": 1756574301.08148,
+      "end_time": 1756574301.088879,
+      "deps": []
+    },
+    "filtering": {
+      "name": "filtering",
+      "status": "completed",
+      "start_time": 1756574301.0896251,
+      "end_time": 1756574306.762944,
+      "deps": []
+    },
+    "candidate_generation": {
+      "name": "candidate_generation",
+      "status": "completed",
+      "start_time": 1756574301.131171,
+      "end_time": 1756574306.76912,
+      "deps": []
+    },
+    "grouping": {
+      "name": "grouping",
+      "status": "completed",
+      "start_time": 1756574301.2580512,
+      "end_time": 1756574306.819416,
+      "deps": []
+    },
+    "survivorship": {
+      "name": "survivorship",
+      "status": "completed",
+      "start_time": 1756574301.310542,
+      "end_time": 1756574306.923839,
+      "deps": []
+    },
+    "disposition": {
+      "name": "disposition",
+      "status": "completed",
+      "start_time": 1756574301.412813,
+      "end_time": 1756574307.00275,
+      "deps": []
+    },
+    "alias_matching": {
+      "name": "alias_matching",
+      "status": "completed",
+      "start_time": 1756574301.491928,
+      "end_time": 1756574307.039571,
+      "deps": []
+    },
+    "final_output": {
+      "name": "final_output",
+      "status": "completed",
+      "start_time": 1756574307.040621,
+      "end_time": 1756574307.084047,
+      "deps": []
+    }
+  },
+  "metadata": {
+    "dag_version": "1.0.0",
+    "input_path": "data/raw/sample_test.csv",
+    "config_path": "config/settings.yaml",
+    "input_hash": "e5cdc2acc273907986c900b17d19dd63ed65bf8ba52aaa754de6dba02945ddec",
+    "config_hash": "",
+    "run_id": "",
+    "cmdline": "python src/cleaning.py --input data/raw/sample_test.csv --outdir data/processed --config config/settings.yaml",
+    "ts": 1756574306.656944
+  }
+}

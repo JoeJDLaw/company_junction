@@ -5,7 +5,8 @@ This module provides parallel execution capabilities using joblib,
 with support for different backends and resource monitoring.
 """
 
-from typing import Any, Callable, List, Optional
+import threading
+from typing import Any, Callable, List, Optional, Tuple
 
 from src.utils.logging_utils import get_logger
 from src.utils.resource_monitor import (
@@ -24,6 +25,65 @@ except ImportError:
     JOBLIB_AVAILABLE = False
     logger.warning("joblib not available - parallel execution will be disabled")
 
+# Cache for loky availability test
+_LOKY_AVAILABLE = None
+
+
+def is_loky_available() -> bool:
+    """Test if loky backend is available and working.
+
+    Returns:
+        True if loky backend can be used, False otherwise
+    """
+    global _LOKY_AVAILABLE
+
+    if _LOKY_AVAILABLE is not None:
+        return _LOKY_AVAILABLE
+
+    if not JOBLIB_AVAILABLE:
+        _LOKY_AVAILABLE = False
+        return _LOKY_AVAILABLE
+
+    try:
+        # Simple test to see if loky works
+        result = Parallel(n_jobs=1, backend="loky")(delayed(lambda: 1)() for _ in [0])
+        _LOKY_AVAILABLE = (
+            isinstance(result, list) and len(result) == 1 and result[0] == 1
+        )
+    except Exception as e:
+        logger.debug(f"loky backend test failed: {e}")
+        _LOKY_AVAILABLE = False
+
+    return _LOKY_AVAILABLE
+
+
+def select_backend(requested: str) -> Tuple[str, str]:
+    """Select the appropriate backend based on availability and platform.
+
+    Args:
+        requested: Requested backend ('loky' or 'threading')
+
+    Returns:
+        Tuple of (chosen_backend, reason)
+    """
+    if not JOBLIB_AVAILABLE:
+        return "sequential", "joblib_unavailable"
+
+    if requested == "threading":
+        return "threading", "requested"
+
+    if requested == "loky":
+        if is_loky_available():
+            return "loky", "requested"
+        else:
+            return "threading", "fallback_unsupported"
+
+    # Default case
+    if is_loky_available():
+        return "loky", "default"
+    else:
+        return "threading", "fallback_unsupported"
+
 
 class ParallelExecutor:
     """Parallel execution wrapper with resource monitoring and fallbacks."""
@@ -35,6 +95,7 @@ class ParallelExecutor:
         chunk_size: int = 1000,
         small_input_threshold: int = 10000,
         disable_parallel: bool = False,
+        stop_flag: Optional[threading.Event] = None,
     ):
         """
         Initialize parallel executor.
@@ -45,9 +106,11 @@ class ParallelExecutor:
             chunk_size: Chunk size for parallel processing
             small_input_threshold: Threshold for auto-switching to sequential
             disable_parallel: Force sequential execution
+            stop_flag: Optional threading.Event for graceful interruption
         """
         self.disable_parallel = disable_parallel
         self.small_input_threshold = small_input_threshold
+        self.stop_flag = stop_flag or threading.Event()
 
         if not JOBLIB_AVAILABLE or disable_parallel:
             logger.warning(
@@ -56,37 +119,24 @@ class ParallelExecutor:
             self.workers = 1
             self.backend = "sequential"
             self.chunk_size = chunk_size
+            self.backend_reason = (
+                "joblib_unavailable" if not JOBLIB_AVAILABLE else "disabled"
+            )
             return
 
         # Calculate optimal workers
         self.workers = calculate_optimal_workers(workers)
 
-        # Validate backend
-        if backend not in ["loky", "threading"]:
-            logger.warning(f"Invalid backend '{backend}', using 'loky'")
-            backend = "loky"
-
-        # Try to use requested backend, fallback if needed
-        if backend == "loky" and not self._test_loky_backend():
-            logger.warning("loky backend not available, falling back to threading")
-            backend = "threading"
-
-        self.backend = backend
+        # Select backend with explicit logging
+        chosen_backend, reason = select_backend(backend)
+        self.backend = chosen_backend
+        self.backend_reason = reason
         self.chunk_size = chunk_size
 
         logger.info(
-            f"Parallel executor initialized: workers={self.workers}, backend={self.backend}"
+            f"Parallel executor initialized | requested={backend}, chosen={chosen_backend}, "
+            f"reason={reason}, workers={self.workers}"
         )
-
-    def _test_loky_backend(self) -> bool:
-        """Test if loky backend is available and working."""
-        try:
-            # Simple test to see if loky works
-            result = Parallel(n_jobs=1, backend="loky")(delayed(lambda x: x + 1)(1))
-            return isinstance(result, list) and len(result) == 1 and result[0] == 2
-        except Exception as e:
-            logger.debug(f"loky backend test failed: {e}")
-            return False
 
     def should_use_parallel(self, input_size: int) -> bool:
         """
@@ -136,7 +186,13 @@ class ParallelExecutor:
 
         if not self.should_use_parallel(input_size):
             logger.info(f"Executing {operation_name} sequentially (size: {input_size})")
-            return [func(item) for item in items]
+            results = []
+            for item in items:
+                if self.stop_flag.is_set():
+                    logger.info(f"Stop flag set, interrupting {operation_name}")
+                    break
+                results.append(func(item))
+            return results
 
         # Monitor parallel execution
         monitor_parallel_execution(self.workers, operation_name)
@@ -161,7 +217,13 @@ class ParallelExecutor:
         except Exception as e:
             logger.error(f"Parallel execution failed: {e}")
             logger.info(f"Falling back to sequential execution for {operation_name}")
-            return [func(item) for item in items]
+            results = []
+            for item in items:
+                if self.stop_flag.is_set():
+                    logger.info(f"Stop flag set, interrupting {operation_name}")
+                    break
+                results.append(func(item))
+            return results
 
     def execute_chunked(
         self,
@@ -195,6 +257,9 @@ class ParallelExecutor:
             ]
             results = []
             for chunk in chunks:
+                if self.stop_flag.is_set():
+                    logger.info(f"Stop flag set, interrupting {operation_name}")
+                    break
                 chunk_result = func(chunk)
                 if isinstance(chunk_result, list):
                     results.extend(chunk_result)
@@ -239,6 +304,9 @@ class ParallelExecutor:
             ]
             results = []
             for chunk in chunks:
+                if self.stop_flag.is_set():
+                    logger.info(f"Stop flag set, interrupting {operation_name}")
+                    break
                 chunk_result = func(chunk)
                 if isinstance(chunk_result, list):
                     results.extend(chunk_result)
@@ -253,6 +321,7 @@ def create_parallel_executor(
     chunk_size: int = 1000,
     small_input_threshold: int = 10000,
     disable_parallel: bool = False,
+    stop_flag: Optional[threading.Event] = None,
 ) -> ParallelExecutor:
     """
     Create a parallel executor with the specified configuration.
@@ -263,6 +332,7 @@ def create_parallel_executor(
         chunk_size: Chunk size for parallel processing
         small_input_threshold: Threshold for auto-switching to sequential
         disable_parallel: Force sequential execution
+        stop_flag: Optional threading.Event for graceful interruption
 
     Returns:
         Configured ParallelExecutor instance
@@ -273,6 +343,7 @@ def create_parallel_executor(
         chunk_size=chunk_size,
         small_input_threshold=small_input_threshold,
         disable_parallel=disable_parallel,
+        stop_flag=stop_flag,
     )
 
 

@@ -337,11 +337,18 @@ def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
         "new_latest": None,
     }
 
-    # Check for inflight runs first
+    # Check for truly inflight runs (with process validation)
+    truly_inflight = []
     for run_id in run_ids:
         if run_id in run_index and run_index[run_id].get("status") == "running":
-            results["inflight_blocked"].append(run_id)
-            return results  # Block all deletions if any run is inflight
+            # Check if there's actually a process running for this run
+            if is_run_truly_inflight(run_id):
+                truly_inflight.append(run_id)
+
+    if truly_inflight:
+        results["inflight_blocked"] = truly_inflight
+        logger.warning(f"Blocking deletion of truly inflight runs: {truly_inflight}")
+        return results  # Block all deletions if any run is truly inflight
 
     # Perform deletions
     for run_id in run_ids:
@@ -480,6 +487,40 @@ def list_runs_sorted() -> List[Tuple[str, Dict[str, Any]]]:
     runs.sort(key=lambda x: x[1]["timestamp"], reverse=True)
 
     return runs
+
+
+def is_run_truly_inflight(run_id: str) -> bool:
+    """Check if a run is truly inflight by looking for active processes.
+
+    Args:
+        run_id: The run ID to check
+
+    Returns:
+        True if there's an active process for this run, False otherwise
+    """
+    try:
+        import psutil
+
+        # Look for python processes running cleaning.py with this run_id
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+            try:
+                if proc.info["name"] == "python" and proc.info["cmdline"]:
+                    cmdline = " ".join(proc.info["cmdline"])
+                    if "cleaning.py" in cmdline and run_id in cmdline:
+                        logger.info(
+                            f"Found active process {proc.info['pid']} for run {run_id}"
+                        )
+                        return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        logger.info(f"No active process found for run {run_id}")
+        return False
+
+    except ImportError:
+        # If psutil is not available, be conservative and assume it's inflight
+        logger.warning("psutil not available, assuming run is inflight")
+        return True
 
 
 def get_next_latest_run() -> Optional[str]:

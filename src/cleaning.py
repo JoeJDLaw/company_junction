@@ -59,13 +59,21 @@ from src.alias_matching import (
 )
 
 try:
-    from src.utils.io_utils import load_settings, load_relationship_ranks
+    from src.utils.io_utils import (
+        load_settings,
+        load_relationship_ranks,
+        read_csv_stable,
+    )
     from src.utils.logging_utils import setup_logging
     from src.utils.path_utils import ensure_directory_exists
     from src.utils.perf_utils import log_perf
     from src.utils.dtypes import optimize_dataframe_memory
 except ImportError:
-    from src.utils.io_utils import load_settings, load_relationship_ranks
+    from src.utils.io_utils import (
+        load_settings,
+        load_relationship_ranks,
+        read_csv_stable,
+    )
 from src.utils.logging_utils import setup_logging
 from src.utils.path_utils import ensure_directory_exists
 from src.utils.perf_utils import log_perf
@@ -263,7 +271,8 @@ def load_salesforce_data(file_path: str) -> pd.DataFrame:
         DataFrame containing the Salesforce data
     """
     if file_path.endswith(".csv"):
-        return pd.read_csv(file_path)
+        # Use stable CSV reader to avoid dtype warnings
+        return read_csv_stable(file_path)
     elif file_path.endswith((".xlsx", ".xls")):
         return pd.read_excel(file_path)
     else:
@@ -443,6 +452,12 @@ def run_pipeline(
     # Update state metadata with current run
     cmdline = f"python src/cleaning.py --input {input_path} --outdir {output_dir} --config {config_path}"
     dag._update_state_metadata(Path(input_path), Path(config_path), cmdline)
+
+    # Add stop flag to parallel executor for graceful interruption
+    import threading
+
+    stop_flag = threading.Event()
+    parallel_executor.stop_flag = stop_flag
 
     try:
         # Step 1: Load and validate data
@@ -895,6 +910,21 @@ def run_pipeline(
         dag.complete("final_output")
         logger.info("[stage:end] final_output")
 
+    except KeyboardInterrupt:
+        # Handle graceful interruption
+        active_stage = dag.get_current_stage() or "unknown"
+        logger.warning(
+            f"Run interrupted by user | run_id={run_id}, stage={active_stage}, saved_state=interrupted"
+        )
+
+        # Mark the pipeline as interrupted
+        dag.mark_interrupted(active_stage)
+
+        # Update run status to interrupted
+        update_run_status(run_id, "interrupted")
+
+        # Exit with standard interrupt code
+        sys.exit(130)
     except Exception:
         logger.exception("Pipeline failed with exception:")
         raise
@@ -970,7 +1000,7 @@ def main() -> None:
         logger.error(f"Input file not found: {args.input}")
         sys.exit(1)
 
-    # Run pipeline
+    # Run pipeline with interrupt handling
     try:
         run_pipeline(
             args.input,
@@ -988,6 +1018,9 @@ def main() -> None:
             args.run_id,
             args.keep_runs,
         )
+    except KeyboardInterrupt:
+        logger.warning("Pipeline interrupted by user (Ctrl+C)")
+        sys.exit(130)  # Standard exit code for interrupt
     except Exception:
         sys.exit(87)  # Exit with code 87 after full traceback has been printed
 

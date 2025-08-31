@@ -75,9 +75,35 @@ logging:
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "pipeline.log"
 
+# CSV Processing Configuration
+csv:
+  # Engine preference for CSV reading (auto, pyarrow, c, python)
+  engine: "auto"
+  
+  # Number of rows to sample for schema inference
+  sample_rows: 20000
+  
+  # Columns to force to string type
+  force_string_cols:
+    - "account_id"
+    - "parent_account_id"
+
 # File Paths
 paths:
   raw_data: "data/raw"
   interim_data: "data/interim"
   processed_data: "data/processed"
   test_fixtures: "tests/fixtures"
+
+# UI Configuration
+ui:
+  page_size_default: 50  # Emergency reduction from 500
+  page_size_options: [50, 100, 200, 500]
+  max_page_fetch_seconds: 30  # Timeout threshold
+  perf_feature_flags:
+    paging_enabled: true
+    emergency_small_pages: true
+    hard_timeout_enabled: true
+  use_duckdb_for_groups: true
+  duckdb_threads: 4
+  max_pyarrow_group_stats_seconds: 5

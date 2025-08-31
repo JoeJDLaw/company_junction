@@ -174,6 +174,11 @@ def _generate_candidate_pairs(
     )
 
     for block_key in block_progress.wrap(unique_blocks):
+        # Check for stop flag
+        if parallel_executor and parallel_executor.stop_flag.is_set():
+            logger.info("Stop flag set, interrupting candidate pair generation")
+            break
+
         if pd.isna(block_key) or block_key == "":
             continue
 

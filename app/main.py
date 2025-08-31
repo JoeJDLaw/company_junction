@@ -6,50 +6,13 @@ This app provides an interactive interface for:
 - Filtering and reviewing duplicate groups
 - Manual disposition overrides and blacklist management
 - Exporting filtered results
-
-## How to Run
-
-### Prerequisites
-1. Install dependencies: `pip install -r requirements.txt`
-2. Run the pipeline first to generate review data:
-   ```bash
-   python src/cleaning.py --input data/raw/your_data.csv --outdir data/processed --config config/settings.yaml
-   ```
-
-### Start the App
-```bash
-streamlit run app/main.py
-```
-
-### Alternative: Headless Mode (for testing)
-```bash
-streamlit run app/main.py --server.headless true --server.port 8501
-```
-
-## Expected Data Files
-- **Primary**: `data/processed/review_ready.parquet` (preferred for native types)
-- **Fallback**: `data/processed/review_ready.csv` (if Parquet not available)
-
-## Features
-- **Review Interface**: Browse duplicate groups with disposition assignments
-- **Filtering**: By disposition, group size, score, suffix mismatches, aliases
-- **Sorting**: By group size, score, or account name
-- **Manual Overrides**: Group-level disposition changes with JSON persistence
-- **Blacklist Management**: View and edit pattern-based deletion rules with word-boundary matching
-- **Pipeline Launcher**: Generate and copy pipeline commands for easy execution
-- **Export**: Download manual overrides and blacklist for audit
-
-## Manual Data Files
-- **Overrides**: `data/manual/manual_dispositions.json`
-- **Blacklist**: `data/manual/manual_blacklist.json`
-- These files are git-ignored and persist across app sessions.
-- **Audit**: `data/processed/review_meta.json` contains run metadata and statistics.
 """
 
 import streamlit as st
 import pandas as pd
 import json
 import os
+
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -181,6 +144,18 @@ def main() -> None:
     # Setup logging
     setup_logging()
 
+    # Phase 1.17.4: Diagnostic Mode
+    diag = False
+    try:
+        # Streamlit ≥1.29
+        qp = st.query_params
+        diag = qp.get("diag", ["0"])[0] == "1"
+    except Exception:
+        pass
+
+    with st.sidebar:
+        diag = st.checkbox("Diagnostic mode", value=diag)
+
     # Phase 1.17.1: Run Picker and Stage Status
     from src.utils.ui_helpers import (
         list_runs,
@@ -220,7 +195,9 @@ def main() -> None:
 
     for run in runs:
         run_id = run["run_id"]
-        display_name = format_run_display_name(run_id, run)
+        # Get proper metadata with formatted timestamp
+        run_metadata = get_run_metadata(run_id)
+        display_name = format_run_display_name(run_id, run_metadata)
         status_icon = get_run_status_icon(run["status"])
 
         # Mark latest run
@@ -515,7 +492,9 @@ def main() -> None:
                 help="Download as shell script",
             )
 
-    # Phase 1.17.2: Run Maintenance
+    # Phase 1.17.2: Run Maintenance (moved to end for performance)
+
+    # Phase 1.17.2: Run Maintenance (moved to end for performance)
     with st.sidebar.expander("Run Maintenance", expanded=False):
         from src.utils.cache_utils import (
             preview_delete_runs,
@@ -535,180 +514,186 @@ def main() -> None:
 
         if not st.session_state.enable_destructive_actions:
             st.info("Check the box above to enable run maintenance features")
-            return
-
-        # Get runs for selection
-        runs_sorted = list_runs_sorted()
-        if not runs_sorted:
-            st.info("No runs available for maintenance")
-            return
-
-        # Run selection
-        st.write("**Select Runs to Delete:**")
-
-        # Create selection options
-        run_options = []
-        run_display_names = []
-
-        for run_id, run_data in runs_sorted:
-            status = run_data.get("status", "unknown")
-            status_icon = get_run_status_icon(status)
-            display_name = format_run_display_name(run_id, run_data)
-
-            # Disable running runs
-            if status == "running":
-                display_name = f"🚫 {display_name} (Running - cannot delete)"
-
-            run_options.append(run_id)
-            run_display_names.append(f"{status_icon} {display_name}")
-
-        selected_runs = st.multiselect(
-            "Runs to delete",
-            options=run_display_names,
-            help="Select one or more runs to delete",
-        )
-
-        # Extract run IDs
-        selected_run_ids = []
-        for display_name in selected_runs:
-            idx = run_display_names.index(display_name)
-            run_id = run_options[idx]
-            run_data = runs_sorted[idx][1]
-
-            # Skip running runs
-            if run_data.get("status") == "running":
-                continue
-
-            selected_run_ids.append(run_id)
-
-        # Preview button
-        if st.button("🔍 Preview Deletion", disabled=not selected_run_ids):
-            with st.spinner("Calculating deletion preview..."):
-                preview = preview_delete_runs(selected_run_ids)
-
-                if preview["runs_inflight"]:
-                    st.error(
-                        f"Cannot delete running runs: {', '.join(preview['runs_inflight'])}"
-                    )
-                    return
-
-                if preview["runs_not_found"]:
-                    st.warning(
-                        f"Runs not found: {', '.join(preview['runs_not_found'])}"
-                    )
-
-                if preview["runs_to_delete"]:
-                    st.write("**Runs to be deleted:**")
-                    total_bytes = 0
-                    for run_info in preview["runs_to_delete"]:
-                        run_id = run_info["run_id"]
-                        bytes_size = run_info["bytes"]
-                        file_count = len(run_info["files"])
-                        total_bytes += bytes_size
-
-                        st.write(
-                            f"• {run_id} ({file_count} files, {bytes_size:,} bytes)"
-                        )
-
-                    st.write(
-                        f"**Total:** {len(preview['runs_to_delete'])} runs, {total_bytes:,} bytes"
-                    )
-
-                    if preview["latest_affected"]:
-                        st.warning("⚠️ This will affect the latest pointer")
-
-                    # Store preview for deletion
-                    st.session_state.deletion_preview = preview
-                    st.session_state.preview_performed = True
-
-        # Delete button (only after preview)
-        if st.session_state.get("preview_performed", False) and selected_run_ids:
-            st.write("**Confirm Deletion:**")
-
-            # Confirmation checkbox
-            confirm_checkbox = st.checkbox(
-                "I understand this permanently deletes data",
-                value=False,
-                help="Required confirmation for deletion",
-            )
-
-            # Typed confirmation
-            if len(selected_run_ids) == 1:
-                confirmation_text = f"Type '{selected_run_ids[0]}' to confirm"
-                expected_confirmation = selected_run_ids[0]
+        else:
+            # Get runs for selection
+            runs_sorted = list_runs_sorted()
+            if not runs_sorted:
+                st.info("No runs available for maintenance")
             else:
-                confirmation_text = "Type 'DELETE ALL' to confirm"
-                expected_confirmation = "DELETE ALL"
+                # Run selection
+                st.write("**Select Runs to Delete:**")
 
-            typed_confirmation = st.text_input(
-                confirmation_text,
-                help="Type the exact text to confirm deletion",
-            )
+                # Create selection options
+                run_options = []
+                run_display_names = []
 
-            # Delete button
-            if confirm_checkbox and typed_confirmation == expected_confirmation:
-                if st.button("🗑️ Delete Selected Runs", type="primary"):
-                    with st.spinner("Deleting runs..."):
-                        results = delete_runs(selected_run_ids)
+                for run_id, run_data in runs_sorted:
+                    status = run_data.get("status", "unknown")
+                    status_icon = get_run_status_icon(status)
+                    display_name = format_run_display_name(run_id, run_data)
 
-                        if results["inflight_blocked"]:
-                            st.error(
-                                f"Cannot delete running runs: {', '.join(results['inflight_blocked'])}"
-                            )
-                        else:
-                            st.success(f"Deleted {len(results['deleted'])} runs")
+                    # Disable running runs
+                    if status == "running":
+                        display_name = f"🚫 {display_name} (Running - cannot delete)"
 
-                            if results["latest_reassigned"]:
-                                st.info(
-                                    f"Latest pointer reassigned to: {results['new_latest']}"
-                                )
+                    run_options.append(run_id)
+                    run_display_names.append(f"{status_icon} {display_name}")
 
-                            if results["total_bytes_freed"] > 0:
-                                st.info(f"Freed {results['total_bytes_freed']:,} bytes")
-
-                            # Clear session state
-                            st.session_state.preview_performed = False
-                            st.session_state.deletion_preview = None
-
-                            # Invalidate cache to refresh run list
-                            st.session_state.cached_data = {}
-                            st.rerun()
-            else:
-                st.info(
-                    "Check the confirmation box and type the exact text to enable deletion"
+                selected_runs = st.multiselect(
+                    "Runs to delete",
+                    options=run_display_names,
+                    help="Select one or more runs to delete",
                 )
 
-        # Quick actions
-        st.write("**Quick Actions:**")
+                # Extract run IDs
+                selected_run_ids = []
+                for display_name in selected_runs:
+                    idx = run_display_names.index(display_name)
+                    run_id = run_options[idx]
+                    run_data = runs_sorted[idx][1]
 
-        # Get completed runs
-        completed_runs = [
-            run_id
-            for run_id, run_data in runs_sorted
-            if run_data.get("status") == "complete"
-        ]
-        latest_run = get_default_run_id()
+                    # Skip running runs
+                    if run_data.get("status") == "running":
+                        continue
 
-        if len(completed_runs) > 1 and latest_run in completed_runs:
-            if st.button("🗑️ Delete all except latest"):
-                runs_to_delete = [
-                    run_id for run_id in completed_runs if run_id != latest_run
+                    selected_run_ids.append(run_id)
+
+                # Preview button
+                if st.button("🔍 Preview Deletion", disabled=not selected_run_ids):
+                    with st.spinner("Calculating deletion preview..."):
+                        preview = preview_delete_runs(selected_run_ids)
+
+                        if preview["runs_inflight"]:
+                            st.error(
+                                f"Cannot delete running runs: {', '.join(preview['runs_inflight'])}"
+                            )
+                        else:
+                            if preview["runs_not_found"]:
+                                st.warning(
+                                    f"Runs not found: {', '.join(preview['runs_not_found'])}"
+                                )
+
+                            if preview["runs_to_delete"]:
+                                st.write("**Runs to be deleted:**")
+                                total_bytes = 0
+                                for run_info in preview["runs_to_delete"]:
+                                    run_id = run_info["run_id"]
+                                    bytes_size = run_info["bytes"]
+                                    file_count = len(run_info["files"])
+                                    total_bytes += bytes_size
+
+                                    st.write(
+                                        f"• {run_id} ({file_count} files, {bytes_size:,} bytes)"
+                                    )
+
+                                st.write(
+                                    f"**Total:** {len(preview['runs_to_delete'])} runs, {total_bytes:,} bytes"
+                                )
+
+                                if preview["latest_affected"]:
+                                    st.warning("⚠️ This will affect the latest pointer")
+
+                                # Store preview for deletion
+                                st.session_state.deletion_preview = preview
+                                st.session_state.preview_performed = True
+
+                # Delete button (only after preview)
+                if (
+                    st.session_state.get("preview_performed", False)
+                    and selected_run_ids
+                ):
+                    st.write("**Confirm Deletion:**")
+
+                    # Confirmation checkbox
+                    confirm_checkbox = st.checkbox(
+                        "I understand this permanently deletes data",
+                        value=False,
+                        help="Required confirmation for deletion",
+                    )
+
+                    # Delete button
+                    if confirm_checkbox:
+                        if st.button("🗑️ Delete Selected Runs", type="primary"):
+                            with st.spinner("Deleting runs..."):
+                                results = delete_runs(selected_run_ids)
+
+                                if results["inflight_blocked"]:
+                                    st.error(
+                                        f"Cannot delete running runs: {', '.join(results['inflight_blocked'])}"
+                                    )
+                                else:
+                                    st.success(
+                                        f"Deleted {len(results['deleted'])} runs"
+                                    )
+
+                                    if results["latest_reassigned"]:
+                                        st.info(
+                                            f"Latest pointer reassigned to: {results['new_latest']}"
+                                        )
+
+                                    if results["total_bytes_freed"] > 0:
+                                        st.info(
+                                            f"Freed {results['total_bytes_freed']:,} bytes"
+                                        )
+
+                                    # Clear session state
+                                    st.session_state.preview_performed = False
+                                    st.session_state.deletion_preview = None
+
+                                    # Invalidate cache to refresh run list
+                                    st.session_state.cached_data = {}
+
+                                    # Clear Streamlit's internal cache to prevent MediaFileStorageError
+                                    st.cache_data.clear()
+                                    st.cache_resource.clear()
+
+                                    st.rerun()
+                    else:
+                        st.info("Check the confirmation box to enable deletion")
+
+                # Quick actions
+                st.write("**Quick Actions:**")
+
+                # Get completed runs
+                completed_runs = [
+                    run_id
+                    for run_id, run_data in runs_sorted
+                    if run_data.get("status") == "complete"
                 ]
-                if runs_to_delete:
-                    with st.spinner("Deleting old runs..."):
-                        results = delete_runs(runs_to_delete)
-                        st.success(f"Deleted {len(results['deleted'])} old runs")
-                        st.session_state.cached_data = {}
-                        st.rerun()
+                latest_run = get_default_run_id()
 
-        if len(runs_sorted) > 1:
-            if st.button("🗑️ Delete all runs"):
-                all_run_ids = [run_id for run_id, _ in runs_sorted]
-                with st.spinner("Deleting all runs..."):
-                    results = delete_runs(all_run_ids)
-                    st.success(f"Deleted {len(results['deleted'])} runs")
-                    st.session_state.cached_data = {}
-                    st.rerun()
+                if len(completed_runs) > 1 and latest_run in completed_runs:
+                    if st.button("🗑️ Delete all except latest"):
+                        runs_to_delete = [
+                            run_id for run_id in completed_runs if run_id != latest_run
+                        ]
+                        if runs_to_delete:
+                            with st.spinner("Deleting old runs..."):
+                                results = delete_runs(runs_to_delete)
+                                st.success(
+                                    f"Deleted {len(results['deleted'])} old runs"
+                                )
+                                st.session_state.cached_data = {}
+
+                                # Clear Streamlit's internal cache to prevent MediaFileStorageError
+                                st.cache_data.clear()
+                                st.cache_resource.clear()
+
+                                st.rerun()
+
+                if len(runs_sorted) > 1:
+                    if st.button("🗑️ Delete all runs"):
+                        all_run_ids = [run_id for run_id, _ in runs_sorted]
+                        with st.spinner("Deleting all runs..."):
+                            results = delete_runs(all_run_ids)
+                            st.success(f"Deleted {len(results['deleted'])} runs")
+                            st.session_state.cached_data = {}
+
+                            # Clear Streamlit's internal cache to prevent MediaFileStorageError
+                            st.cache_data.clear()
+                            st.cache_resource.clear()
+
+                            st.rerun()
 
     # Load review data with caching
     if selected_run_id != st.session_state.cached_run_id:
@@ -717,16 +702,25 @@ def main() -> None:
         st.session_state.cached_run_id = selected_run_id
 
     # Load data if not cached
-    if selected_run_id not in st.session_state.cached_data:
-        df = load_review_data(selected_run_id)
-        if df is not None:
-            st.session_state.cached_data[selected_run_id] = df
+    try:
+        if selected_run_id not in st.session_state.cached_data:
+            df = load_review_data(selected_run_id)
+            if df is not None:
+                st.session_state.cached_data[selected_run_id] = df
+            else:
+                st.error(f"Failed to load data for run {selected_run_id}")
+                return
         else:
-            st.error(f"Failed to load data for run {selected_run_id}")
-            return
-    else:
-        df = st.session_state.cached_data[selected_run_id]
-        st.success(f"Loaded {len(df)} records from cache (run {selected_run_id})")
+            df = st.session_state.cached_data[selected_run_id]
+            st.success(f"Loaded {len(df)} records from cache (run {selected_run_id})")
+    except Exception as e:
+        # Handle cases where cached data becomes invalid (e.g., after run deletion)
+        st.error(f"Error loading data for run {selected_run_id}: {str(e)}")
+        # Clear the problematic cache entry
+        if selected_run_id in st.session_state.cached_data:
+            del st.session_state.cached_data[selected_run_id]
+        st.info("Please refresh the page or select a different run.")
+        return
 
     # Load settings for rules panel
     settings = load_settings()
@@ -1058,7 +1052,30 @@ def main() -> None:
     # Display groups
     st.subheader("Duplicate Groups")
 
-    # Sorting controls
+    # Import pagination helpers
+    from src.utils.ui_helpers import (
+        get_groups_page,
+        get_group_details_lazy,
+        build_cache_key,
+        build_details_cache_key,
+        get_total_groups_count,
+        _is_non_empty,
+        PageFetchTimeout,
+    )
+
+    # Load settings for pagination configuration
+    settings = load_settings()
+    page_size_options = settings.get("ui", {}).get(
+        "page_size_options", [50, 100, 200, 500]
+    )
+    default_page_size = settings.get("ui", {}).get("page_size_default", 50)
+
+    # Force DuckDB backend when flag is enabled
+    use_duckdb = settings.get("ui", {}).get("use_duckdb_for_groups", False)
+    if use_duckdb:
+        st.session_state.setdefault("groups_backend", {})[selected_run_id] = "duckdb"
+
+    # Sorting controls (preserve existing labels and behavior)
     st.sidebar.write("**Sorting**")
     sort_by = st.sidebar.selectbox(
         "Sort Groups By",
@@ -1073,66 +1090,150 @@ def main() -> None:
         index=0,
     )
 
-    # Apply sorting to groups
-    group_stats = []
-    for group_id in filtered_df["group_id"].unique():
-        group_data = filtered_df[filtered_df["group_id"] == group_id]
-        max_score = group_data["weakest_edge_to_primary"].max()
-        # Get primary record's account name for sorting
-        primary_record = (
-            group_data[group_data["is_primary"]].iloc[0]
-            if group_data["is_primary"].any()
-            else group_data.iloc[0]
-        )
-        primary_name = primary_record.get("account_name", "")
-        group_stats.append(
-            {
-                "group_id": group_id,
-                "size": len(group_data),
-                "max_score": max_score,
-                "primary_name": primary_name,
-            }
-        )
+    # Pagination controls
+    page_size = st.sidebar.selectbox(
+        "Page Size", page_size_options, index=page_size_options.index(default_page_size)
+    )
 
-    group_stats_df = pd.DataFrame(group_stats)
-
-    if "Group Size" in sort_by:
-        if "(Desc)" in sort_by:
-            sorted_groups = group_stats_df.sort_values("size", ascending=False)[
-                "group_id"
-            ].tolist()
-        else:
-            sorted_groups = group_stats_df.sort_values("size", ascending=True)[
-                "group_id"
-            ].tolist()
-    elif "Max Score" in sort_by:
-        if "(Desc)" in sort_by:
-            sorted_groups = group_stats_df.sort_values("max_score", ascending=False)[
-                "group_id"
-            ].tolist()
-        else:
-            sorted_groups = group_stats_df.sort_values("max_score", ascending=True)[
-                "group_id"
-            ].tolist()
-    else:  # Account Name
-        if "(Desc)" in sort_by:
-            sorted_groups = group_stats_df.sort_values("primary_name", ascending=False)[
-                "group_id"
-            ].tolist()
-        else:
-            sorted_groups = group_stats_df.sort_values("primary_name", ascending=True)[
-                "group_id"
-            ].tolist()
-
-    # Pagination
-    page_size = st.sidebar.selectbox("Page Size", [10, 25, 50, 100], index=1)
-    total_groups = len(sorted_groups)
-
+    # Initialize session state for pagination
     if "page" not in st.session_state:
         st.session_state.page = 1
 
+    # Build filters dictionary
+    filters = {
+        "dispositions": selected_dispositions if selected_dispositions else None,
+        "min_group_size": min_group_size,
+        "show_suffix_mismatch": show_suffix_mismatch,
+        "has_aliases": has_aliases,
+        "min_edge_strength": min_edge_strength,
+    }
+
+    # Check if filters changed to reset page
+    current_filters_key = build_cache_key(
+        selected_run_id, sort_by, 1, page_size, filters
+    )
+    if "previous_filters_key" not in st.session_state:
+        st.session_state.previous_filters_key = current_filters_key
+    elif st.session_state.previous_filters_key != current_filters_key:
+        st.session_state.page = 1
+        st.session_state.previous_filters_key = current_filters_key
+
+    # Get total groups count
+    total_groups = get_total_groups_count(selected_run_id, filters)
     max_page = max(1, (total_groups + page_size - 1) // page_size)
 
+    # Ensure page is within bounds
+    if st.session_state.page > max_page:
+        st.session_state.page = max_page
+    elif st.session_state.page < 1:
+        st.session_state.page = 1
+
+    # Get groups for current page using PyArrow pagination
+    # Build cache key for this specific page request
+    backend = st.session_state.get("groups_backend", {}).get(selected_run_id, "pyarrow")
+    page_cache_key = build_cache_key(
+        selected_run_id, sort_by, st.session_state.page, page_size, filters, backend
+    )
+
+    try:
+        page_groups, actual_total = get_groups_page(
+            selected_run_id, sort_by, st.session_state.page, page_size, filters
+        )
+
+        # Update total if different (should be the same, but handle edge cases)
+        if actual_total != total_groups:
+            total_groups = actual_total
+            max_page = max(1, (total_groups + page_size - 1) // page_size)
+
+    except PageFetchTimeout:
+        # Handle timeout specifically
+        st.error("⚠️ Page load timed out after 30 seconds. The dataset is very large.")
+
+        # Offer user options
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Try Again"):
+                st.rerun()
+        with col2:
+            if st.button("📉 Reduce Page Size to 50"):
+                st.session_state.page_size = 50
+                st.rerun()
+
+        st.info(
+            "💡 **Tip:** For large datasets, try reducing the page size or applying filters to reduce the data load."
+        )
+        return
+
+    except Exception as e:
+        # Fallback to current behavior if pagination fails
+        st.warning(f"Pagination failed, falling back to current behavior: {e}")
+        # Log error using st.error instead of logger
+        st.error(
+            f'Groups pagination fallback | run_id={selected_run_id} error="{str(e)}"'
+        )
+
+        # Use existing logic as fallback
+        group_stats = []
+        for group_id in filtered_df["group_id"].unique():
+            group_data = filtered_df[filtered_df["group_id"] == group_id]
+            max_score = group_data["weakest_edge_to_primary"].max()
+            primary_record = (
+                group_data[group_data["is_primary"]].iloc[0]
+                if group_data["is_primary"].any()
+                else group_data.iloc[0]
+            )
+            primary_name = primary_record.get("account_name", "")
+            group_stats.append(
+                {
+                    "group_id": group_id,
+                    "size": len(group_data),
+                    "max_score": max_score,
+                    "primary_name": primary_name,
+                }
+            )
+
+        group_stats_df = pd.DataFrame(group_stats)
+
+        # Apply sorting
+        if "Group Size" in sort_by:
+            if "(Desc)" in sort_by:
+                sorted_groups = group_stats_df.sort_values("size", ascending=False)[
+                    "group_id"
+                ].tolist()
+            else:
+                sorted_groups = group_stats_df.sort_values("size", ascending=True)[
+                    "group_id"
+                ].tolist()
+        elif "Max Score" in sort_by:
+            if "(Desc)" in sort_by:
+                sorted_groups = group_stats_df.sort_values(
+                    "max_score", ascending=False
+                )["group_id"].tolist()
+            else:
+                sorted_groups = group_stats_df.sort_values("max_score", ascending=True)[
+                    "group_id"
+                ].tolist()
+        else:  # Account Name
+            if "(Desc)" in sort_by:
+                sorted_groups = group_stats_df.sort_values(
+                    "primary_name", ascending=False
+                )["group_id"].tolist()
+            else:
+                sorted_groups = group_stats_df.sort_values(
+                    "primary_name", ascending=True
+                )["group_id"].tolist()
+
+        # Pagination
+        total_groups = len(sorted_groups)
+        max_page = max(1, (total_groups + page_size - 1) // page_size)
+
+        start_idx = (st.session_state.page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_groups = [
+            {"group_id": group_id} for group_id in sorted_groups[start_idx:end_idx]
+        ]
+
+    # Page navigation
     col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("Prev") and st.session_state.page > 1:
@@ -1143,246 +1244,354 @@ def main() -> None:
         if st.button("Next") and st.session_state.page < max_page:
             st.session_state.page += 1
 
+    # Show pagination caption
     start_idx = (st.session_state.page - 1) * page_size
-    end_idx = start_idx + page_size
+    end_idx = min(start_idx + page_size, total_groups)
+    st.caption(f"Showing {start_idx + 1}–{end_idx} of {total_groups} groups")
 
-    # Get groups for current page
-    page_groups = sorted_groups[start_idx:end_idx]
-
-    # Group by group_id and display each group
-    for group_id in page_groups:
-        group_data = filtered_df[filtered_df["group_id"] == group_id].copy()
-
-        # Parse merge preview for this group
-        merge_preview = None
-        for _, row in group_data.iterrows():
-            if row["merge_preview_json"]:
-                merge_preview = parse_merge_preview(row["merge_preview_json"])
-                break
-
-        # Group header
-        primary_record = (
-            group_data[group_data["is_primary"]].iloc[0]
-            if group_data["is_primary"].any()
-            else group_data.iloc[0]
-        )
-
-        with st.expander(
-            f"Group {group_id}: {primary_record['account_name']} ({len(group_data)} records)"
-        ):
-            # Group Info at the top
-            col1, col2, col3 = st.columns([2, 1, 1])
-
-            with col1:
-                # Group badges
-                suffix_classes = group_data["suffix_class"].unique()
-                if len(suffix_classes) > 1:
-                    st.error("⚠️ Suffix Mismatch")
-                else:
-                    st.success(f"✅ {suffix_classes[0]}")
-
-                # Blacklist hits
-                blacklist_hits = (
-                    group_data["account_name"]
-                    .str.lower()
-                    .str.contains(
-                        "|".join(
-                            [
-                                "pnc is not sure",
-                                "unsure",
-                                "unknown",
-                                "1099",
-                                "none",
-                                "n/a",
-                                "test",
-                            ]
-                        )
-                    )
-                    .sum()
-                )
-
-                if blacklist_hits > 0:
-                    st.warning(f"⚠️ {blacklist_hits} blacklist hits")
-
-            with col2:
-                # Primary selection info
-                if merge_preview and "primary_record" in merge_preview:
-                    primary_info = merge_preview["primary_record"]
-                    st.write(f"**Primary:** {primary_info.get('account_id', 'N/A')}")
-                    st.write(
-                        f"**Rank:** {primary_info.get('relationship_rank', 'N/A')}"
-                    )
-
-            with col3:
-                # Manual override dropdown
-                # Get current override for the primary record
-                primary_record_id = str(primary_record.name)
-                current_override = get_manual_override(primary_record_id)
-
-                if current_override:
-                    st.info(f"**Override:** {current_override}")
-
-                override_options = ["No Override", "Keep", "Delete", "Update", "Verify"]
-                selected_override = st.selectbox(
-                    "Manual Override",
-                    override_options,
-                    index=(
-                        override_options.index(current_override)
-                        if current_override
-                        else 0
-                    ),
-                    key=f"override_{group_id}",
-                )
-
-                if (
-                    selected_override != "No Override"
-                    and selected_override != current_override
-                ):
-                    if st.button("Apply Override", key=f"apply_{group_id}"):
-                        upsert_manual_override(
-                            record_id=primary_record_id,
-                            override=selected_override,
-                            reason="Manual override from UI",
-                            reviewer="streamlit_user",
-                        )
-                        st.rerun()
-
-            # Display group table below
-            st.write("**Records:**")
-            display_cols = [
-                "account_name",
-                "account_id",
-                "relationship",
-                "Disposition",
-                "is_primary",
-                "weakest_edge_to_primary",
-                "suffix_class",
-            ]
-            display_cols = [col for col in display_cols if col in group_data.columns]
-
-            # Configure column display for better readability
-            column_config = {
-                "account_name": st.column_config.TextColumn(
-                    "Account Name", width="large", help="Company name", max_chars=None
-                ),
-                "account_id": st.column_config.TextColumn("Account ID", width="medium"),
-                "relationship": st.column_config.TextColumn(
-                    "Relationship", width="medium"
-                ),
-                "Disposition": st.column_config.SelectboxColumn(
-                    "Disposition",
-                    width="small",
-                    options=["Keep", "Update", "Delete", "Verify"],
-                ),
-                "is_primary": st.column_config.CheckboxColumn("Primary", width="small"),
-                "weakest_edge_to_primary": st.column_config.NumberColumn(
-                    "Edge Score", width="small", format="%.1f"
-                ),
-                "suffix_class": st.column_config.TextColumn("Suffix", width="small"),
-            }
-
-            st.dataframe(
-                group_data[display_cols],
-                width="stretch",
-                column_config=column_config,
-                hide_index=True,
+    # Cache management
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("🗑️ Clear Caches for Current Run"):
+            # Clear list-level caches for current run
+            backend = st.session_state.get("groups_backend", {}).get(
+                selected_run_id, "pyarrow"
             )
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            st.success(f"Cleared caches for run {selected_run_id} (backend: {backend})")
+            st.rerun()
 
-            # Explain metadata (Phase 1.11)
-            if any(
-                col in group_data.columns
-                for col in [
-                    "group_join_reason",
-                    "weakest_edge_to_primary",
-                    "shared_tokens_count",
-                ]
-            ):
-                with st.expander("🔍 Explain Metadata", expanded=False):
-                    explain_cols = []
-                    if "group_join_reason" in group_data.columns:
-                        explain_cols.append("group_join_reason")
-                    if "weakest_edge_to_primary" in group_data.columns:
-                        explain_cols.append("weakest_edge_to_primary")
-                    if "shared_tokens_count" in group_data.columns:
-                        explain_cols.append("shared_tokens_count")
-                    if "applied_penalties" in group_data.columns:
-                        explain_cols.append("applied_penalties")
-                    if "survivorship_reason" in group_data.columns:
-                        explain_cols.append("survivorship_reason")
+        # Group by group_id and display each group
+    for group_info in page_groups:
+            group_id = group_info["group_id"]
 
-                    if explain_cols:
-                        explain_data = group_data[
-                            ["account_name"] + explain_cols
-                        ].copy()
-                        st.dataframe(
-                            explain_data,
-                            width="stretch",
-                            hide_index=True,
-                            column_config={
-                                "account_name": st.column_config.TextColumn(
-                                    "Account Name", width="large"
-                                ),
-                                "group_join_reason": st.column_config.TextColumn(
-                                    "Join Reason", width="medium"
-                                ),
-                                "weakest_edge_to_primary": st.column_config.NumberColumn(
-                                    "Weakest Edge", width="small", format="%.1f"
-                                ),
-                                "shared_tokens_count": st.column_config.NumberColumn(
-                                    "Shared Tokens", width="small"
-                                ),
-                                "applied_penalties": st.column_config.TextColumn(
-                                    "Penalties", width="medium"
-                                ),
-                                "survivorship_reason": st.column_config.TextColumn(
-                                    "Survivorship", width="medium"
-                                ),
-                            },
+            # Get minimal group data for header (just the group info from pagination)
+            group_size = group_info["group_size"]
+            primary_name = group_info["primary_name"]
+
+            # Create keys for lazy loading the full group details
+            group_details_key = f"group_details_{selected_run_id}_{group_id}"
+            group_details_loaded_key = f"group_details_loaded_{selected_run_id}_{group_id}"
+            details_requested_key = f"details_requested:{selected_run_id}:{group_id}"
+
+            with st.expander(f"Group {group_id}: {primary_name} ({group_size} records)"):
+                # Check if full group details are loaded
+                if st.session_state.get(group_details_loaded_key, False):
+                    # Full details are loaded, display everything
+                    group_details = st.session_state.get(group_details_key, {})
+                    if "error" in group_details:
+                        st.error(
+                            f"Failed to load group {group_id}: {group_details['error']}"
+                        )
+                        # Skip to next group instead of continue
+                        continue
+
+                    group_data = pd.DataFrame(group_details["group_data"])
+                    merge_preview = group_details.get("merge_preview")
+
+                # Group Info at the top
+                col1, col2, col3 = st.columns([2, 1, 1])
+
+                with col1:
+                    # Group badges
+                    suffix_classes = group_data["suffix_class"].unique()
+                    if len(suffix_classes) > 1:
+                        st.error("⚠️ Suffix Mismatch")
+                    else:
+                        st.success(f"✅ {suffix_classes[0]}")
+
+                    # Blacklist hits
+                    blacklist_hits = (
+                        group_data["account_name"]
+                        .str.lower()
+                        .str.contains(
+                            "|".join(
+                                [
+                                    "pnc is not sure",
+                                    "unsure",
+                                    "unknown",
+                                    "1099",
+                                    "none",
+                                    "n/a",
+                                    "test",
+                                ]
+                            )
+                        )
+                        .sum()
+                    )
+
+                    if blacklist_hits > 0:
+                        st.warning(f"⚠️ {blacklist_hits} blacklist hits")
+
+                with col2:
+                    # Primary selection info
+                    if merge_preview and "primary_record" in merge_preview:
+                        primary_info = merge_preview["primary_record"]
+                        st.write(
+                            f"**Primary:** {primary_info.get('account_id', 'N/A')}"
+                        )
+                        st.write(
+                            f"**Rank:** {primary_info.get('relationship_rank', 'N/A')}"
                         )
 
-            # Alias information (if present)
-            if "alias_cross_refs" in group_data.columns:
-                alias_records = group_data[
-                    group_data["alias_cross_refs"].apply(lambda x: len(x) > 0)
+                with col3:
+                    # Manual override dropdown
+                    # Get current override for the primary record
+                    primary_record = (
+                        group_data[group_data["is_primary"]].iloc[0]
+                        if group_data["is_primary"].any()
+                        else group_data.iloc[0]
+                    )
+                    primary_record_id = str(primary_record.name)
+                    current_override = get_manual_override(primary_record_id)
+
+                    if current_override:
+                        st.info(f"**Override:** {current_override}")
+
+                    override_options = [
+                        "No Override",
+                        "Keep",
+                        "Delete",
+                        "Update",
+                        "Verify",
+                    ]
+                    selected_override = st.selectbox(
+                        "Manual Override",
+                        override_options,
+                        index=(
+                            override_options.index(current_override)
+                            if current_override
+                            else 0
+                        ),
+                        key=f"override_{group_id}",
+                    )
+
+                    if (
+                        selected_override != "No Override"
+                        and selected_override != current_override
+                    ):
+                        if st.button("Apply Override", key=f"apply_{group_id}"):
+                            upsert_manual_override(
+                                record_id=primary_record_id,
+                                override=selected_override,
+                                reason="Manual override from UI",
+                                reviewer="streamlit_user",
+                            )
+                            st.rerun()
+
+                # Display group table below
+                st.write("**Records:**")
+                display_cols = [
+                    "account_name",
+                    "account_id",
+                    "relationship",
+                    "Disposition",
+                    "is_primary",
+                    "weakest_edge_to_primary",
+                    "suffix_class",
                 ]
-                if not alias_records.empty:
+                display_cols = [
+                    col for col in display_cols if col in group_data.columns
+                ]
+
+                # Configure column display for better readability
+                column_config = {
+                    "account_name": st.column_config.TextColumn(
+                        "Account Name",
+                        width="large",
+                        help="Company name",
+                        max_chars=None,
+                    ),
+                    "account_id": st.column_config.TextColumn(
+                        "Account ID", width="medium"
+                    ),
+                    "relationship": st.column_config.TextColumn(
+                        "Relationship", width="medium"
+                    ),
+                    "Disposition": st.column_config.SelectboxColumn(
+                        "Disposition",
+                        width="small",
+                        options=["Keep", "Update", "Delete", "Verify"],
+                    ),
+                    "is_primary": st.column_config.CheckboxColumn(
+                        "Primary", width="small"
+                    ),
+                    "weakest_edge_to_primary": st.column_config.NumberColumn(
+                        "Edge Score", width="small", format="%.1f"
+                    ),
+                    "suffix_class": st.column_config.TextColumn(
+                        "Suffix", width="small"
+                    ),
+                }
+
+                st.dataframe(
+                    group_data[display_cols],
+                    width="stretch",
+                    column_config=column_config,
+                    hide_index=True,
+                )
+            else:
+                # Full details not loaded yet, show load button
+                if st.button("Load Group Details", key=f"load_group_{group_id}"):
+                    # Load the full group details
+                    group_details = get_group_details_lazy(selected_run_id, group_id)
+                    st.session_state[group_details_key] = group_details
+                    st.session_state[group_details_loaded_key] = True
+                    st.rerun()
+                else:
+                    st.caption(
+                        "Click 'Load Group Details' to view records and metadata."
+                    )
+                    st.caption(f"Group {group_id} has {group_size} records.")
+
+            # Only show explain metadata and aliases if full group details are loaded
+            if st.session_state.get(group_details_loaded_key, False):
+                # Explain metadata (Phase 1.17.5: Truly lazy-loaded)
+                explain_metadata_key = f"explain_metadata_{selected_run_id}_{group_id}"
+                explain_loaded_key = f"explain_loaded_{selected_run_id}_{group_id}"
+
+                with st.expander("🔍 Explain Metadata", expanded=False):
+                    if st.session_state.get(explain_loaded_key, False):
+                        # Display cached explain metadata
+                        explain_data = st.session_state.get(
+                            explain_metadata_key, pd.DataFrame()
+                        )
+                        if not explain_data.empty:
+                            st.dataframe(
+                                explain_data,
+                                width="stretch",
+                                hide_index=True,
+                                column_config={
+                                    "account_name": st.column_config.TextColumn(
+                                        "Account Name", width="large"
+                                    ),
+                                    "group_join_reason": st.column_config.TextColumn(
+                                        "Join Reason", width="medium"
+                                    ),
+                                    "weakest_edge_to_primary": st.column_config.NumberColumn(
+                                        "Weakest Edge", width="small", format="%.1f"
+                                    ),
+                                    "shared_tokens_count": st.column_config.NumberColumn(
+                                        "Shared Tokens", width="small"
+                                    ),
+                                    "applied_penalties": st.column_config.TextColumn(
+                                        "Penalties", width="medium"
+                                    ),
+                                    "survivorship_reason": st.column_config.TextColumn(
+                                        "Survivorship", width="medium"
+                                    ),
+                                },
+                            )
+                        else:
+                            st.info("No explain metadata available for this group")
+                    else:
+                        if st.button("Load details", key=f"btn_explain_{group_id}"):
+                            # Load explain metadata on demand
+                            explain_cols = []
+                            if "group_join_reason" in group_data.columns:
+                                explain_cols.append("group_join_reason")
+                            if "weakest_edge_to_primary" in group_data.columns:
+                                explain_cols.append("weakest_edge_to_primary")
+                            if "shared_tokens_count" in group_data.columns:
+                                explain_cols.append("shared_tokens_count")
+                            if "applied_penalties" in group_data.columns:
+                                explain_cols.append("applied_penalties")
+                            if "survivorship_reason" in group_data.columns:
+                                explain_cols.append("survivorship_reason")
+
+                            if explain_cols:
+                                explain_data = group_data[
+                                    ["account_name"] + explain_cols
+                                ].copy()
+                                st.session_state[explain_metadata_key] = explain_data
+                            else:
+                                st.session_state[explain_metadata_key] = pd.DataFrame()
+
+                            st.session_state[explain_loaded_key] = True
+                            st.rerun()
+                        else:
+                            st.caption("Details load on demand.")
+
+                # Alias information (Phase 1.17.5: Truly lazy-loaded)
+                alias_cross_refs_key = f"alias_cross_refs_{selected_run_id}_{group_id}"
+                alias_loaded_key = f"alias_loaded_{selected_run_id}_{group_id}"
+
+                # Check if group has aliases (lightweight check)
+                has_aliases = False
+                if "alias_cross_refs" in group_data.columns:
+                    # Use a lightweight check to avoid processing all records
+                    has_aliases = any(
+                        _is_non_empty(record.get("alias_cross_refs"))
+                        for _, record in group_data.iterrows()
+                    )
+
+                if has_aliases:
                     st.write("**Alias Cross-links:**")
-                    for _, record in alias_records.iterrows():
-                        cross_refs = record["alias_cross_refs"]
-                        if cross_refs:
-                            st.write(f"📎 {len(cross_refs)} cross-links")
-                            with st.expander("View cross-links"):
-                                for ref in cross_refs:
+                    with st.expander("View cross-links", expanded=False):
+                        if st.session_state.get(alias_loaded_key, False):
+                            # Display cached alias cross-refs
+                            cross_refs_list = st.session_state.get(
+                                alias_cross_refs_key, []
+                            )
+                            if cross_refs_list:
+                                st.write(f"📎 {len(cross_refs_list)} cross-links")
+                                for ref in cross_refs_list:
                                     st.write(
                                         f"• {ref.get('alias', '')} → Group {ref.get('group_id', '')} (score: {ref.get('score', '')}, source: {ref.get('source', '')})"
                                     )
+                            else:
+                                st.info("No cross-links available")
+                        else:
+                            if st.button(
+                                "Load cross-links", key=f"btn_alias_{group_id}"
+                            ):
+                                # Load alias cross-refs on demand
+                                cross_refs_list = []
+                                for _, record in group_data.iterrows():
+                                    cross_refs = record.get("alias_cross_refs")
+                                    if _is_non_empty(cross_refs):
+                                        try:
+                                            refs = json.loads(str(cross_refs))
+                                            if isinstance(refs, list):
+                                                cross_refs_list.extend(refs)
+                                        except (json.JSONDecodeError, TypeError):
+                                            continue
 
-            # Display merge preview if available
-            if merge_preview and "field_comparisons" in merge_preview:
-                st.write("**Field Conflicts:**")
+                                st.session_state[alias_cross_refs_key] = cross_refs_list
+                                st.session_state[alias_loaded_key] = True
+                                st.rerun()
+                            else:
+                                st.caption("Cross-links load on demand.")
 
-                conflicts = []
-                for field, comparison in merge_preview["field_comparisons"].items():
-                    if comparison.get("has_conflict", False):
-                        conflicts.append(
-                            {
-                                "field": field,
-                                "primary_value": comparison.get("primary_value", ""),
-                                "alternatives": comparison.get(
-                                    "alternative_values", []
-                                ),
-                            }
-                        )
+                # Display merge preview if available
+                if merge_preview and "field_comparisons" in merge_preview:
+                    st.write("**Field Conflicts:**")
 
-                if conflicts:
-                    for conflict in conflicts:
-                        st.write(f"**{conflict['field']}:**")
-                        st.write(f"  Primary: {conflict['primary_value']}")
-                        st.write(
-                            f"  Alternatives: {', '.join(conflict['alternatives'])}"
-                        )
-                else:
-                    st.success("✅ No field conflicts")
+                    conflicts = []
+                    for field, comparison in merge_preview["field_comparisons"].items():
+                        if comparison.get("has_conflict", False):
+                            conflicts.append(
+                                {
+                                    "field": field,
+                                    "primary_value": comparison.get(
+                                        "primary_value", ""
+                                    ),
+                                    "alternatives": comparison.get(
+                                        "alternative_values", []
+                                    ),
+                                }
+                            )
+
+                    if conflicts:
+                        for conflict in conflicts:
+                            st.write(f"**{conflict['field']}:**")
+                            st.write(f"  Primary: {conflict['primary_value']}")
+                            st.write(
+                                f"  Alternatives: {', '.join(conflict['alternatives'])}"
+                            )
+                    else:
+                        st.success("✅ No field conflicts")
 
     # Export functionality
     st.subheader("Export")

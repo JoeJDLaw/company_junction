@@ -26,6 +26,10 @@ data/interim/*
 data/processed/*
 data/manual/*
 
+# Repo-local state (don’t version)
+data/run_index.json
+data/run_deletions.log
+
 # Logs
 *.log
 

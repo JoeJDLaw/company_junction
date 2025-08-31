@@ -9,7 +9,7 @@ import time
 import os
 import hashlib
 
-Status = Literal["pending", "running", "completed", "failed"]
+Status = Literal["pending", "running", "completed", "failed", "interrupted"]
 
 
 @dataclass
@@ -63,6 +63,25 @@ class MiniDAG:
         st.end_time = time.time()
         self._save()
 
+    def mark_interrupted(self, stage: str) -> None:
+        """Mark the pipeline as interrupted at the specified stage.
+
+        Args:
+            stage: Name of the stage that was interrupted
+        """
+        # Mark the current stage as interrupted
+        if stage in self._stages:
+            st = self._stages[stage]
+            st.status = "interrupted"
+            st.end_time = time.time()
+
+        # Update metadata to indicate interruption
+        self._metadata["status"] = "interrupted"
+        self._metadata["active_stage"] = stage
+        self._metadata["interrupt_timestamp"] = time.time()
+
+        self._save()
+
     def should_run(self, name: str, resume_from: Optional[str]) -> bool:
         """Return True if this stage should execute, considering resume semantics."""
         if resume_from is None:
@@ -107,6 +126,17 @@ class MiniDAG:
                 last_completed = stage
 
         return last_completed
+
+    def get_current_stage(self) -> Optional[str]:
+        """Get the name of the currently running stage, or None if no stage is running."""
+        running_stages = [
+            name for name, stage in self._stages.items() if stage.status == "running"
+        ]
+        if not running_stages:
+            return None
+
+        # Return the first running stage (should only be one)
+        return running_stages[0] if running_stages else None
 
     def validate_intermediate_files(
         self, stage_name: str, interim_dir: Path = Path("data/interim")

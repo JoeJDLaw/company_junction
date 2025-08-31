@@ -69,7 +69,11 @@ tail -f pipeline.log | ts
 
 ### 3) Review results in Streamlit (read-only)
 ```bash
+# Option 1: Direct Streamlit (may show CancelledError on Ctrl+C)
 streamlit run app/main.py
+
+# Option 2: Using wrapper script (better interrupt handling)
+python run_streamlit.py
 ```
 
 ### 4) Where to look
@@ -389,6 +393,13 @@ When adding new utility functions:
 - **Run-Scoped Only**: Complete elimination of global path fallbacks
 - **Pure Helper Functions**: All UI logic moved to testable `src/utils/ui_helpers.py`
 
+### Phase 1.17.3 Highlights
+- **Explicit Backend Selection**: Clear logging of parallel backend choices (loky/threading) with fallback reasons
+- **CSV Dtype Stability**: Eliminated mixed-type warnings through robust schema inference and stable reading
+- **Graceful Interrupt Handling**: Clean Ctrl+C handling with atomic state preservation and seamless resume
+- **Stop Flag Support**: Threading.Event integration for graceful interruption of long-running operations
+- **Interrupted Run UI**: ⚠️ badge for interrupted runs with resume command display
+
 ### Phase 1.17.2 Highlights
 - **CLI Command Builder**: Interactive builder for pipeline commands with real-time validation
 - **Run Maintenance**: Safe deletion of pipeline runs with preview and confirmation safeguards
@@ -430,7 +441,7 @@ The Streamlit UI provides safe run maintenance capabilities for managing pipelin
 ### Safety Features
 - **Destructive Actions Fuse**: Must enable destructive actions before any deletion
 - **Preview Mode**: See exactly what will be deleted before confirming
-- **Two-step Confirmation**: Checkbox + typed confirmation required
+- **Checkbox Confirmation**: Simple checkbox confirmation required
 - **In-flight Protection**: Cannot delete runs with "running" status
 - **Latest Pointer Management**: Automatic recomputation of latest run pointers
 
@@ -439,7 +450,7 @@ The Streamlit UI provides safe run maintenance capabilities for managing pipelin
 2. Select one or more runs to delete
 3. Click "Preview Deletion" to see what will be removed
 4. Check "I understand this permanently deletes data"
-5. Type the exact run ID (or "DELETE ALL" for multiple runs)
+5. Check "I understand this permanently deletes data"
 6. Click "Delete Selected Runs" to confirm
 
 ### Quick Actions

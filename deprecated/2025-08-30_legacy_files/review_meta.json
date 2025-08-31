@@ -1,0 +1,24 @@
+{
+  "run_ts": "2025-08-30T08:58:57.750902",
+  "thresholds": {
+    "high": 92,
+    "medium": 84,
+    "penalty": {
+      "suffix_mismatch": 25,
+      "num_style_mismatch": 5,
+      "punctuation_mismatch": 3
+    },
+    "max_alias_pairs": 100000
+  },
+  "effective_blacklist_count": 24,
+  "builtin_blacklist_count": 24,
+  "manual_blacklist_count": 0,
+  "manual_overrides_applied": 0,
+  "alias_stats": {
+    "pairs_generated": 0,
+    "capped_blocks": 0,
+    "accepted_matches": 0,
+    "elapsed_time": 0.03143596649169922
+  },
+  "git_commit": "27129c6"
+}

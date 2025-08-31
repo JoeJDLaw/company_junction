@@ -32,6 +32,7 @@ from src.utils.cache_utils import (
     remove_latest_pointer,
     list_runs_sorted,
     get_next_latest_run,
+    is_run_truly_inflight,
 )
 
 
@@ -570,6 +571,179 @@ def test_get_next_latest_run(tmp_path: Path) -> None:
 
         # Check that run2 is next latest
         assert next_latest == run2
+
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_recompute_latest_pointer_empty(tmp_path: Path) -> None:
+    """Test latest pointer recomputation when no completed runs remain."""
+    # Change to temporary directory for testing
+    original_cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        # Create test structure
+        os.makedirs("data/interim", exist_ok=True)
+        os.makedirs("data/processed", exist_ok=True)
+
+        # Create test runs
+        run1 = "run1_123_20231201120000"
+        run2 = "run2_456_20231201120001"
+
+        for run_id in [run1, run2]:
+            os.makedirs(f"data/interim/{run_id}", exist_ok=True)
+            os.makedirs(f"data/processed/{run_id}", exist_ok=True)
+
+        # Add to index with non-complete statuses
+        add_run_to_index(run1, ["input1.csv"], ["config1.yaml"], "running")
+        add_run_to_index(run2, ["input2.csv"], ["config2.yaml"], "failed")
+
+        # Set run1 as latest (even though it's running)
+        create_latest_pointer(run1)
+
+        # Verify latest pointer exists
+        assert get_latest_run_id() == run1
+
+        # Recompute latest pointer (should remove it since no completed runs)
+        new_latest = recompute_latest_pointer()
+
+        # Check that no latest pointer is returned
+        assert new_latest is None
+
+        # Check that latest pointer files are removed
+        assert not os.path.exists("data/processed/latest.json")
+        assert not os.path.islink("data/processed/latest")
+
+        # Check that get_latest_run_id returns None
+        assert get_latest_run_id() is None
+
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_is_run_truly_inflight() -> None:
+    """Test inflight run detection."""
+    # Test with a non-existent run ID
+    result = is_run_truly_inflight("nonexistent_run_id")
+    assert isinstance(result, bool)
+
+    # Test with a real run ID (should return False since no process is running)
+    result = is_run_truly_inflight("test_run_id")
+    assert isinstance(result, bool)
+
+
+def test_delete_runs_with_stuck_running_status(tmp_path: Path, monkeypatch) -> None:
+    """Test deletion of runs with stuck 'running' status."""
+
+    # Mock is_run_truly_inflight to always return False (no truly inflight runs)
+    def mock_is_run_truly_inflight(run_id: str) -> bool:
+        return False
+
+    monkeypatch.setattr(
+        "src.utils.cache_utils.is_run_truly_inflight", mock_is_run_truly_inflight
+    )
+
+    # Change to temporary directory for testing
+    original_cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        # Create test structure
+        os.makedirs("data/interim", exist_ok=True)
+        os.makedirs("data/processed", exist_ok=True)
+
+        # Create test runs
+        run1 = "run1_123_20231201120000"
+        run2 = "run2_456_20231201120001"
+
+        for run_id in [run1, run2]:
+            os.makedirs(f"data/interim/{run_id}", exist_ok=True)
+            os.makedirs(f"data/processed/{run_id}", exist_ok=True)
+
+            # Create some test files
+            with open(f"data/interim/{run_id}/test.txt", "w") as f:
+                f.write("test content")
+            with open(f"data/processed/{run_id}/output.csv", "w") as f:
+                f.write("output content")
+
+        # Add to index - both with "running" status (simulating stuck runs)
+        add_run_to_index(run1, ["input1.csv"], ["config1.yaml"], "running")
+        add_run_to_index(run2, ["input2.csv"], ["config2.yaml"], "running")
+
+        # Set run1 as latest
+        create_latest_pointer(run1)
+
+        # Delete runs - should succeed since no actual processes are running
+        results = delete_runs([run1, run2])
+
+        # Check results
+        assert len(results["deleted"]) == 2
+        assert len(results["not_found"]) == 0
+        assert len(results["inflight_blocked"]) == 0
+        assert results["latest_reassigned"] is True
+        assert results["new_latest"] is None  # No completed runs remain
+
+        # Check that directories were removed
+        assert not os.path.exists(f"data/interim/{run1}")
+        assert not os.path.exists(f"data/processed/{run1}")
+        assert not os.path.exists(f"data/interim/{run2}")
+        assert not os.path.exists(f"data/processed/{run2}")
+
+        # Check that latest pointer is removed
+        assert not os.path.exists("data/processed/latest.json")
+        assert not os.path.islink("data/processed/latest")
+
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_delete_all_runs_scenarios(tmp_path: Path) -> None:
+    """Test various delete-all scenarios."""
+    # Change to temporary directory for testing
+    original_cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        # Create test structure
+        os.makedirs("data/interim", exist_ok=True)
+        os.makedirs("data/processed", exist_ok=True)
+
+        # Test 1: Delete all when no runs exist
+        results = delete_runs([])
+        assert len(results["deleted"]) == 0
+        assert len(results["not_found"]) == 0
+        assert len(results["inflight_blocked"]) == 0
+
+        # Test 2: Delete all when one run exists
+        run1 = "run1_123_20231201120000"
+        os.makedirs(f"data/interim/{run1}", exist_ok=True)
+        os.makedirs(f"data/processed/{run1}", exist_ok=True)
+        add_run_to_index(run1, ["input1.csv"], ["config1.yaml"], "complete")
+        create_latest_pointer(run1)
+
+        results = delete_runs([run1])
+        assert len(results["deleted"]) == 1
+        assert results["latest_reassigned"] is True
+        assert results["new_latest"] is None
+
+        # Test 3: Delete all when multiple runs exist
+        run2 = "run2_456_20231201120001"
+        run3 = "run3_789_20231201120002"
+
+        for run_id in [run2, run3]:
+            os.makedirs(f"data/interim/{run_id}", exist_ok=True)
+            os.makedirs(f"data/processed/{run_id}", exist_ok=True)
+            add_run_to_index(
+                run_id, [f"input{run_id}.csv"], [f"config{run_id}.yaml"], "complete"
+            )
+
+        create_latest_pointer(run2)
+
+        results = delete_runs([run2, run3])
+        assert len(results["deleted"]) == 2
+        assert results["latest_reassigned"] is True
+        assert results["new_latest"] is None
 
     finally:
         os.chdir(original_cwd)

@@ -1,0 +1,731 @@
+account_id,group_id,group_size,is_primary,group_join_reason,weakest_edge_to_primary,shared_tokens_count,Potential Case Employer Junction ID,Company Association,Disposition,relationship,Relationship (If Other),account_name,Cleaned Account Name,Potential Case Employer Junction ID_6,Cleaned Potential Case Name,Potential Case Name: Potential Case Name,Record Type,Employer Name,LR ID,Account Owner: Full Name,Account Record Type,COI,Created By: Full Name,created_date,Format Search Name,Known to have Arbitration Agreements?,Last Modified By: Full Name,Last Modified Date,Main Address,Main Country,Main Country (text only),Last Modified Date_5,Stage,account_id_src,name_raw,name_base,name_core,suffix_class,has_parentheses,has_semicolon,has_multiple_names,alias_candidates,alias_sources,name_core_tokens,block_key,merge_preview_json,disposition_reason,alias_cross_refs,applied_penalties,survivorship_reason
+001Hs000054SD8IIAW,e36055511a,1,True,primary,0.0,0,PCEJ-10541,,Keep,"Per PNC, Company Name",,_24 Hour Fitness,,a09Hs00000cyZL8,PC0866900 - _24 Hour Fitness,PC0866900 - _24 Hour Fitness,Unassigned,_24 Hour Fitness,15686.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,_24hourfitness,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054SD8I,_24 Hour Fitness,24 hour fitness,24 hour fitness,NONE,False,False,False,[],[],"[""24"", ""hour"", ""fitness""]",24,,clean_singleton,[],,
+001Hs000054SD6KIAW,21598249a7,1,True,primary,0.0,0,PCEJ-10478,,Keep,"Per PNC, Company Name",,_BMW of Ontario (Penske Auto Group Ontario B1),,a09Hs00000cyZK7,PC0866914 - _BMW of Ontario (Penske Auto Group Ontario B1),PC0866914 - _BMW of Ontario (Penske Auto Group Ontario B1),Unassigned,_BMW of Ontario (Penske Auto Group Ontario B1),15887.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,_bmwofontariopenskeautogroupontariob1,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054SD6K,_BMW of Ontario (Penske Auto Group Ontario B1),bmw of ontario penske auto group ontario b1,bmw of ontario penske auto group ontario b1,NONE,True,False,False,['Penske Auto Group Ontario B1'],['parentheses'],"[""bmw"", ""of"", ""ontario"", ""penske"", ""auto"", ""group"", ""ontario"", ""b1""]",bmw,,clean_singleton,[],,
+001Hs000054SIrvIAG,38176379f1,1,True,primary,0.0,0,PCEJ-79472,,Keep,"Per PNC, Company Name",,_EZ Solar,,a09Hs00000cyrGv,PC0644732 - _EZ Solar,PC0644732 - _EZ Solar,Unassigned,_EZ Solar,51738.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,_ezsolar,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SIrv,_EZ Solar,ez solar,ez solar,NONE,False,False,False,[],[],"[""ez"", ""solar""]",ez,,clean_singleton,[],,
+001Hs000054SD5aIAG,cc92aea4b1,1,True,primary,0.0,0,PCEJ-15834,,Keep,"Per PNC, Company Name",,_Hyundai of Serramonte (Avante Auto Group),,a09Hs00000cyaiV,PC0793115 - _Hyundai of Serramonte (Avante Auto Group),PC0793115 - _Hyundai of Serramonte (Avante Auto Group),Unassigned,_Hyundai of Serramonte (Avante Auto Group),15973.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,_hyundaiofserramonteavanteautogroup,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SD5a,_Hyundai of Serramonte (Avante Auto Group),hyundai of serramonte avante auto group,hyundai of serramonte avante auto group,NONE,True,False,False,['Avante Auto Group'],['parentheses'],"[""hyundai"", ""of"", ""serramonte"", ""avante"", ""auto"", ""group""]",hyundai,,clean_singleton,[],,
+001Hs000054SEEVIA4,e338eff3aa,1,True,primary,0.0,0,PCEJ-62019,,Keep,"Per PNC, Company Name",,_Proton Facility Solutions,,a09Hs00000cymjQ,PC0867503 - _Proton Facility Solutions,PC0867503 - _Proton Facility Solutions,Unassigned,_Proton Facility Solutions,39070.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,_protonfacilitysolutions,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054SEEV,_Proton Facility Solutions,proton facility solutions,proton facility solutions,NONE,False,False,False,[],[],"[""proton"", ""facility"", ""solutions""]",proton,,clean_singleton,[],,
+001Hs000054Sm9NIAS,e7a5971f91,1,True,primary,0.0,0,PCEJ-90291,,Keep,Other/Miscellaneous,Company acquired by The Hiller Companies LLC,"""A&D Fire Sprinklers, inc",,a09Hs00000cyuPu,"PC0822975 - Hiller, ""A&D Fire Sprinklers, inc, The Hiller Companies","PC0822975 - Hiller, ""A&D Fire Sprinklers, inc, The Hiller Companies",Unassigned,"""A&D Fire Sprinklers, inc",,Syuzan Oganesyan,Company Account,0,Syuzan Oganesyan,2025-06-18,"""adfiresprinklersinc",Not Sure,Sam Silberman,45834,United States,United States,United States,45826,Review,001Hs000054Sm9N,"""A&D Fire Sprinklers, inc",a and d fire sprinklers inc,a and d fire sprinklers,INC,False,False,False,[],[],"[""a"", ""and"", ""d"", ""fire"", ""sprinklers""]",a,,clean_singleton,[],,
+001Hs000054S74fIAC,c42b72f0b2,1,True,primary,0.0,0,PCEJ-19800,,Keep,"Per PNC, Company Name on the Paystub",,"""Bud something"" - pnc",,a09Hs00000cybkT,"PC0823528 - Dole Fresh Vegetables Inc, ""Bud something"" - pnc","PC0823528 - Dole Fresh Vegetables Inc, ""Bud something"" - pnc",Unassigned,"""Bud something"" - pnc",84520.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,"""budsomething""pnc",Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S74f,"""Bud something"" - pnc",bud something pnc,bud something pnc,NONE,False,False,False,[],[],"[""bud"", ""something"", ""pnc""]",bud,,clean_singleton,[],,
+001Hs000054SFDbIAO,9347e3eea6,1,True,primary,0.0,0,PCEJ-07949,,Keep,"Per PNC, Company Name",,"""Our Place""",,a09Hs00000cyYfK,"PC0772035 - Fantasy Cakes LLC; BBA Sundried Tomato an American Bistro, ""Our Place""","PC0772035 - Fantasy Cakes LLC; BBA Sundried Tomato an American Bistro, ""Our Place""",Unassigned,"""Our Place""",130627.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,"""ourplace""",Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SFDb,"""Our Place""",our place,our place,NONE,False,False,False,[],[],"[""our"", ""place""]",our,,clean_singleton,[],,
+001Hs000054S9zZIAS,c135ac37d0,1,True,primary,0.0,0,PCEJ-26486,,Verify,"Per PNC, Company Name",,(1)Don Roberto Jewelers; (2) BYD Auto,,a09Hs00000cydUJ,PC0830806 - (1)Don Roberto Jewelers; (2) BYD Auto,PC0830806 - (1)Don Roberto Jewelers; (2) BYD Auto,Unassigned,(1)Don Roberto Jewelers; (2) BYD Auto,17668.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1donrobertojewelers2bydauto,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S9zZ,(1)Don Roberto Jewelers; (2) BYD Auto,don roberto jewelers 2 byd auto,don roberto jewelers 2 byd auto,NONE,True,True,True,"['Don Roberto Jewelers', 'BYD Auto']","['semicolon', 'semicolon']","[""don"", ""roberto"", ""jewelers"", ""2"", ""byd"", ""auto""]",don,,multi_name_string_requires_split,[],,
+001Hs000054SFKHIA4,5bf33884f5,1,True,primary,0.0,0,PCEJ-11824,,Verify,"Per PNC, Company Name",,(1st issue: Diamond Foods) (2nd issue: Holz Rubber Co Inc (Express Staffing)),,a09Hs00000cyZfp,PC0866823 - (1st issue: Diamond Foods) (2nd issue: Holz Rubber Co Inc (Express Staffing)),PC0866823 - (1st issue: Diamond Foods) (2nd issue: Holz Rubber Co Inc (Express Staffing)),Unassigned,(1st issue: Diamond Foods) (2nd issue: Holz Rubber Co Inc (Express Staffing)),14908.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1stissuediamondfoods2ndissueholzrubbercoincexpressstaffing,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054SFKH,(1st issue: Diamond Foods) (2nd issue: Holz Rubber Co Inc (Express Staffing)),1st issue diamond foods 2nd issue holz rubber co inc express staffing,1st issue diamond foods 2nd issue holz rubber co inc express staffing,NONE,True,False,True,"['1st issue: Diamond Foods', '2nd issue: Holz Rubber Co Inc (Express Staffing']","['parentheses', 'parentheses']","[""1st"", ""issue"", ""diamond"", ""foods"", ""2nd"", ""issue"", ""holz"", ""rubber"", ""co"", ""inc"", ""express"", ""staffing""]",1st,,multi_name_string_requires_split,[],,
+001Hs000054S64rIAC,978131fd03,1,True,primary,0.0,0,PCEJ-63587,,Verify,"Per PNC, Company Name",,(562) 445-9040,,a09Hs00000cyn8i,PC0701036 - (562) 445-9040,PC0701036 - (562) 445-9040,Unassigned,(562) 445-9040,20355.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,5624459040,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S64r,(562) 445-9040,445 9040,445 9040,NONE,True,False,True,[],[],"[""445"", ""9040""]",445,,multi_name_string_requires_split,[],,
+001Hs000054S8OdIAK,b9b2b61747,1,True,primary,0.0,0,PCEJ-74228,,Keep,"Per PNC, Company Name on the Paystub",,(Aerotek),,a09Hs00000cypuL,"PC0846536 - Abbott Vascular, Inc., (Aerotek)","PC0846536 - Abbott Vascular, Inc., (Aerotek)",Unassigned,(Aerotek),142178.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,aerotek,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S8Od,(Aerotek),aerotek,aerotek,NONE,True,False,False,[],[],"[""aerotek""]",aerotek,,clean_singleton,[],,
+001Hs000054S6JnIAK,1c192dffd3,1,True,primary,0.0,0,PCEJ-47356,,Keep,"Per PNC, Company Name on the Paystub",,(BART) Bay Area Rapid Transit,,a09Hs00000cyiuv,PC0737015 - (BART) Bay Area Rapid Transit,PC0737015 - (BART) Bay Area Rapid Transit,Unassigned,(BART) Bay Area Rapid Transit,202291.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,bartbayarearapidtransit,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S6Jn,(BART) Bay Area Rapid Transit,bart bay area rapid transit,bart bay area rapid transit,NONE,True,False,False,[],[],"[""bart"", ""bay"", ""area"", ""rapid"", ""transit""]",bart,,clean_singleton,[],,
+001Hs000054S5JrIAK,cf12300062,1,True,primary,0.0,0,PCEJ-52289,,Keep,"Per PNC, Company Name on the Paystub",,(Campers sports on Pay Stubs),,a09Hs00000cykCU,"PC0867610 - Desert Willow Golf Resort, (Campers sports on Pay Stubs)","PC0867610 - Desert Willow Golf Resort, (Campers sports on Pay Stubs)",Unassigned,(Campers sports on Pay Stubs),45267.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,camperssportsonpaystubs,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054S5Jr,(Campers sports on Pay Stubs),campers sports on pay stubs,campers sports on pay stubs,NONE,True,False,False,[],[],"[""campers"", ""sports"", ""on"", ""pay"", ""stubs""]",campers,,clean_singleton,[],,
+001Hs000054SG4JIAW,1c9c9206ef,1,True,primary,0.0,0,PCEJ-23099,,Keep,"Per PNC, Company Name",,(E-Z Up warehouse)-Staffmark Staffing Agency,,a09Hs00000cycbg,PC0750458 - (E-Z Up warehouse)-Staffmark Staffing Agency,PC0750458 - (E-Z Up warehouse)-Staffmark Staffing Agency,Unassigned,(E-Z Up warehouse)-Staffmark Staffing Agency,14329.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,ezupwarehousestaffmarkstaffingagency,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SG4J,(E-Z Up warehouse)-Staffmark Staffing Agency,e z up warehouse staffmark staffing agency,e z up warehouse staffmark staffing agency,NONE,True,False,False,[],[],"[""e"", ""z"", ""up"", ""warehouse"", ""staffmark"", ""staffing"", ""agency""]",e,,clean_singleton,[],,
+001Hs000054SErbIAG,45f09931a5,1,True,primary,0.0,0,PCEJ-76829,,Keep,"Per PNC, Company Name on the Paystub",,(HG Foods),,a09Hs00000cyqaI,"PC0701229 - Burger King, (HG Foods)","PC0701229 - Burger King, (HG Foods)",Unassigned,(HG Foods),53487.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,hgfoods,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SErb,(HG Foods),hg foods,hg foods,NONE,True,False,False,[],[],"[""hg"", ""foods""]",hg,,clean_singleton,[],,
+001Hs000054SDUpIAO,c220011c96,1,True,primary,0.0,0,PCEJ-24600,,Keep,"Per PNC, Company Name",,"(infiniti of thousand oaks) Achievement Automotive Group, LLC",,a09Hs00000cyczt,"PC0858079 - (infiniti of thousand oaks) Achievement Automotive Group, LLC","PC0858079 - (infiniti of thousand oaks) Achievement Automotive Group, LLC",Unassigned,"(infiniti of thousand oaks) Achievement Automotive Group, LLC",39126.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,infinitiofthousandoaksachievementautomotivegroupllc,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SDUp,"(infiniti of thousand oaks) Achievement Automotive Group, LLC",infiniti of thousand oaks achievement automotive group llc,infiniti of thousand oaks achievement automotive group,LLC,True,False,False,[],[],"[""infiniti"", ""of"", ""thousand"", ""oaks"", ""achievement"", ""automotive"", ""group""]",infiniti,,clean_singleton,[],,
+001Hs000054SEiPIAW,b5463759ca,1,True,primary,0.0,0,PCEJ-77030,,Keep,"Per PNC, Company Name on the Paystub",,(Los Angeles Unified School District,,a09Hs00000cyqdX,"PC0831839 - Robert Louis Stevenson Middle School, (Los Angeles Unified School District","PC0831839 - Robert Louis Stevenson Middle School, (Los Angeles Unified School District",Unassigned,(Los Angeles Unified School District,167587.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,losangelesunifiedschooldistrict,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SEiP,(Los Angeles Unified School District,los angeles unified school district,los angeles unified school district,NONE,False,False,False,[],[],"[""los"", ""angeles"", ""unified"", ""school"", ""district""]",los,,clean_singleton,[],,
+001Hs000054S2HgIAK,9524fa33ab,1,True,primary,0.0,0,PCEJ-05770,,Delete,"Per PNC, Company Name on the Paystub",,(no paystubs but company is: The Vincit Group),,a09Hs00000cyY6B,"PC0754497 - QSI Contract Sanitation, (no paystubs but company is: The Vincit Group)","PC0754497 - QSI Contract Sanitation, (no paystubs but company is: The Vincit Group)",Unassigned,(no paystubs but company is: The Vincit Group),73964.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,nopaystubsbutcompanyisthevincitgroup,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S2Hg,(no paystubs but company is: The Vincit Group),no paystubs but company is the vincit group,no paystubs but company is the vincit group,NONE,True,False,True,[],[],"[""no"", ""paystubs"", ""but"", ""company"", ""is"", ""the"", ""vincit"", ""group""]",no,,blacklisted_name,[],,
+001Hs000054S02EIAS,1d2218173e,1,True,primary,0.0,0,PCEJ-48045,,Keep,"Per PNC, Company Name on the Paystub",,(not one company name),,a09Hs00000cyj62,"PC0849616 - IATSE, (not one company name)","PC0849616 - IATSE, (not one company name)",Unassigned,(not one company name),215140.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,notonecompanyname,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S02E,(not one company name),not one company name,not one company name,NONE,True,False,False,['not one company name'],['parentheses'],"[""not"", ""one"", ""company"", ""name""]",not,,clean_singleton,[],,
+001Hs000054SIzcIAG,d2c25f1abe,1,True,primary,0.0,0,PCEJ-14106,,Keep,"Per PNC, Company Name",,(previous issue) GK Mongolian BBQ / Fixd (new issue),,a09Hs00000cyaGd,"PC0856940 - Fixd, (previous issue) GK Mongolian BBQ / Fixd (new issue)","PC0856940 - Fixd, (previous issue) GK Mongolian BBQ / Fixd (new issue)",Unassigned,(previous issue) GK Mongolian BBQ / Fixd (new issue),34130.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,previousissuegkmongolianbbqfixdnewissue,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SIzc,(previous issue) GK Mongolian BBQ / Fixd (new issue),previous issue gk mongolian bbq fixd new issue,previous issue gk mongolian bbq fixd new issue,NONE,True,False,False,[],[],"[""previous"", ""issue"", ""gk"", ""mongolian"", ""bbq"", ""fixd"", ""new"", ""issue""]",previous,,clean_singleton,[],,
+001Hs000054S5iWIAS,51822fc83b,1,True,primary,0.0,0,PCEJ-06127,,Keep,"Per PNC, Company Name on the Paystub",,(required) Delirium Events LLC / Kinetic content LLC Confirm during CM call,,a09Hs00000cyYBw,"PC0798433 - Kinetic Content LLC, (required) Delirium Events LLC / Kinetic content LLC Confirm during CM call","PC0798433 - Kinetic Content LLC, (required) Delirium Events LLC / Kinetic content LLC Confirm during CM call",Unassigned,(required) Delirium Events LLC / Kinetic content LLC Confirm during CM call,211827.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,requireddeliriumeventsllckineticcontentllcconfirmduringcmcall,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S5iW,(required) Delirium Events LLC / Kinetic content LLC Confirm during CM call,required delirium events llc kinetic content llc confirm during cm call,required delirium events llc kinetic content llc confirm during cm call,NONE,True,False,False,[],[],"[""required"", ""delirium"", ""events"", ""llc"", ""kinetic"", ""content"", ""llc"", ""confirm"", ""during"", ""cm"", ""call""]",required,,clean_singleton,[],,
+001Hs000054S6dMIAS,bbb1d445a1,1,True,primary,0.0,0,PCEJ-85655,,Keep,"Per PNC, Company Name",,(Sonic Automotive) Buena Park Honda,,a09Hs00000cysse,"PC0695128 - Sonic Automotive, (Sonic Automotive) Buena Park Honda","PC0695128 - Sonic Automotive, (Sonic Automotive) Buena Park Honda",Unassigned,(Sonic Automotive) Buena Park Honda,70755.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,sonicautomotivebuenaparkhonda,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S6dM,(Sonic Automotive) Buena Park Honda,sonic automotive buena park honda,sonic automotive buena park honda,NONE,True,False,False,['Sonic Automotive'],['parentheses'],"[""sonic"", ""automotive"", ""buena"", ""park"", ""honda""]",sonic,,clean_singleton,[],,
+001Hs000054S53YIAS,21f452a065,1,True,primary,0.0,0,PCEJ-27391,,Keep,"Per PNC, Company Name",,(Staffing Agency-New Egg),,a09Hs00000cydiu,"PC0868107 - Business Solutions Inc, (Staffing Agency-New Egg)","PC0868107 - Business Solutions Inc, (Staffing Agency-New Egg)",Unassigned,(Staffing Agency-New Egg),71522.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,staffingagencynewegg,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054S53Y,(Staffing Agency-New Egg),staffing agency new egg,staffing agency new egg,NONE,True,False,False,[],[],"[""staffing"", ""agency"", ""new"", ""egg""]",staffing,,clean_singleton,[],,
+001Hs000054SG0bIAG,e3b69a7c6c,1,True,primary,0.0,0,PCEJ-50475,,Keep,"Per PNC, Company Name",,(TDC) The Door Company,,a09Hs00000cyjjE,"PC0671577 - Door Systems Design Incorporation, (TDC) The Door Company","PC0671577 - Door Systems Design Incorporation, (TDC) The Door Company",Unassigned,(TDC) The Door Company,180559.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,tdcthedoorcompany,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SG0b,(TDC) The Door Company,tdc the door company,tdc the door,CO,True,False,False,[],[],"[""tdc"", ""the"", ""door""]",tdc,,clean_singleton,[],,
+001Hs000054SKpvIAG,1ea75033d5,1,True,primary,0.0,0,PCEJ-45730,,Keep,"Per PNC, Company Name on the Paystub",,"(The TJX Companies, Inc.)",,a09Hs00000cyiUh,"PC0786940 - TJ MAXX, (The TJX Companies, Inc.)","PC0786940 - TJ MAXX, (The TJX Companies, Inc.)",Unassigned,"(The TJX Companies, Inc.)",49855.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,thetjxcompaniesinc,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SKpv,"(The TJX Companies, Inc.)",the tjx companies inc,the tjx companies,INC,True,False,False,"['The TJX Companies, Inc.']",['parentheses'],"[""the"", ""tjx"", ""companies""]",the,,clean_singleton,[],,
+001Hs000054S2K3IAK,19fdc4194c,1,True,primary,0.0,0,PCEJ-19985,,Keep,"Per PNC, Company Name on the Paystub",,(UCB) Pharmaceutical,,a09Hs00000cybnS,"PC0760128 - United Chemical Belgium (UCB) Pharmaceutical, (UCB) Pharmaceutical","PC0760128 - United Chemical Belgium (UCB) Pharmaceutical, (UCB) Pharmaceutical",Unassigned,(UCB) Pharmaceutical,195916.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,ucbpharmaceutical,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S2K3,(UCB) Pharmaceutical,ucb pharmaceutical,ucb pharmaceutical,NONE,True,False,False,[],[],"[""ucb"", ""pharmaceutical""]",ucb,,clean_singleton,[],,
+001Hs000054S6bnIAC,92bcd3063e,1,True,primary,0.0,0,PCEJ-85581,,Keep,"Per PNC, Company Name on the Paystub",,(USTA) United States Tennis Association,,a09Hs00000cysrS,PC0695251 - (USTA) United States Tennis Association,PC0695251 - (USTA) United States Tennis Association,Unassigned,(USTA) United States Tennis Association,70905.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,ustaunitedstatestennisassociation,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S6bn,(USTA) United States Tennis Association,usta united states tennis association,usta united states tennis association,NONE,True,False,False,[],[],"[""usta"", ""united"", ""states"", ""tennis"", ""association""]",usta,,clean_singleton,[],,
+001Hs000054SJJ6IAO,b436fc6a39,1,True,primary,0.0,0,PCEJ-76161,,Keep,"Per PNC, Company Name on the Paystub",,(Walt Disney Resorts,,a09Hs00000cyqPW,"PC0716367 - Disneyland, (Walt Disney Resorts","PC0716367 - Disneyland, (Walt Disney Resorts",Unassigned,(Walt Disney Resorts,129222.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,waltdisneyresorts,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SJJ6,(Walt Disney Resorts,walt disney resorts,walt disney resorts,NONE,False,False,False,[],[],"[""walt"", ""disney"", ""resorts""]",walt,,clean_singleton,[],,
+001Hs000054SMbxIAG,27ad5a81bb,2,True,primary,0.0,0,PCEJ-67764,,Keep,"Per PNC, Company Name",,$30 CAP OG KUSH INDOOR ONLY,,a09Hs00000cyoE5,PC0820484 - $30 CAP OG KUSH INDOOR ONLY,PC0820484 - $30 CAP OG KUSH INDOOR ONLY,Unassigned,$30 CAP OG KUSH INDOOR ONLY,124147.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,$30capogkushindooronly,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SMbx,$30 CAP OG KUSH INDOOR ONLY,30 cap og kush indoor only,30 cap og kush indoor only,NONE,False,False,False,[],[],"[""30"", ""cap"", ""og"", ""kush"", ""indoor"", ""only""]",30,"{
+  ""primary_record"": {
+    ""index"": 29,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 2,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 30,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",primary_record,[],,
+001Hs000054SMbyIAG,27ad5a81bb,2,False,edge>=high,100.0,6,PCEJ-67765,,Update,"Per PNC, Company Name on the Paystub",,$30 CAP OG KUSH INDOOR ONLY,,a09Hs00000cyoE6,PC0820484 - $30 CAP OG KUSH INDOOR ONLY,PC0820484 - $30 CAP OG KUSH INDOOR ONLY,Unassigned,$30 CAP OG KUSH INDOOR ONLY,124147.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,$30capogkushindooronly,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SMby,$30 CAP OG KUSH INDOOR ONLY,30 cap og kush indoor only,30 cap og kush indoor only,NONE,False,False,False,[],[],"[""30"", ""cap"", ""og"", ""kush"", ""indoor"", ""only""]",30,"{
+  ""primary_record"": {
+    ""index"": 29,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 2,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 30,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs00005MMMdwIAH,5f6aaf2c22,1,True,primary,0.0,0,PCEJ-93431,,Keep,"Per PNC, Company Name on the Paystub",,0T534 - Tyson The Gill Corporation,,a09Hs00000cyxw9,"PC0837571 - 0T534 - Tyson The Gill Corporation, The Gill Corporation","PC0837571 - 0T534 - Tyson The Gill Corporation, The Gill Corporation",Unassigned,0T534 - Tyson The Gill Corporation,,D.Law Integrations User,Company Account,0,D.Law Integrations User,2025-07-14,0t534tysonthegillcorporation,Not Sure,D.Law Integrations User,45852,United States,United States,United States,45852,Review,001Hs00005MMMdw,0T534 - Tyson The Gill Corporation,0t534 tyson the gill corporation,0t534 tyson the gill,CORP,False,False,False,[],[],"[""0t534"", ""tyson"", ""the"", ""gill""]",0t534,,clean_singleton,[],,
+001Hs000054SDcUIAW,0ccd974f0c,1,True,primary,0.0,0,PCEJ-66334,,Keep,"Per PNC, Company Name on the Paystub",,1 Cerberus Security & Patrol,,a09Hs00000cynr1,PC0702117 - 1 Cerberus Security & Patrol,PC0702117 - 1 Cerberus Security & Patrol,Unassigned,1 Cerberus Security & Patrol,182476.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1cerberussecuritypatrol,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SDcU,1 Cerberus Security & Patrol,1 cerberus security and patrol,1 cerberus security and patrol,NONE,False,False,False,[],[],"[""1"", ""cerberus"", ""security"", ""and"", ""patrol""]",1,,clean_singleton,[],,
+001Hs000054S3HPIA0,94589a8329,1,True,primary,0.0,0,PCEJ-10823,,Keep,"Per PNC, Company Name",,1 MC Logistics,,a09Hs00000cyZPg,PC0753966 - 1 MC Logistics,PC0753966 - 1 MC Logistics,Unassigned,1 MC Logistics,22306.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1mclogistics,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S3HP,1 MC Logistics,1 mc logistics,1 mc logistics,NONE,False,False,False,[],[],"[""1"", ""mc"", ""logistics""]",1,,clean_singleton,[],,
+001Hs000054SMomIAG,90e605fcc2,1,True,primary,0.0,0,PCEJ-23814,,Keep,"Per PNC, Company Name on the Paystub",,1 Platinum Security 3. Black Knight Patrol,,a09Hs00000cycnD,PC0793513 - 1 Platinum Security 3. Black Knight Patrol,PC0793513 - 1 Platinum Security 3. Black Knight Patrol,Unassigned,1 Platinum Security 3. Black Knight Patrol,25580.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1platinumsecurity3blackknightpatrol,Not Sure,Sam Silberman,45834,United States,United States,United States,45822,Declined,001Hs000054SMom,1 Platinum Security 3. Black Knight Patrol,1 platinum security 3 black knight patrol,1 platinum security 3 black knight patrol,NONE,False,False,False,[],[],"[""1"", ""platinum"", ""security"", ""3"", ""black"", ""knight"", ""patrol""]",1,,clean_singleton,[],,
+001Hs000054SMLmIAO,ff4385eea8,1,True,primary,0.0,0,PCEJ-19016,,Verify,"Per PNC, Company Name",,1 Somethic; 1. Apple 1,,a09Hs00000cybXp,PC0765897 - 1 Somethic; 1. Apple 1,PC0765897 - 1 Somethic; 1. Apple 1,Unassigned,1 Somethic; 1. Apple 1,74460.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1somethic1apple1,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SMLm,1 Somethic; 1. Apple 1,1 somethic 1 apple 1,1 somethic 1 apple 1,NONE,False,True,True,"['1 Somethic', '1. Apple 1']","['semicolon', 'semicolon']","[""1"", ""somethic"", ""1"", ""apple"", ""1""]",1,,multi_name_string_requires_split,[],,
+001Hs000054S9Z3IAK,e6a8406230,1,True,primary,0.0,0,PCEJ-30124,,Keep,"Per PNC, Company Name",,1 stop builders,,a09Hs00000cyeQz,PC0751741 - 1 stop builders,PC0751741 - 1 stop builders,Unassigned,1 stop builders,42007.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1stopbuilders,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S9Z3,1 stop builders,1 stop builders,1 stop builders,NONE,False,False,False,[],[],"[""1"", ""stop"", ""builders""]",1,,clean_singleton,[],,
+001Hs000054SLBrIAO,15b3a7a2aa,3,True,edge>=high,100.0,4,PCEJ-78367,,Keep,"Per PNC, Company Name",,1-800 Got Junk,,a09Hs00000cyqz6,PC0709319 - 1-800 Got Junk,PC0709319 - 1-800 Got Junk,Unassigned,1-800 Got Junk,31045.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800gotjunk,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SLBr,1-800 Got Junk,1 800 got junk,1 800 got junk,NONE,False,False,False,[],[],"[""1"", ""800"", ""got"", ""junk""]",1,"{
+  ""primary_record"": {
+    ""index"": 37,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 7,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 41,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 42,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 43,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 44,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 45,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 46,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",primary_record,[],,
+001Hs000054SGhvIAG,bae668fd74,1,True,primary,0.0,0,PCEJ-34376,,Keep,"Per PNC, Company Name",,1-800 Radiator & A/C,,a09Hs00000cyfXZ,PC0812424 - 1-800 Radiator & A/C,PC0812424 - 1-800 Radiator & A/C,Unassigned,1-800 Radiator & A/C,36534.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800radiatorac,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SGhv,1-800 Radiator & A/C,1 800 radiator and a c,1 800 radiator and a c,NONE,False,False,False,[],[],"[""1"", ""800"", ""radiator"", ""and"", ""a"", ""c""]",1,,clean_singleton,[],,
+001Hs000054SFKJIA4,cabd97ba82,1,True,primary,0.0,0,PCEJ-33288,,Keep,"Per PNC, Company Name",,1-800 Remodel,,a09Hs00000cyfG1,PC0764116 - 1-800 Remodel,PC0764116 - 1-800 Remodel,Unassigned,1-800 Remodel,14901.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800remodel,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SFKJ,1-800 Remodel,1 800 remodel,1 800 remodel,NONE,False,False,False,[],[],"[""1"", ""800"", ""remodel""]",1,,clean_singleton,[],,
+001Hs000054S057IAC,7601cdda74,1,True,primary,0.0,0,PCEJ-11085,,Keep,"Per PNC, Company Name on the Paystub",,1-800 Water Damage,,a09Hs00000cyZTu,PC0795379 - 1-800 Water Damage,PC0795379 - 1-800 Water Damage,Unassigned,1-800 Water Damage,197362.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800waterdamage,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S057,1-800 Water Damage,1 800 water damage,1 800 water damage,NONE,False,False,False,[],[],"[""1"", ""800"", ""water"", ""damage""]",1,,clean_singleton,[],,
+001Hs000054S4RZIA0,15b3a7a2aa,3,False,primary,0.0,0,PCEJ-57976,,Update,"Per PNC, Company Name",,1-800-GOT-JUNK?,,a09Hs00000cylgD,PC0649988 - 1-800-GOT-JUNK?,PC0649988 - 1-800-GOT-JUNK?,Unassigned,1-800-GOT-JUNK?,45662.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800gotjunk?,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S4RZ,1-800-GOT-JUNK?,1 800 got junk,1 800 got junk,NONE,False,False,False,[],[],"[""1"", ""800"", ""got"", ""junk""]",1,"{
+  ""primary_record"": {
+    ""index"": 37,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 7,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 41,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 42,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 43,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 44,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 45,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 46,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs000054S4YtIAK,15b3a7a2aa,3,False,primary,0.0,0,PCEJ-87899,,Update,"Per PNC, Company Name",,1-800-GOT-JUNK?,,a09Hs00000cytSq,"PC0639994 - LA Junkies, 1-800-GOT-JUNK?","PC0639994 - LA Junkies, 1-800-GOT-JUNK?",Unassigned,1-800-GOT-JUNK?,59882.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800gotjunk?,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S4Yt,1-800-GOT-JUNK?,1 800 got junk,1 800 got junk,NONE,False,False,False,[],[],"[""1"", ""800"", ""got"", ""junk""]",1,"{
+  ""primary_record"": {
+    ""index"": 37,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 7,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 41,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 42,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 43,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 44,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 45,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 46,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs000054S6V3IAK,15b3a7a2aa,3,False,primary,0.0,0,PCEJ-46865,,Update,"Per PNC, Company Name",,1-800-GOT-JUNK?,,a09Hs00000cyin0,"PC0813333 - Green Co LLC, 1-800-GOT-JUNK?","PC0813333 - Green Co LLC, 1-800-GOT-JUNK?",Unassigned,1-800-GOT-JUNK?,58168.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800gotjunk?,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S6V3,1-800-GOT-JUNK?,1 800 got junk,1 800 got junk,NONE,False,False,False,[],[],"[""1"", ""800"", ""got"", ""junk""]",1,"{
+  ""primary_record"": {
+    ""index"": 37,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 7,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 41,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 42,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 43,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 44,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 45,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 46,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs000054SI2fIAG,15b3a7a2aa,3,False,edge>=high,100.0,4,PCEJ-37311,,Update,"Per PNC, Company Name",,1-800-GOT-JUNK?,,a09Hs00000cygIu,"PC0829610 - RG Silicon Valley LLC, 1-800-GOT-JUNK?","PC0829610 - RG Silicon Valley LLC, 1-800-GOT-JUNK?",Demand,1-800-GOT-JUNK?,198480.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800gotjunk?,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SI2f,1-800-GOT-JUNK?,1 800 got junk,1 800 got junk,NONE,False,False,False,[],[],"[""1"", ""800"", ""got"", ""junk""]",1,"{
+  ""primary_record"": {
+    ""index"": 37,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 7,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 41,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 42,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 43,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 44,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 45,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 46,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs000054SIBmIAO,15b3a7a2aa,3,False,edge>=high,100.0,4,PCEJ-34221,,Update,"Per PNC, Company Name",,1-800-GOT-JUNK?,,a09Hs00000cyfV4,PC0789987 - 1-800-GOT-JUNK?,PC0789987 - 1-800-GOT-JUNK?,Unassigned,1-800-GOT-JUNK?,35854.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800gotjunk?,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SIBm,1-800-GOT-JUNK?,1 800 got junk,1 800 got junk,NONE,False,False,False,[],[],"[""1"", ""800"", ""got"", ""junk""]",1,"{
+  ""primary_record"": {
+    ""index"": 37,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 7,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 41,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 42,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 43,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 44,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 45,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 46,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs000054SLE8IAO,15b3a7a2aa,3,False,edge>=high,100.0,4,PCEJ-07284,,Update,"Per PNC, Company Name",,1-800-GOT-JUNK?,,a09Hs00000cyYUb,PC0780538 - 1-800-GOT-JUNK?,PC0780538 - 1-800-GOT-JUNK?,Unassigned,1-800-GOT-JUNK?,49690.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800gotjunk?,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SLE8,1-800-GOT-JUNK?,1 800 got junk,1 800 got junk,NONE,False,False,False,[],[],"[""1"", ""800"", ""got"", ""junk""]",1,"{
+  ""primary_record"": {
+    ""index"": 37,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 7,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 41,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 42,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 43,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 44,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 45,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 46,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs000054S0dkIAC,ab5b0f5528,2,True,primary,0.0,0,PCEJ-07352,,Keep,"Per PNC, Company Name",,1-800-PACK-RAT,,a09Hs00000cyYVh,"PC0780403 - 1-800-PACK-RAT LLC, 1-800-PACK-RAT","PC0780403 - 1-800-PACK-RAT LLC, 1-800-PACK-RAT",Unassigned,1-800-PACK-RAT,122883.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800packrat,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S0dk,1-800-PACK-RAT,1 800 pack rat,1 800 pack rat,NONE,False,False,False,[],[],"[""1"", ""800"", ""pack"", ""rat""]",1,"{
+  ""primary_record"": {
+    ""index"": 47,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 2,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 48,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",primary_record,[],,
+001Hs000054SHsyIAG,ab5b0f5528,2,False,edge>=high,100.0,4,PCEJ-17655,,Update,"Per PNC, Company Name",,1-800-PACK-RAT,,a09Hs00000cybBs,"PC0792653 - 1-800-PACK-RAT Zippy Shell, 1-800-PACK-RAT","PC0792653 - 1-800-PACK-RAT Zippy Shell, 1-800-PACK-RAT",Unassigned,1-800-PACK-RAT,166145.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800packrat,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SHsy,1-800-PACK-RAT,1 800 pack rat,1 800 pack rat,NONE,False,False,False,[],[],"[""1"", ""800"", ""pack"", ""rat""]",1,"{
+  ""primary_record"": {
+    ""index"": 47,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 2,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 48,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    }
+  ]
+}",duplicate_record,[],,
+001Hs000054S0dlIAC,abb8c67127,1,True,primary,0.0,0,PCEJ-07353,,Keep,"Per PNC, Company Name on the Paystub",,1-800-PACK-RAT LLC,,a09Hs00000cyYVi,"PC0780403 - 1-800-PACK-RAT LLC, 1-800-PACK-RAT","PC0780403 - 1-800-PACK-RAT LLC, 1-800-PACK-RAT",Unassigned,1-800-PACK-RAT LLC,122883.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800packratllc,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S0dl,1-800-PACK-RAT LLC,1 800 pack rat llc,1 800 pack rat,LLC,False,False,False,[],[],"[""1"", ""800"", ""pack"", ""rat""]",1,,clean_singleton,[],,
+001Hs000054SHszIAG,40be040661,1,True,primary,0.0,0,PCEJ-17656,,Keep,"Per PNC, Company Name on the Paystub",,1-800-PACK-RAT Zippy Shell,,a09Hs00000cybBt,"PC0792653 - 1-800-PACK-RAT Zippy Shell, 1-800-PACK-RAT","PC0792653 - 1-800-PACK-RAT Zippy Shell, 1-800-PACK-RAT",Unassigned,1-800-PACK-RAT Zippy Shell,166145.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800packratzippyshell,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SHsz,1-800-PACK-RAT Zippy Shell,1 800 pack rat zippy shell,1 800 pack rat zippy shell,NONE,False,False,False,[],[],"[""1"", ""800"", ""pack"", ""rat"", ""zippy"", ""shell""]",1,,clean_singleton,[],,
+001Hs000054S96CIAS,71f53ad196,1,True,primary,0.0,0,PCEJ-28327,,Keep,"Per PNC, Company Name",,1-800-Radiator,,a09Hs00000cydy0,"PC0844934 - Driven Brands Shared Services, LLC., 1-800-Radiator","PC0844934 - Driven Brands Shared Services, LLC., 1-800-Radiator",Unassigned,1-800-Radiator,141948.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1800radiator,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054S96C,1-800-Radiator,1 800 radiator,1 800 radiator,NONE,False,False,False,[],[],"[""1"", ""800"", ""radiator""]",1,,clean_singleton,[],,
+001Hs000054SD0FIAW,3734fd1e31,1,True,primary,0.0,0,PCEJ-08826,,Delete,"Per PNC, Company Name",,"1,001-5,000 employees",,a09Hs00000cyYtT,"PC0868628 - 1,001-5,000 employees","PC0868628 - 1,001-5,000 employees",Unassigned,"1,001-5,000 employees",95800.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,10015000employees,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054SD0F,"1,001-5,000 employees",1 001 5 000 employees,1 001 5 000 employees,NONE,False,False,False,[],[],"[""1"", ""001"", ""5"", ""000"", ""employees""]",1,,blacklisted_name,[],,
+001Hs000054SI9FIAW,9e2ac18de6,1,True,primary,0.0,0,PCEJ-88129,,Keep,"Per PNC, Company Name",,"1,200 per",,a09Hs00000cytWY,"PC0657548 - 1,200 per","PC0657548 - 1,200 per",Unassigned,"1,200 per",52082.0,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,1200per,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Declined,001Hs000054SI9F,"1,200 per",1 200 per,1 200 per,NONE,False,False,False,[],[],"[""1"", ""200"", ""per""]",1,,clean_singleton,[],,

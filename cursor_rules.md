@@ -102,12 +102,47 @@
 - Question assumptions about data formats and requirements
 - Validate that solutions are maintainable and scalable
 - Consider edge cases and error handling
+- **Streamlit Debugging**: When troubleshooting UI issues, consider Streamlit's top-to-bottom rendering order
+- **Evidence-Based Debugging**: Use controlled testing (like diagnostic modes) to isolate problematic sections
+- **Simple Solutions First**: Prefer simple fixes (like reordering UI elements) over complex caching/optimization solutions
 
 ## File Naming Conventions
 - Use `snake_case` for Python files/functions.
 - Use descriptive names that indicate purpose
 - Include timestamps in processed data filenames
 - Keep file paths relative to project root
+
+## Streamlit Debugging Best Practices (Phase 1.17.4+)
+
+### Rendering Order Awareness
+- **Top-to-bottom execution**: Streamlit renders UI elements in the order they appear in the script
+- **Heavy operations placement**: Place computationally expensive operations at the end of sidebar or main content
+- **Blocking prevention**: Heavy operations in early sections can block rendering of subsequent sections
+- **Section isolation**: Use `st.expander()` to isolate heavy operations and prevent UI blocking
+
+### Diagnostic Mode Implementation
+- **Controlled testing**: Implement diagnostic mode to disable/enable problematic sections
+- **Isolation testing**: Use diagnostic flags to isolate which section is causing issues
+- **Evidence-based debugging**: Use controlled experiments rather than assumptions
+- **Preserve diagnostic tools**: Keep diagnostic mode available for future troubleshooting
+
+### Pandas Array Handling
+- **Explicit length checks**: Use `len(array) > 0` instead of `if array:` for pandas Series
+- **Truthiness errors**: Avoid `ValueError: The truth value of an array with more than one element is ambiguous`
+- **Type safety**: Always validate DataFrame column types before operations
+- **Array operations**: Use explicit boolean masks for DataFrame assignments
+
+### UI Performance Optimization
+- **Lazy loading**: Load heavy data only when needed (e.g., when expander is opened)
+- **Session state caching**: Use `st.session_state` to cache expensive operations
+- **Progressive disclosure**: Show essential UI first, load details on demand
+- **Memory management**: Clear session state caches when switching between runs
+
+### Error Handling in Streamlit
+- **Section guards**: Wrap heavy sections in try/except blocks to prevent complete UI failure
+- **Graceful degradation**: Provide fallback UI when operations fail
+- **User feedback**: Show clear error messages and recovery options
+- **Debug information**: Include diagnostic information in error messages
 
 ---
 
@@ -308,15 +343,19 @@
 - **Run-Scoped Only**: No global path fallbacks, all artifacts must be run-scoped
 - **Error Handling**: Clear messages for missing runs, failed runs, or incomplete artifacts
 - **Type Safety**: All helper functions must have comprehensive type annotations
+- **Streamlit Rendering Order**: Heavy operations must be placed at the end of sidebar to avoid blocking main content
+- **Diagnostic Mode**: Include diagnostic mode for troubleshooting UI rendering issues
+- **Pandas Array Handling**: Use explicit length checks (`len(array) > 0`) instead of truthiness for pandas Series
 
 ### UI Safety Standards (Phase 1.17.2+)
 - **Destructive Actions Fuse**: Require explicit enablement before any destructive operations
 - **Preview Mode**: Show exactly what will be affected before confirming actions
-- **Two-step Confirmation**: Checkbox + typed confirmation for all destructive operations
+- **Checkbox Confirmation**: Simple checkbox confirmation for all destructive operations
 - **In-flight Protection**: Prevent deletion of running or active resources
 - **Audit Logging**: Log all destructive operations with timestamps and details
 - **Atomic Operations**: Use temporary files and atomic rename for critical updates
 - **Latest Pointer Management**: Automatic recomputation and atomic updates of pointers
+- **UI Performance**: Heavy operations must be placed at the end of sidebar to prevent blocking main content rendering
 
 - **Config (config/settings.yaml):**
   - Keep existing thresholds.
