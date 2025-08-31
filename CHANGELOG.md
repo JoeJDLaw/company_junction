@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase1.19.1] - 2025-08-31
+
+### Read-Only Hygiene & Cleanup
+- **Phase 1 Destructive Fuse**: Added `PHASE_1_DESTRUCTIVE_FUSE = False` to gate all destructive operations
+- **Gated Functions**: All destructive functions now check the fuse before executing:
+  - `prune_old_runs()` - Run pruning for disk space management
+  - `cleanup_failed_runs()` - Cleanup of failed run artifacts
+  - `delete_runs()` - Manual run deletion functionality
+  - `create_latest_pointer()` - Latest symlink management
+  - `remove_latest_pointer()` - Latest pointer removal
+- **Safe Cleanup Utility**: New CLI tool `tools/cleanup_test_artifacts.py` for removing test/demo artifacts
+  - Dry-run by default with `--really-delete` fuse for actual deletion
+  - Configurable filters: `--pattern`, `--include-sample-test`, `--days-older-than`, `--only-stale-index`
+  - Safe scope: Only affects `data/interim/` and `data/processed/` run directories
+  - Never touches `data/raw/`, `data/samples/`, or `deprecated/` directories
+  - Interactive confirmation prompts and JSON summary output
+- **Run Dropdown Hygiene**: Improved display names for temporary files and deduplication
+  - Temporary files show compact run ID format: `run_id[:8]...run_id[-6:]`
+  - Deduplication by `(input_hash, config_hash)` keeping newest timestamp
+  - Better fallback handling for unknown/missing metadata
+- **Regression Tests**: Comprehensive safety tests to ensure read-only posture
+  - `test_no_destructive_functions_in_code()` - Verifies all destructive ops are gated
+  - `test_no_direct_run_index_deletions()` - Ensures run index modifications are gated
+  - `test_maintenance_ui_shows_readonly_copy()` - Confirms UI shows read-only message
+  - `test_maintenance_rendered_in_sidebar()` - Verifies sidebar placement per rules
+  - `test_phase_1_fuse_not_enabled()` - Ensures fuse is disabled by default
+  - `test_no_destructive_ui_buttons()` - Confirms no destructive UI elements
+- **Logging Boundaries**: Added logging for sidebar maintenance rendering
+- **Documentation**: Updated cursor_rules.md to clarify Phase 1 read-only requirements
+
+### Technical Implementation
+- **Fuse Detection**: Sophisticated AST-based detection of gated destructive operations
+- **Cache Management**: All cache operations properly gated behind Phase 1 fuse
+- **CLI Safety**: Cleanup utility with multiple safety layers and explicit fuses
+- **Test Coverage**: 17 new tests covering cleanup utility and safety requirements
+- **Type Safety**: All new code follows strict type annotation requirements
+
 ## [Phase1.18.4] - 2025-08-31
 
 ### Critical Bug Fixes

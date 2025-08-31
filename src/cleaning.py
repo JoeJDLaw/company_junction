@@ -37,6 +37,7 @@ from src.utils.cache_utils import (
     update_run_status,
     create_latest_pointer,
     prune_old_runs,
+    PHASE_1_DESTRUCTIVE_FUSE,
 )
 from src.utils.parallel_utils import create_parallel_executor
 from src.utils.resource_monitor import log_resource_summary
@@ -349,8 +350,11 @@ def run_pipeline(
     # Add run to index
     add_run_to_index(run_id, [input_path], [config_path], "running")
 
-    # Prune old runs
-    prune_old_runs(keep_runs)
+    # Prune old runs (gated by Phase 1 fuse)
+    if PHASE_1_DESTRUCTIVE_FUSE:
+        prune_old_runs(keep_runs)
+    else:
+        logger.info("Skipping run pruning: Phase 1 destructive fuse not enabled")
 
     # Log resource summary
     log_resource_summary()

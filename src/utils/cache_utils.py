@@ -14,6 +14,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logging_utils import get_logger
 
+# Phase 1 destructive operations fuse
+PHASE_1_DESTRUCTIVE_FUSE = False  # Disabled by default for read-only Phase 1
+
 logger = get_logger(__name__)
 
 # Default values
@@ -147,6 +150,12 @@ def update_run_status(run_id: str, status: str) -> None:
 
 def create_latest_pointer(run_id: str) -> None:
     """Create latest pointer to the most recent successful run."""
+    if not PHASE_1_DESTRUCTIVE_FUSE:
+        logger.warning(
+            "Latest pointer creation disabled: Phase 1 destructive fuse not enabled"
+        )
+        return
+
     latest_symlink = "data/processed/latest"
     latest_json = "data/processed/latest.json"
 
@@ -198,6 +207,10 @@ def get_latest_run_id() -> Optional[str]:
 
 def prune_old_runs(keep_runs: int = DEFAULT_KEEP_RUNS) -> None:
     """Prune old completed runs, keeping only the most recent N."""
+    if not PHASE_1_DESTRUCTIVE_FUSE:
+        logger.warning("Prune old runs disabled: Phase 1 destructive fuse not enabled")
+        return
+
     run_index = load_run_index()
 
     # Get completed runs sorted by timestamp
@@ -232,6 +245,12 @@ def prune_old_runs(keep_runs: int = DEFAULT_KEEP_RUNS) -> None:
 
 def cleanup_failed_runs() -> None:
     """Clean up directories for failed runs."""
+    if not PHASE_1_DESTRUCTIVE_FUSE:
+        logger.warning(
+            "Cleanup failed runs disabled: Phase 1 destructive fuse not enabled"
+        )
+        return
+
     run_index = load_run_index()
 
     for run_id, run_data in list(run_index.items()):
@@ -326,6 +345,18 @@ def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
     Returns:
         Dict with deletion results
     """
+    if not PHASE_1_DESTRUCTIVE_FUSE:
+        logger.warning("Delete runs disabled: Phase 1 destructive fuse not enabled")
+        return {
+            "deleted": [],
+            "not_found": [],
+            "inflight_blocked": [],
+            "errors": ["Delete runs disabled: Phase 1 destructive fuse not enabled"],
+            "total_bytes_freed": 0,
+            "latest_reassigned": False,
+            "new_latest": None,
+        }
+
     run_index = load_run_index()
     results: Dict[str, Any] = {
         "deleted": [],
@@ -440,6 +471,12 @@ def recompute_latest_pointer() -> Optional[str]:
 
 def remove_latest_pointer() -> None:
     """Remove the latest pointer (symlink and JSON)."""
+    if not PHASE_1_DESTRUCTIVE_FUSE:
+        logger.warning(
+            "Latest pointer removal disabled: Phase 1 destructive fuse not enabled"
+        )
+        return
+
     latest_symlink = "data/processed/latest"
     latest_json = "data/processed/latest.json"
 

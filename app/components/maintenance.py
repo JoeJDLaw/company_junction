@@ -16,6 +16,11 @@ def render_maintenance(selected_run_id: str) -> None:
     Args:
         selected_run_id: The selected run ID
     """
+    from src.utils.logging_utils import get_logger
+
+    logger = get_logger(__name__)
+    logger.info(f"Sidebar maintenance copy rendered | run_id={selected_run_id}")
+
     st.sidebar.subheader("Run Maintenance")
 
     # Cache clearing functionality
