@@ -9,7 +9,6 @@ import json
 import os
 import time
 import hashlib
-import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -22,7 +21,6 @@ import pyarrow.dataset as ds  # type: ignore
 # Optional DuckDB import for fallback
 try:
     import duckdb
-
     DUCKDB_AVAILABLE = True
 except ImportError:
     DUCKDB_AVAILABLE = False
@@ -90,19 +88,15 @@ def _is_non_empty(obj: Any) -> bool:
 
 def list_runs() -> List[Dict[str, Any]]:
     """
-    Get a sorted list of all runs with metadata, with duplicates removed.
+    Get a sorted list of all runs with metadata.
 
     Returns:
         List of run dictionaries sorted by timestamp (newest first)
     """
-    from src.utils.cache_utils import list_runs_deduplicated
-
-    # Get deduplicated runs
-    deduplicated_runs = list_runs_deduplicated()
-
-    # Convert to the expected format
+    run_index = load_run_index()
     runs = []
-    for run_id, run_data in deduplicated_runs:
+
+    for run_id, run_data in run_index.items():
         runs.append(
             {
                 "run_id": run_id,
@@ -115,6 +109,9 @@ def list_runs() -> List[Dict[str, Any]]:
                 "dag_version": run_data.get("dag_version", "1.0.0"),
             }
         )
+
+    # Sort by timestamp (newest first)
+    runs.sort(key=lambda x: x["timestamp"], reverse=True)
 
     return runs
 
@@ -374,20 +371,7 @@ def format_run_display_name(
     input_paths = metadata.get("input_paths", [])
     input_file = "Unknown"
     if input_paths:
-        input_path = input_paths[0]
-        input_file = str(Path(input_path).name)
-
-        # Handle temporary files and unknown paths
-        if (
-            input_file.startswith("tmp")
-            or "/tmp/" in input_path
-            or "Unknown" in input_file
-        ):
-            # Use a more descriptive name for temporary files
-            input_file = f"temp_file_{run_id[:8]}"
-            logger.info(
-                f"Display name fallback: using run_id prefix for temp file | run_id={run_id}"
-            )
+        input_file = str(Path(input_paths[0]).name)
 
     # Format timestamp
     timestamp = metadata.get("formatted_timestamp", "Unknown")
@@ -517,8 +501,10 @@ def get_groups_page_pyarrow(
         step_start = time.time()
         dataset = ds.dataset(parquet_path)
         dataset_time = time.time() - step_start
-        logger.info(f"Dataset creation | run_id={run_id} elapsed={dataset_time:.3f}s")
-
+        logger.info(
+            f'Dataset creation | run_id={run_id} elapsed={dataset_time:.3f}s'
+        )
+        
         check_timeout()
 
         # Step 2: Column projection
@@ -537,16 +523,16 @@ def get_groups_page_pyarrow(
         existing_columns = [col for col in header_columns if col in available_columns]
 
         logger.info(
-            f"Column projection | run_id={run_id} available={len(available_columns)} projected={len(existing_columns)} columns={existing_columns}"
+            f'Column projection | run_id={run_id} available={len(available_columns)} projected={len(existing_columns)} columns={existing_columns}'
         )
 
         # Use scanner for projection
         scanner = dataset.scanner(columns=existing_columns)
         projected_table = scanner.to_table()
         projection_time = time.time() - step_start
-
+        
         logger.info(
-            f"Projection complete | run_id={run_id} rows={projected_table.num_rows} elapsed={projection_time:.3f}s"
+            f'Projection complete | run_id={run_id} rows={projected_table.num_rows} elapsed={projection_time:.3f}s'
         )
 
         check_timeout()
@@ -555,40 +541,37 @@ def get_groups_page_pyarrow(
         step_start = time.time()
         filtered_table = apply_filters_pyarrow(projected_table, filters)
         filter_time = time.time() - step_start
-
+        
         logger.info(
-            f"Filters applied | run_id={run_id} before={projected_table.num_rows} after={filtered_table.num_rows} elapsed={filter_time:.3f}s"
+            f'Filters applied | run_id={run_id} before={projected_table.num_rows} after={filtered_table.num_rows} elapsed={filter_time:.3f}s'
         )
 
         check_timeout()
 
-        # Step 4: Compute group statistics
+                # Step 4: Compute group statistics
         step_start = time.time()
         groups_table = compute_group_stats_pyarrow(filtered_table)
         stats_time = time.time() - step_start
-
+        
         logger.info(
-            f"Group stats computed | run_id={run_id} groups={groups_table.num_rows} elapsed={stats_time:.3f}s"
+            f'Group stats computed | run_id={run_id} groups={groups_table.num_rows} elapsed={stats_time:.3f}s'
         )
-
+        
         # Auto-switch to DuckDB if group stats take too long
         try:
             from src.utils.config_utils import load_settings
-
             settings = load_settings()
-            max_pyarrow_seconds = settings.get("ui", {}).get(
-                "max_pyarrow_group_stats_seconds", 5
-            )
+            max_pyarrow_seconds = settings.get("ui", {}).get("max_pyarrow_group_stats_seconds", 5)
         except Exception:
             max_pyarrow_seconds = 5
-
+            
         if stats_time > max_pyarrow_seconds and DUCKDB_AVAILABLE:
             logger.info(
-                f"Auto-switching groups backend to DuckDB | run_id={run_id} reason=pyarrow_groupby_slow elapsed={stats_time:.3f}s"
+                f'Auto-switching groups backend to DuckDB | run_id={run_id} reason=pyarrow_groupby_slow elapsed={stats_time:.3f}s'
             )
             # Close current connection and switch to DuckDB
             return get_groups_page_duckdb(run_id, sort_key, page, page_size, filters)
-
+        
         check_timeout()
 
         # Get total count
@@ -621,7 +604,7 @@ def get_groups_page_pyarrow(
             sort_time = time.time() - step_start
 
             logger.info(
-                f"Sorting applied | run_id={run_id} sort_keys={sort_keys} elapsed={sort_time:.3f}s"
+                f'Sorting applied | run_id={run_id} sort_keys={sort_keys} elapsed={sort_time:.3f}s'
             )
 
             check_timeout()
@@ -632,7 +615,7 @@ def get_groups_page_pyarrow(
             slice_time = time.time() - step_start
 
             logger.info(
-                f"Slice applied | run_id={run_id} offset={offset} limit={limit} slice_rows={page_table.num_rows} elapsed={slice_time:.3f}s"
+                f'Slice applied | run_id={run_id} offset={offset} limit={limit} slice_rows={page_table.num_rows} elapsed={slice_time:.3f}s'
             )
 
             # Step 8: Convert slice to pandas
@@ -641,7 +624,7 @@ def get_groups_page_pyarrow(
             pandas_time = time.time() - step_start
 
             logger.info(
-                f"Pandas conversion | run_id={run_id} rows={len(page_data)} elapsed={pandas_time:.3f}s"
+                f'Pandas conversion | run_id={run_id} rows={len(page_data)} elapsed={pandas_time:.3f}s'
             )
 
         elapsed = time.time() - start_time
@@ -672,54 +655,29 @@ def get_groups_page(
     Get a page of groups using the configured backend (PyArrow or DuckDB).
 
     Args:
-        run_id: The run ID
-        sort_key: The sort key
-        page: The page number
-        page_size: The page size
-        filters: The filters dictionary
+        run_id: Run ID to load data from
+        sort_key: Sort key from dropdown
+        page: Page number (1-based)
+        page_size: Number of groups per page
+        filters: Dictionary of active filters
 
     Returns:
-        Tuple of (page_data, total_groups)
+        Tuple of (groups_data, total_count)
     """
-    # Load settings
-    with open("config/settings.yaml", "r") as f:
-        settings = yaml.safe_load(f)
-    use_duckdb = settings.get("ui", {}).get("use_duckdb_for_groups", False)
-
-    # DuckDB-first routing: when flag is true, route to DuckDB before any PyArrow work
+    # Check if DuckDB is enabled via feature flag
+    try:
+        from src.utils.config_utils import load_settings
+        settings = load_settings()
+        use_duckdb = settings.get("ui", {}).get("use_duckdb_for_groups", False)
+    except Exception:
+        use_duckdb = False
+    
+    # Use DuckDB if enabled and available
     if use_duckdb and DUCKDB_AVAILABLE:
-        logger.info(
-            f"Using DuckDB backend for groups | run_id={run_id} reason=flag_true"
-        )
-
-        # Persist backend choice in session state (using namespaced keys)
-        import streamlit as st
-
-        if "cj" not in st.session_state:
-            st.session_state["cj"] = {}
-        if "backend" not in st.session_state["cj"]:
-            st.session_state["cj"]["backend"] = {}
-        if "groups" not in st.session_state["cj"]["backend"]:
-            st.session_state["cj"]["backend"]["groups"] = {}
-
-        st.session_state["cj"]["backend"]["groups"][run_id] = "duckdb"
-
+        logger.info(f'Using DuckDB backend for groups | run_id={run_id}')
         return get_groups_page_duckdb(run_id, sort_key, page, page_size, filters)
     else:
-        logger.info(f"Using PyArrow backend for groups | run_id={run_id}")
-
-        # Persist backend choice in session state (using namespaced keys)
-        import streamlit as st
-
-        if "cj" not in st.session_state:
-            st.session_state["cj"] = {}
-        if "backend" not in st.session_state["cj"]:
-            st.session_state["cj"]["backend"] = {}
-        if "groups" not in st.session_state["cj"]["backend"]:
-            st.session_state["cj"]["backend"]["groups"] = {}
-
-        st.session_state["cj"]["backend"]["groups"][run_id] = "pyarrow"
-
+        logger.info(f'Using PyArrow backend for groups | run_id={run_id}')
         return get_groups_page_pyarrow(run_id, sort_key, page, page_size, filters)
 
 
@@ -810,103 +768,16 @@ def compute_group_stats_pyarrow(table: pa.Table) -> pa.Table:
     return pa.Table.from_pylist(stats_data)
 
 
-def get_group_details_duckdb(run_id: str, group_id: str) -> List[Dict[str, Any]]:
+def get_group_details_lazy(run_id: str, group_id: str) -> Dict[str, Any]:
     """
-    Get group details using DuckDB for efficient per-group querying.
+    Get detailed information for a specific group (lazy-loaded).
 
     Args:
-        run_id: The run ID
-        group_id: The specific group ID to fetch details for
+        run_id: Run ID to load data from
+        group_id: Group ID to get details for
 
     Returns:
-        List of dictionaries containing group details
-    """
-    start_time = time.time()
-    step_start = time.time()
-
-    try:
-        # Get artifact paths and settings
-        artifact_paths = get_artifact_paths(run_id)
-        parquet_path = artifact_paths["review_ready_parquet"]
-
-        # Load settings
-        with open("config/settings.yaml", "r") as f:
-            settings = yaml.safe_load(f)
-        duckdb_threads = settings.get("ui", {}).get("duckdb_threads", 4)
-
-        # Projected columns for details UI
-        projected_cols = [
-            "account_name",
-            "account_id",
-            "Disposition",
-            "is_primary",
-            "weakest_edge_to_primary",
-            "suffix",
-        ]
-
-        logger.info(
-            f"Group details fetch start | run_id={run_id} group_id={group_id} projected_cols={projected_cols}"
-        )
-
-        # Step 1: DuckDB connection
-        conn = duckdb.connect(":memory:")
-        conn.execute(f"PRAGMA threads = {duckdb_threads}")
-        connect_time = time.time() - step_start
-        logger.info(
-            f"DuckDB connection (details) | run_id={run_id} elapsed={connect_time:.3f}"
-        )
-
-        # Step 2: Build and execute query
-        step_start = time.time()
-        sql = f"""
-        SELECT {', '.join(projected_cols)}
-        FROM read_parquet('{parquet_path}')
-        WHERE group_id = '{group_id}'
-        ORDER BY account_name ASC
-        """
-
-        result = conn.execute(sql)
-        query_time = time.time() - step_start
-        logger.info(
-            f"Details query executed | run_id={run_id} group_id={group_id} rows={result.rowcount} elapsed={query_time:.3f}"
-        )
-
-        # Step 3: Convert to pandas
-        step_start = time.time()
-        df = result.df()
-        pandas_time = time.time() - step_start
-        logger.info(
-            f"Details pandas conversion | run_id={run_id} group_id={group_id} rows={len(df)} elapsed={pandas_time:.3f}"
-        )
-
-        details_data = df.to_dict("records")
-        conn.close()
-
-        elapsed = time.time() - start_time
-        logger.info(
-            f"Group details loaded | run_id={run_id} group_id={group_id} rows={len(details_data)} elapsed={elapsed:.3f}"
-        )
-
-        return details_data
-
-    except Exception as e:
-        elapsed = time.time() - start_time
-        logger.error(
-            f'Group details load failed | run_id={run_id} group_id={group_id} error="{str(e)}" elapsed={elapsed:.3f}'
-        )
-        raise
-
-
-def get_group_details_pyarrow(run_id: str, group_id: str) -> List[Dict[str, Any]]:
-    """
-    Get group details using PyArrow (fallback implementation).
-
-    Args:
-        run_id: The run ID
-        group_id: The group ID
-
-    Returns:
-        List of dictionaries containing group details
+        Dictionary with group details
     """
     start_time = time.time()
     try:
@@ -915,7 +786,7 @@ def get_group_details_pyarrow(run_id: str, group_id: str) -> List[Dict[str, Any]
         parquet_path = artifact_paths["review_ready_parquet"]
 
         if not os.path.exists(parquet_path):
-            return []
+            return {"error": "Parquet file not found"}
 
         # Read parquet file and filter for group
         table = pq.read_table(parquet_path)
@@ -923,141 +794,105 @@ def get_group_details_pyarrow(run_id: str, group_id: str) -> List[Dict[str, Any]
         group_table = table.filter(group_mask)
 
         if group_table.num_rows == 0:
-            return []
+            return {"error": "Group not found"}
 
         # Convert to pandas for easier processing
         group_df = group_table.to_pandas()
 
-        # Project only the columns shown in details UI
-        projected_cols = [
-            "account_name",
-            "account_id",
-            "Disposition",
-            "is_primary",
-            "weakest_edge_to_primary",
-            "suffix",
-        ]
-        available_cols = [col for col in projected_cols if col in group_df.columns]
-        group_df = group_df[available_cols]
+        # Get merge preview
+        merge_preview = None
+        for _, row in group_df.iterrows():
+            merge_preview_value = row.get("merge_preview_json")
+            if _is_non_empty(merge_preview_value):
+                try:
+                    merge_preview = json.loads(str(merge_preview_value))
+                    break
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+        # Get alias cross-references
+        alias_cross_refs = []
+        for _, row in group_df.iterrows():
+            alias_cross_refs_value = row.get("alias_cross_refs")
+            if _is_non_empty(alias_cross_refs_value):
+                try:
+                    refs = json.loads(str(alias_cross_refs_value))
+                    if isinstance(refs, list):
+                        alias_cross_refs.extend(refs)
+                except (json.JSONDecodeError, TypeError):
+                    continue
 
         elapsed = time.time() - start_time
         logger.info(
-            f"Group details loaded (PyArrow) | run_id={run_id} group_id={group_id} elapsed={elapsed:.3f}"
+            f"Group details loaded | run_id={run_id} group_id={group_id} elapsed={elapsed:.3f}"
         )
 
-        return group_df.to_dict("records")
+        return {
+            "group_data": group_df.to_dict("records"),
+            "merge_preview": merge_preview,
+            "alias_cross_refs": alias_cross_refs,
+            "group_size": len(group_df),
+            "primary_record": (
+                group_df[group_df["is_primary"]].iloc[0].to_dict()
+                if group_df["is_primary"].any()
+                else group_df.iloc[0].to_dict()
+            ),
+        }
 
     except Exception as e:
-        elapsed = time.time() - start_time
-        logger.error(
-            f"Failed to load group details (PyArrow): {e} | run_id={run_id} group_id={group_id} elapsed={elapsed:.3f}"
-        )
-        return []
-
-
-def get_group_details_lazy(run_id: str, group_id: str) -> List[Dict[str, Any]]:
-    """
-    Get group details using the configured backend (DuckDB preferred for performance).
-
-    Args:
-        run_id: The run ID
-        group_id: The group ID
-
-    Returns:
-        List of dictionaries containing group details
-    """
-    # Load settings
-    with open("config/settings.yaml", "r") as f:
-        settings = yaml.safe_load(f)
-    use_duckdb = settings.get("ui", {}).get("use_duckdb_for_groups", False)
-
-    if use_duckdb and DUCKDB_AVAILABLE:
-        return get_group_details_duckdb(run_id, group_id)
-    else:
-        # Fallback to existing PyArrow implementation
-        return get_group_details_pyarrow(run_id, group_id)
+        logger.error(f"Failed to load group details: {e}")
+        return {"error": str(e)}
 
 
 def build_cache_key(
-    run_id: str,
-    sort_key: str,
-    page: int,
-    page_size: int,
-    filters: Dict[str, Any],
-    backend: str = "pyarrow",
+    run_id: str, sort_key: str, page: int, page_size: int, filters: Dict[str, Any]
 ) -> str:
     """
-    Build a cache key for groups page data.
+    Build cache key for pagination results.
 
     Args:
-        run_id: The run ID
-        sort_key: The sort key
-        page: The page number
-        page_size: The page size
-        filters: The filters dictionary
-        backend: The backend used ("pyarrow" or "duckdb")
+        run_id: Run ID
+        sort_key: Sort key
+        page: Page number
+        page_size: Page size
+        filters: Active filters
 
     Returns:
-        A string cache key
+        Cache key string
     """
-    # Get parquet fingerprint
+    # Create filter signature
+    filter_items = sorted(filters.items())
+    filter_str = json.dumps(filter_items, sort_keys=True)
+
+    # Get parquet file fingerprint (mtime + size)
     try:
         artifact_paths = get_artifact_paths(run_id)
         parquet_path = artifact_paths["review_ready_parquet"]
-        stat = os.stat(parquet_path)
-        parquet_fingerprint = f"{int(stat.st_mtime)}_{stat.st_size}"
+        if os.path.exists(parquet_path):
+            stat = os.stat(parquet_path)
+            parquet_fingerprint = f"{int(stat.st_mtime)}_{stat.st_size}"
+        else:
+            parquet_fingerprint = "missing"
     except Exception:
-        parquet_fingerprint = "unknown"
+        parquet_fingerprint = "error"
 
-    # Create filters signature
-    filters_signature = hashlib.md5(str(sorted(filters.items())).encode()).hexdigest()[
-        :8
-    ]
-
-    # Build cache key components
-    key_components = [
+    # Build cache key
+    key_parts = [
         run_id,
-        parquet_fingerprint,
         sort_key,
         str(page),
         str(page_size),
-        filters_signature,
-        backend,
+        parquet_fingerprint,
+        hashlib.md5(filter_str.encode()).hexdigest()[:8],
     ]
 
-    cache_key = hashlib.md5("|".join(key_components).encode()).hexdigest()
+    cache_key = "|".join(key_parts)
+    
+    # Log cache key for debugging
     logger.info(
-        f'Cache key generated | run_id={run_id} key={cache_key[:8]}... fingerprint={parquet_fingerprint} backend={backend} page={page} size={page_size} sort="{sort_key}"'
+        f'Cache key generated | run_id={run_id} key={cache_key[:50]}... fingerprint={parquet_fingerprint}'
     )
-
-    return cache_key
-
-
-def build_details_cache_key(run_id: str, group_id: str, backend: str = "duckdb") -> str:
-    """
-    Build a cache key for group details data.
-
-    Args:
-        run_id: The run ID
-        group_id: The group ID
-        backend: The backend used ("pyarrow" or "duckdb")
-
-    Returns:
-        A string cache key
-    """
-    # Get parquet fingerprint
-    try:
-        artifact_paths = get_artifact_paths(run_id)
-        parquet_path = artifact_paths["review_ready_parquet"]
-        stat = os.stat(parquet_path)
-        parquet_fingerprint = f"{int(stat.st_mtime)}_{stat.st_size}"
-    except Exception:
-        parquet_fingerprint = "unknown"
-
-    # Build cache key components
-    key_components = [run_id, group_id, parquet_fingerprint, backend]
-
-    cache_key = hashlib.md5("|".join(key_components).encode()).hexdigest()
+    
     return cache_key
 
 
@@ -1093,14 +928,11 @@ def get_groups_page_duckdb(
         def check_timeout():
             elapsed = time.time() - start_time
             if elapsed > 30:  # 30 second timeout
-                raise PageFetchTimeout(
-                    f"Page fetch exceeded 30 second timeout after {elapsed:.1f}s"
-                )
+                raise PageFetchTimeout(f"Page fetch exceeded 30 second timeout after {elapsed:.1f}s")
 
         # Load settings
         try:
             from src.utils.config_utils import load_settings
-
             settings = load_settings()
             duckdb_threads = settings.get("ui", {}).get("duckdb_threads", 4)
         except Exception:
@@ -1113,33 +945,31 @@ def get_groups_page_duckdb(
 
         # Step 1: DuckDB connection
         step_start = time.time()
-        conn = duckdb.connect(":memory:")
+        conn = duckdb.connect(':memory:')
         conn.execute(f"PRAGMA threads = {duckdb_threads}")
         connect_time = time.time() - step_start
-
+        
         logger.info(
-            f"DuckDB connection | run_id={run_id} threads={duckdb_threads} elapsed={connect_time:.3f}s"
+            f'DuckDB connection | run_id={run_id} threads={duckdb_threads} elapsed={connect_time:.3f}s'
         )
-
+        
         check_timeout()
 
         # Step 2: Build SQL query
         step_start = time.time()
-
+        
         # Build WHERE clause for filters
         where_conditions = []
         if filters.get("dispositions"):
             dispositions = filters["dispositions"]
             disp_list = "', '".join(dispositions)
             where_conditions.append(f"Disposition IN ('{disp_list}')")
-
+        
         if filters.get("min_edge_strength", 0.0) > 0.0:
-            where_conditions.append(
-                f"weakest_edge_to_primary >= {filters['min_edge_strength']}"
-            )
-
+            where_conditions.append(f"weakest_edge_to_primary >= {filters['min_edge_strength']}")
+        
         where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
-
+        
         # Build ORDER BY clause
         order_by_clause = ""
         if "Group Size" in sort_key:
@@ -1159,10 +989,10 @@ def get_groups_page_duckdb(
                 order_by_clause = "p.primary_name ASC"
         else:
             order_by_clause = "s.group_id ASC"
-
+        
         # Calculate pagination
         offset = (page - 1) * page_size
-
+        
         # Build SQL
         sql = f"""
         WITH base AS (
@@ -1201,38 +1031,38 @@ def get_groups_page_duckdb(
         LIMIT {page_size}
         OFFSET {offset};
         """
-
+        
         query_build_time = time.time() - step_start
-
+        
         logger.info(
             f'DuckDB query built | run_id={run_id} where_clause="{where_clause}" order_by="{order_by_clause}" elapsed={query_build_time:.3f}s'
         )
-
+        
         check_timeout()
 
         # Step 3: Execute query
         step_start = time.time()
         result = conn.execute(sql)
         query_exec_time = time.time() - step_start
-
+        
         logger.info(
-            f"DuckDB query executed | run_id={run_id} elapsed={query_exec_time:.3f}s"
+            f'DuckDB query executed | run_id={run_id} elapsed={query_exec_time:.3f}s'
         )
-
+        
         check_timeout()
 
         # Step 4: Convert to pandas
         step_start = time.time()
         df = result.df()
         pandas_time = time.time() - step_start
-
+        
         logger.info(
-            f"DuckDB pandas conversion | run_id={run_id} rows={len(df)} elapsed={pandas_time:.3f}s"
+            f'DuckDB pandas conversion | run_id={run_id} rows={len(df)} elapsed={pandas_time:.3f}s'
         )
-
+        
         # Step 5: Convert to list of dicts
-        page_data = df.to_dict("records")
-
+        page_data = df.to_dict('records')
+        
         # Get total count
         count_sql = f"""
         WITH base AS (
@@ -1245,10 +1075,10 @@ def get_groups_page_duckdb(
         """
         total_result = conn.execute(count_sql)
         total_groups = total_result.fetchone()[0]
-
+        
         # Close connection
         conn.close()
-
+        
         elapsed = time.time() - start_time
         logger.info(
             f'DuckDB groups page loaded | run_id={run_id} rows={len(page_data)} offset={offset} sort="{sort_key}" elapsed={elapsed:.3f} projected_cols=["group_id", "group_size", "max_score", "primary_name"]'
@@ -1259,7 +1089,7 @@ def get_groups_page_duckdb(
     except PageFetchTimeout:
         elapsed = time.time() - start_time
         logger.error(
-            f"DuckDB groups page load timeout | run_id={run_id} elapsed={elapsed:.3f}"
+            f'DuckDB groups page load timeout | run_id={run_id} elapsed={elapsed:.3f}'
         )
         raise
     except Exception as e:

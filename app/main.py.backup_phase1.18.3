@@ -41,7 +41,7 @@ import pandas as pd
 import yaml
 from typing import Any, Dict, List, Optional
 
-from src.utils.logging_utils import setup_logging, get_logger
+from src.utils.logging_utils import setup_logging
 from src.utils.state_utils import migrate_legacy_keys
 from app.components import (
     render_controls,
@@ -134,7 +134,6 @@ def main():
     """Main application entry point."""
     # Setup logging
     setup_logging()
-    logger = get_logger(__name__)
 
     # Page configuration
     st.set_page_config(
@@ -164,46 +163,8 @@ def main():
 
     runs = list_runs()
 
-    # Always render sidebar structure first
-    logger.info("Sidebar controls rendering...")
-
-    # Filter controls (always render)
-    st.sidebar.header("Filters")
-
-    # Disposition filter
-    dispositions = ["Keep", "Update", "Delete", "Verify"]
-    selected_dispositions = st.sidebar.multiselect(
-        "Disposition", dispositions, default=dispositions
-    )
-
-    # Group size filter
-    min_group_size = st.sidebar.number_input(
-        "Min Group Size", min_value=1, value=1, step=1
-    )
-
-    # Score filter
-    min_edge_strength = st.sidebar.number_input(
-        "Min Edge Strength", min_value=0.0, value=0.0, step=0.1, format="%.1f"
-    )
-
-    # Additional filters
-    show_suffix_mismatch = st.sidebar.checkbox("Show Suffix Mismatch Only", value=False)
-    has_aliases = st.sidebar.checkbox("Has Aliases Only", value=False)
-
-    # Build filters dictionary
-    filters = {
-        "dispositions": selected_dispositions if selected_dispositions else None,
-        "min_group_size": min_group_size,
-        "show_suffix_mismatch": show_suffix_mismatch,
-        "has_aliases": has_aliases,
-        "min_edge_strength": min_edge_strength,
-    }
-
-    # Handle no runs case
     if not runs:
         st.error("No runs found. Please run the pipeline first.")
-        # Still render maintenance in sidebar
-        render_maintenance("no_runs")
         return
 
     # Filter to show complete runs first, then others
@@ -251,14 +212,9 @@ def main():
 
     if not selected_run_id:
         st.error("Invalid run selection")
-        # Still render maintenance in sidebar
-        render_maintenance("invalid_run")
         return
 
-    # Render maintenance in sidebar (always render)
-    render_maintenance(selected_run_id)
-
-    # Show run status for non-complete runs
+    # Show run status
     if selected_run["status"] == "running":
         st.info(f"⏳ Run {selected_run_id} is still processing...")
         st.progress(0.5)  # Placeholder progress
@@ -274,6 +230,29 @@ def main():
     df = load_review_data(selected_run_id)
     if df is None:
         return
+
+    # Filter controls
+    st.sidebar.header("Filters")
+
+    # Disposition filter
+    dispositions = ["Keep", "Update", "Delete", "Verify"]
+    selected_dispositions = st.sidebar.multiselect(
+        "Disposition", dispositions, default=dispositions
+    )
+
+    # Group size filter
+    min_group_size = st.sidebar.number_input(
+        "Min Group Size", min_value=1, value=1, step=1
+    )
+
+    # Score filter
+    min_edge_strength = st.sidebar.number_input(
+        "Min Edge Strength", min_value=0.0, value=0.0, step=0.1, format="%.1f"
+    )
+
+    # Additional filters
+    show_suffix_mismatch = st.sidebar.checkbox("Show Suffix Mismatch Only", value=False)
+    has_aliases = st.sidebar.checkbox("Has Aliases Only", value=False)
 
     # Apply filters
     filtered_df = df.copy()
@@ -307,6 +286,15 @@ def main():
         ]["group_id"].unique()
         filtered_df = filtered_df[filtered_df["group_id"].isin(has_alias_groups)]
 
+    # Build filters dictionary
+    filters = {
+        "dispositions": selected_dispositions if selected_dispositions else None,
+        "min_group_size": min_group_size,
+        "show_suffix_mismatch": show_suffix_mismatch,
+        "has_aliases": has_aliases,
+        "min_edge_strength": min_edge_strength,
+    }
+
     # Render controls
     filters, sort_by, page, page_size = render_controls(
         selected_run_id, settings, filters
@@ -327,6 +315,9 @@ def main():
         primary_name = group_info["primary_name"]
 
         render_group_details(selected_run_id, group_id, group_size, primary_name)
+
+    # Render maintenance
+    render_maintenance(selected_run_id)
 
     # Render export
     render_export(filtered_df)

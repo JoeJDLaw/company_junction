@@ -90,19 +90,15 @@ def _is_non_empty(obj: Any) -> bool:
 
 def list_runs() -> List[Dict[str, Any]]:
     """
-    Get a sorted list of all runs with metadata, with duplicates removed.
+    Get a sorted list of all runs with metadata.
 
     Returns:
         List of run dictionaries sorted by timestamp (newest first)
     """
-    from src.utils.cache_utils import list_runs_deduplicated
-
-    # Get deduplicated runs
-    deduplicated_runs = list_runs_deduplicated()
-
-    # Convert to the expected format
+    run_index = load_run_index()
     runs = []
-    for run_id, run_data in deduplicated_runs:
+
+    for run_id, run_data in run_index.items():
         runs.append(
             {
                 "run_id": run_id,
@@ -115,6 +111,9 @@ def list_runs() -> List[Dict[str, Any]]:
                 "dag_version": run_data.get("dag_version", "1.0.0"),
             }
         )
+
+    # Sort by timestamp (newest first)
+    runs.sort(key=lambda x: x["timestamp"], reverse=True)
 
     return runs
 
@@ -374,20 +373,7 @@ def format_run_display_name(
     input_paths = metadata.get("input_paths", [])
     input_file = "Unknown"
     if input_paths:
-        input_path = input_paths[0]
-        input_file = str(Path(input_path).name)
-
-        # Handle temporary files and unknown paths
-        if (
-            input_file.startswith("tmp")
-            or "/tmp/" in input_path
-            or "Unknown" in input_file
-        ):
-            # Use a more descriptive name for temporary files
-            input_file = f"temp_file_{run_id[:8]}"
-            logger.info(
-                f"Display name fallback: using run_id prefix for temp file | run_id={run_id}"
-            )
+        input_file = str(Path(input_paths[0]).name)
 
     # Format timestamp
     timestamp = metadata.get("formatted_timestamp", "Unknown")

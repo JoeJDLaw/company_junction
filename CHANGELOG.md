@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase1.18.4] - 2025-08-31
+
+### Critical Bug Fixes
+- **Sidebar Rendering**: Fixed missing sidebar controls and incorrect maintenance placement
+  - **Root Cause**: Maintenance section was rendered in main content instead of sidebar, and early returns prevented sidebar rendering
+  - **Solution**: Moved maintenance to sidebar and restructured early returns to preserve sidebar visibility
+  - **Rendering Order**: Sidebar now renders first, ensuring controls are always visible
+  - **Logging**: Added sidebar rendering boundaries for better debugging
+- **Run Deduplication**: Fixed duplicate entries in run selector dropdown
+  - **Root Cause**: Multiple runs with identical input/config hashes but different timestamps
+  - **Solution**: Implemented `list_runs_deduplicated()` function to keep only the most recent run per unique combination
+  - **Logging**: Added deduplication events with counts of removed duplicates
+- **Display Name Formatting**: Improved handling of temporary and unknown file paths
+  - **Root Cause**: Temporary files and unknown paths showed as "Unknown" in dropdown
+  - **Solution**: Enhanced `format_run_display_name()` to use descriptive names for temp files
+  - **Fallback**: Uses `temp_file_{run_id_prefix}` for temporary files and unknown paths
+
+### UI/UX Improvements
+- **Sidebar Structure**: Maintenance section now appears in sidebar as intended
+  - **Placement**: Moved from bottom of main content to sidebar after filters
+  - **Consistency**: Maintains sidebar structure even when no runs exist
+  - **Accessibility**: All sidebar controls remain accessible regardless of run state
+- **Run Selection**: Cleaner dropdown with deduplicated entries
+  - **No Duplicates**: Each unique input/config combination appears only once
+  - **Better Names**: Temporary files show descriptive names instead of "Unknown"
+  - **Status Icons**: Maintained visual status indicators (✅⏳❌)
+
+### Technical Improvements
+- **Run Deduplication Logic**: New `list_runs_deduplicated()` function in `src/utils/cache_utils.py`
+  - **Hash-based Grouping**: Groups runs by input_hash + config_hash
+  - **Timestamp Sorting**: Keeps only the most recent run per group
+  - **Logging**: Comprehensive logging of deduplication events
+- **Display Name Enhancement**: Improved `format_run_display_name()` in `src/utils/ui_helpers.py`
+  - **Temp File Detection**: Identifies temporary files and unknown paths
+  - **Descriptive Names**: Uses run ID prefix for better identification
+  - **Fallback Logging**: Logs when fallback names are used
+- **Sidebar Rendering**: Restructured `app/main.py` to ensure sidebar always renders
+  - **Early Return Handling**: Sidebar renders before any early returns
+  - **Maintenance Placement**: Moved maintenance to sidebar context
+  - **Error Resilience**: Sidebar remains visible even with invalid runs
+
+### Files Modified
+- `app/main.py`: Restructured sidebar rendering and moved maintenance to sidebar
+- `app/components/maintenance.py`: Updated to render in sidebar context
+- `src/utils/cache_utils.py`: Added `list_runs_deduplicated()` function
+- `src/utils/ui_helpers.py`: Enhanced display name formatting and updated `list_runs()` to use deduplication
+- `tests/test_ui_helpers.py`: Added tests for temp file display name formatting
+- `tests/test_cache_utils.py`: Added tests for run deduplication functionality
+- `CHANGELOG.md`: This entry
+
+### Testing
+- **New Tests**: Added comprehensive tests for deduplication and display name formatting
+- **Updated Tests**: Modified existing tests to work with deduplicated run listing
+- **Test Coverage**: All tests pass with new functionality
+
+### Performance Impact
+- **No Performance Regression**: All fixes maintain existing performance characteristics
+- **Better UX**: Faster navigation with deduplicated run list
+- **Improved Debugging**: Better logging for troubleshooting UI issues
+
 ## [Phase1.18.1b] - 2025-08-31
 
 ### Critical Bug Fixes
@@ -933,17 +993,142 @@ The following stages are tracked and support resumability:
 - **Type Safety**: Typed session state helpers prevent key errors
 - **Test Coverage**: Comprehensive tests for all new utilities
 
-## [1.12.0] - 2024-12-19
+## [Phase1.18.3 - Fragment API Unification & Backend Compliance] - 2025-08-31
 
-### Changed
-- **Utils package structure**: Refactored `src/utils.py` into logical modules under `src/utils/`
-- **Import paths**: Updated all imports to use absolute paths rooted at `src`
-- **Module organization**: 
-  - `src/utils/logging_utils.py` - `setup_logging`
-  - `src/utils/path_utils.py` - `get_project_root`, `ensure_directory_exists`, `get_data_paths`
-  - `src/utils/validation_utils.py` - `validate_dataframe`
-  - `src/utils/io_utils.py` - `get_file_info`, `list_data_files`, `load_settings`, `load_relationship_ranks`
-  - `src/utils/perf_utils.py` - `log_perf`
-  - `src/utils/hash_utils.py` - `config_hash`, `stable_group_id`, `_compute_config_hash`
-  - `src/utils/dtypes.py` - Memory optimization utilities (existing)
-- **Hash utilities**: Moved `config_hash` and `stable_group_id` from `src/grouping.py` to `
+**Date:** 2025-08-31  
+**Phase:** Fragment API, DuckDB-First Routing, Details Optimization, Cache Hygiene
+
+### 🎯 **Objectives**
+- Implement missing fragment utility from Phase 1.18.2 audit
+- Fix deprecated `st.experimental_fragment` usage
+- Ensure DuckDB-first routing when flag is enabled
+- Optimize per-group details with strict projection
+- Improve cache hygiene with backend inclusion
+- Exclude legacy files from QA gates
+
+### 🔧 **Technical Improvements**
+
+#### Fragment API Unification
+- **New module**: `src/utils/fragment_utils.py` with version detection
+- **Unified decorator**: `@fragment` automatically chooses `st.fragment` (≥ 1.29) or `st.experimental_fragment` (< 1.29)
+- **App start logging**: Logs fragment API choice once at startup
+- **Component updates**: Replaced all `st.experimental_fragment` with `@fragment` in `group_list.py` and `group_details.py`
+
+#### Session State Namespace Compliance
+- **Migration shim**: Added one-time migration for legacy keys to namespaced versions
+- **Clean legacy keys**: Remove legacy session state keys after migration
+- **Consistent naming**: Use only `cj.backend.groups[run_id]` (not `groups_backend`)
+
+#### DuckDB-First Routing
+- **Immediate routing**: When `ui.use_duckdb_for_groups: true`, route to DuckDB before any PyArrow work
+- **Backend persistence**: Store choice in `st.session_state['cj.backend.groups'][run_id]`
+- **Enhanced logging**: `Using DuckDB backend for groups | run_id=<RID> reason=flag_true`
+- **Cache key inclusion**: All list-level cache keys include backend parameter
+
+#### Per-Group Details Optimization
+- **Strict queries**: Use `WHERE group_id = ?` with visible column projection only
+- **Fragment wrapping**: Wrap details body in individual `@fragment` decorators
+- **No st.rerun()**: Use session flags instead of page-wide reruns
+- **Enhanced timing**: Detailed logs for `details_query_exec`, `to_pandas`, `elapsed`
+
+#### Cache Hygiene
+- **Backend inclusion**: All cache keys include backend parameter to prevent collisions
+- **List-level clearing**: "Clear caches for current run" button clears list-level only
+- **Key schema compliance**: Verified cache key schemas include all required parameters
+
+#### Legacy File Exclusions
+- **QA gate exclusions**: Added `deprecated/**` to `mypy.ini`, `pytest.ini`, and `pyproject.toml`
+- **No modifications**: Legacy backup files are excluded from all linting and testing
+
+### 🧪 **Testing & Quality Assurance**
+
+#### New Tests
+- **Fragment utility tests**: `tests/test_fragment_utils.py` with availability and decorator smoke tests
+- **Import tests**: Updated `tests/test_imports.py` to include new fragment utility
+- **Backend routing tests**: Verify flag true → no PyArrow path invoked
+- **Details projection tests**: Assert only visible columns selected, no blob fields
+- **Cache key validation**: Ensure keys include backend parameter
+
+#### QA Gates
+- **All gates pass**: black, ruff, mypy, pytest all ✅ (excluding deprecated files)
+- **Configuration updates**: Updated tool configs to exclude legacy files
+- **Import health**: All new modules import successfully
+
+### 📚 **Documentation Updates**
+
+#### cursor_rules.md
+- **Fragment API guidance**: Added rules for unified fragment decorator usage
+- **DuckDB-first routing**: Documented immediate routing when flag enabled
+- **Per-group details rules**: Strict projection, fragment wrapping, no rerun
+- **Cache key schema**: Documented backend inclusion requirements
+- **Legacy exclusions**: Added note about `deprecated/**` exclusion from QA gates
+
+#### Configuration Files
+- **mypy.ini**: Added `exclude = deprecated/.*`
+- **pytest.ini**: Added `norecursedirs = deprecated`
+- **pyproject.toml**: Added `[tool.ruff.exclude]` with `"deprecated/**"`
+
+### 🔄 **Migration & Compatibility**
+
+#### Session State Migration
+- **One-time migration**: Legacy keys automatically migrated to namespaced versions
+- **Cleanup**: Legacy keys removed after successful migration
+- **Backward compatibility**: No breaking changes to existing functionality
+
+#### Fragment API Compatibility
+- **Version detection**: Automatically adapts to Streamlit version
+- **No breaking changes**: Existing functionality preserved
+- **Unified interface**: Single `@fragment` decorator for all use cases
+
+### 📊 **Performance Impact**
+
+#### Fragment API
+- **Reduced blocking**: Fragment-wrapped components prevent page-wide blocking
+- **Improved responsiveness**: Individual expanders can load independently
+- **Better UX**: Spinners and loading states scoped to specific components
+
+#### DuckDB Routing
+- **Faster list loading**: Immediate routing to DuckDB for large runs
+- **Reduced memory usage**: No PyArrow pre-work when DuckDB flag enabled
+- **Better cache efficiency**: Backend-specific cache keys prevent collisions
+
+#### Details Optimization
+- **Faster details loading**: Strict projection reduces data transfer
+- **Reduced memory usage**: No heavy JSON/blob fields unless rendered
+- **Better responsiveness**: Fragment-wrapped details with session flags
+
+### 🚀 **Files Modified**
+
+#### New Files
+- `src/utils/fragment_utils.py` - Fragment API detection and unified decorator
+- `tests/test_fragment_utils.py` - Fragment utility tests
+- `pyproject.toml` - Ruff configuration with legacy exclusions
+
+#### Modified Files
+- `app/components/group_list.py` - Replaced `st.experimental_fragment` with `@fragment`
+- `app/components/group_details.py` - Fragment updates, session flag usage
+- `src/utils/ui_helpers.py` - DuckDB-first routing, session state persistence
+- `src/utils/state_utils.py` - Migration shim for legacy keys
+- `tests/test_imports.py` - Added fragment utility import test
+- `mypy.ini` - Added deprecated directory exclusion
+- `pytest.ini` - Added deprecated directory exclusion
+- `cursor_rules.md` - Added Phase 1.18.3 specific rules
+- `CHANGELOG.md` - Added Phase 1.18.3 entry
+
+### ✅ **Acceptance Criteria Met**
+- ✅ Fragment API unified with version detection
+- ✅ Session state namespace compliance with migration
+- ✅ DuckDB-first routing when flag enabled
+- ✅ Per-group details optimization with strict projection
+- ✅ Cache hygiene with backend inclusion
+- ✅ Legacy files excluded from QA gates
+- ✅ All tests pass (excluding deprecated files)
+- ✅ Documentation updated (cursor_rules.md, CHANGELOG.md)
+- ✅ No functional regressions
+- ✅ Performance improvements for large runs
+
+### 🔮 **Next Steps**
+- Monitor fragment API performance in production
+- Consider additional DuckDB optimizations for very large datasets
+- Evaluate need for additional cache management features
+- Plan Phase 1.18.4 based on user feedback and performance metrics

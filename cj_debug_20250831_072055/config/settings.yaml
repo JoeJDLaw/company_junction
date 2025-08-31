@@ -1,0 +1,109 @@
+# Company Junction Pipeline Configuration
+
+# Data Processing Settings
+data:
+  # Default name column for duplicate detection
+  name_column: "Account Name"
+  
+  # Supported file formats
+  supported_formats: [".csv", ".xlsx", ".xls"]
+  
+  # Output file naming pattern
+  output_pattern: "cleaned_{object_type}_{timestamp}.csv"
+
+similarity:
+  high: 92
+  medium: 84
+  penalty:
+    suffix_mismatch: 25
+    num_style_mismatch: 5
+    punctuation_mismatch: 3
+  max_alias_pairs: 100000
+
+grouping:
+  edge_gating:
+    enabled: true
+    require_high_to_primary: false
+    allow_medium_plus_shared_token: true
+    shared_token_source: "name_core_tokens"  # exclude stop tokens
+    canopy_bound:
+      enabled: true
+      max_without_high_edge: 8
+
+llm:
+  enabled: false
+  delete_threshold: 85
+
+survivorship:
+  tie_breakers: [created_date, account_id]
+
+io:
+  interim_format: parquet
+
+# Salesforce Integration
+salesforce:
+  # Default object types
+  object_types: ["Account", "Contact", "Lead", "Opportunity"]
+  
+  # Batch size for API operations
+  batch_size: 200
+  
+  # Retry settings for failed operations
+  max_retries: 3
+  retry_delay: 5
+
+# Parallelism Configuration
+parallelism:
+  # Default number of workers (None for auto-detection)
+  workers: null
+  
+  # Backend to use ('loky' for processes, 'threading' for threads)
+  backend: "loky"
+  
+  # Chunk size for parallel processing
+  chunk_size: 1000
+  
+  # Threshold for auto-switching to sequential execution
+  small_input_threshold: 10000
+  
+  # Memory cap percentage (0.75 = 75% of total RAM)
+  memory_cap_percent: 75.0
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "pipeline.log"
+
+# CSV Processing Configuration
+csv:
+  # Engine preference for CSV reading (auto, pyarrow, c, python)
+  engine: "auto"
+  
+  # Number of rows to sample for schema inference
+  sample_rows: 20000
+  
+  # Columns to force to string type
+  force_string_cols:
+    - "account_id"
+    - "parent_account_id"
+
+# File Paths
+paths:
+  raw_data: "data/raw"
+  interim_data: "data/interim"
+  processed_data: "data/processed"
+  test_fixtures: "tests/fixtures"
+
+# UI Configuration
+ui:
+  page_size_default: 50  # Emergency reduction from 500
+  page_size_options: [50, 100, 200, 500]
+  max_page_fetch_seconds: 30  # Timeout threshold
+  perf_feature_flags:
+    paging_enabled: true
+    emergency_small_pages: true
+    hard_timeout_enabled: true
+  use_duckdb_for_groups: true
+  duckdb_threads: 4
+  max_pyarrow_group_stats_seconds: 5

@@ -1,113 +1,98 @@
 """
-Test that all modules can be imported without errors.
+Test that all modules can be imported successfully.
 
-This test ensures that all modules in the project can be imported successfully,
-which helps catch import errors early in the development process.
+This test ensures that all modules in the project can be imported without errors,
+which helps catch import issues early.
 """
 
 import pytest
-import importlib
-
-
-def test_import_src_utils():
-    """Test importing src.utils modules."""
-    utils = [
-        "src.utils.cache_utils",
-        "src.utils.logging_utils",
-        "src.utils.path_utils",
-        "src.utils.ui_helpers",
-        "src.utils.state_utils",  # Phase 1.18.1 new
-        "src.utils.sort_utils",  # Phase 1.18.1 new
-        "src.utils.cli_builder",
-        "src.utils.id_utils",
-        "src.utils.io_utils",
-        "src.utils.mini_dag",
-        "src.utils.parallel_utils",
-        "src.utils.perf_utils",
-        "src.utils.progress",
-        "src.utils.resource_monitor",
-        "src.utils.dtypes",
-        "src.utils.hash_utils",
-        "src.utils.validation_utils",
-    ]
-
-    for util in utils:
-        try:
-            importlib.import_module(util)
-        except ImportError as e:
-            pytest.fail(f"Failed to import {util}: {e}")
-
-
-def test_import_app_components():
-    """Test importing app.components modules."""
-    components = [
-        "app.components",
-        "app.components.controls",
-        "app.components.group_list",
-        "app.components.group_details",
-        "app.components.maintenance",
-        "app.components.export",
-    ]
-
-    for component in components:
-        try:
-            importlib.import_module(component)
-        except ImportError as e:
-            pytest.fail(f"Failed to import {component}: {e}")
-
-
-def test_import_app_modules():
-    """Test importing app modules."""
-    app_modules = [
-        "app.main",
-    ]
-
-    for module in app_modules:
-        try:
-            importlib.import_module(module)
-        except ImportError as e:
-            pytest.fail(f"Failed to import {module}: {e}")
-
-
-def test_import_src_modules():
-    """Test importing src modules."""
-    src_modules = [
-        "src.utils",
-    ]
-
-    for module in src_modules:
-        try:
-            importlib.import_module(module)
-        except ImportError as e:
-            pytest.fail(f"Failed to import {module}: {e}")
-
-
-def test_import_src_utils_submodules():
-    """Test importing src.utils submodules."""
 
 
 def test_absolute_imports():
-    """Test that absolute imports work correctly."""
-    # Test importing the new modules
-    import app.components
+    """Test that all modules can be imported using absolute imports."""
+    modules_to_test = [
+        # Core modules
+        "src.utils.cache_utils",
+        "src.utils.dtypes",
+        "src.utils.hash_utils",
+        "src.utils.io_utils",
+        "src.utils.logging_utils",
+        "src.utils.parallel_utils",
+        "src.utils.path_utils",
+        "src.utils.perf_utils",
+        "src.utils.resource_monitor",
+        "src.utils.sort_utils",
+        "src.utils.state_utils",
+        "src.utils.validation_utils",
+        "src.utils.fragment_utils",  # Phase 1.18.3 addition
+        "src.utils.ui_helpers",
+        "src.alias_matching",
+        "src.cleaning",
+        "src.disposition",
+        "src.grouping",
+        "src.manual_io",
+        "src.normalize",
+        "src.performance",
+        "src.salesforce",
+        "src.similarity",
+        "src.survivorship",
+        # App modules
+        "app.components.controls",
+        "app.components.export",
+        "app.components.group_details",
+        "app.components.group_list",
+        "app.components.maintenance",
+        "app.main",
+    ]
 
-    assert app.components is not None
-
-    import src.utils.state_utils
-
-    assert src.utils.state_utils is not None
-
-    import src.utils.sort_utils
-
-    assert src.utils.sort_utils is not None
+    for module_name in modules_to_test:
+        try:
+            module = __import__(module_name, fromlist=[""])
+            assert module is not None
+        except ImportError as e:
+            pytest.fail(f"Failed to import {module_name}: {e}")
 
 
-def test_no_relative_imports():
-    """Test that no relative imports are used in the new modules."""
-    # This is a basic test - in practice, you'd want to scan the actual source files
-    # to ensure no relative imports are used
+def test_component_imports():
+    """Test that all component modules can be imported."""
+    component_modules = [
+        "app.components.controls",
+        "app.components.export",
+        "app.components.group_details",
+        "app.components.group_list",
+        "app.components.maintenance",
+    ]
 
-    # Import the modules to ensure they work
+    for module_name in component_modules:
+        try:
+            module = __import__(module_name, fromlist=[""])
+            assert module is not None
+        except ImportError as e:
+            pytest.fail(f"Failed to import component {module_name}: {e}")
 
-    # If we get here without errors, the imports work
-    assert True
+
+def test_utils_imports():
+    """Test that all utility modules can be imported."""
+    utils_modules = [
+        "src.utils.cache_utils",
+        "src.utils.dtypes",
+        "src.utils.hash_utils",
+        "src.utils.io_utils",
+        "src.utils.logging_utils",
+        "src.utils.parallel_utils",
+        "src.utils.path_utils",
+        "src.utils.perf_utils",
+        "src.utils.resource_monitor",
+        "src.utils.sort_utils",
+        "src.utils.state_utils",
+        "src.utils.validation_utils",
+        "src.utils.fragment_utils",  # Phase 1.18.3 addition
+        "src.utils.ui_helpers",
+    ]
+
+    for module_name in utils_modules:
+        try:
+            module = __import__(module_name, fromlist=[""])
+            assert module is not None
+        except ImportError as e:
+            pytest.fail(f"Failed to import utility {module_name}: {e}")

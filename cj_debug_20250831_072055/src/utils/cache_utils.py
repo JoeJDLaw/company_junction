@@ -489,56 +489,6 @@ def list_runs_sorted() -> List[Tuple[str, Dict[str, Any]]]:
     return runs
 
 
-def list_runs_deduplicated() -> List[Tuple[str, Dict[str, Any]]]:
-    """Get list of runs sorted by timestamp (newest first) with duplicates removed.
-
-    Duplicates are runs with identical input_hash and config_hash. Only the most recent
-    run for each unique combination is kept.
-
-    Returns:
-        List of deduplicated runs sorted by timestamp (newest first)
-    """
-    run_index = load_run_index()
-
-    # Group runs by input_hash + config_hash
-    hash_groups: Dict[str, List[Tuple[str, Dict[str, Any]]]] = {}
-
-    for run_id, run_data in run_index.items():
-        input_hash = run_data.get("input_hash", "")
-        config_hash = run_data.get("config_hash", "")
-        hash_key = f"{input_hash}_{config_hash}"
-
-        if hash_key not in hash_groups:
-            hash_groups[hash_key] = []
-        hash_groups[hash_key].append((run_id, run_data))
-
-    # For each group, keep only the most recent run
-    deduplicated_runs = []
-    total_duplicates = 0
-
-    for hash_key, group_runs in hash_groups.items():
-        if len(group_runs) > 1:
-            # Sort by timestamp (newest first) and keep only the first (most recent)
-            group_runs.sort(key=lambda x: x[1]["timestamp"], reverse=True)
-            deduplicated_runs.append(group_runs[0])
-            total_duplicates += len(group_runs) - 1
-            logger.info(
-                f"Run deduplication: kept {group_runs[0][0]} from group of {len(group_runs)} runs"
-            )
-        else:
-            deduplicated_runs.append(group_runs[0])
-
-    # Sort all deduplicated runs by timestamp (newest first)
-    deduplicated_runs.sort(key=lambda x: x[1]["timestamp"], reverse=True)
-
-    if total_duplicates > 0:
-        logger.info(
-            f"Run deduplication: removed {total_duplicates} duplicates from {len(deduplicated_runs) + total_duplicates} total runs"
-        )
-
-    return deduplicated_runs
-
-
 def is_run_truly_inflight(run_id: str) -> bool:
     """Check if a run is truly inflight by looking for active processes.
 

@@ -1,7 +1,7 @@
 """
 Group details component for Phase 1.18.1 refactor.
 
-This module handles lazy expanders for group details and cross-links.
+This module handles the detailed information display for individual groups.
 """
 
 import streamlit as st
@@ -16,6 +16,7 @@ from src.utils.state_utils import (
     get_aliases_state,
     set_aliases_state,
 )
+from src.utils.fragment_utils import fragment
 from src.utils.ui_helpers import get_group_details_lazy, _is_non_empty
 
 
@@ -73,18 +74,28 @@ def render_group_details(
         else:
             # Full details not loaded yet, show load button
             if st.button("Load Group Details", key=f"load_group_{group_id}"):
-                # Load the full group details
-                try:
-                    group_details = get_group_details_lazy(selected_run_id, group_id)
-                    details_state.data[details_key] = group_details
-                    details_state.loaded[details_key] = True
-                    set_details_state(st.session_state, details_state)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to load group details: {e}")
+                # Set session flag to request details loading
+                details_state.requested[details_key] = True
+                set_details_state(st.session_state, details_state)
+                # No st.rerun() - let the fragment handle the update
             else:
                 st.caption("Click 'Load Group Details' to view records and metadata.")
                 st.caption(f"Group {group_id} has {group_size} records.")
+
+        # Check if details were requested and load them
+        if details_state.requested.get(details_key, False) and not details_loaded:
+            try:
+                # Load the full group details
+                group_details = get_group_details_lazy(selected_run_id, group_id)
+                details_state.data[details_key] = group_details
+                details_state.loaded[details_key] = True
+                set_details_state(st.session_state, details_state)
+                # No st.rerun() - let the fragment handle the update
+            except Exception as e:
+                st.error(f"Failed to load group details: {e}")
+                details_state.data[details_key] = {"error": str(e)}
+                details_state.loaded[details_key] = True
+                set_details_state(st.session_state, details_state)
 
 
 def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
@@ -180,6 +191,7 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
         st.warning("No displayable columns found in group data")
 
 
+@fragment
 def _render_explain_metadata(
     selected_run_id: str, group_id: str, group_data: pd.DataFrame, explain_state: Any
 ) -> None:
@@ -241,11 +253,12 @@ def _render_explain_metadata(
 
                 explain_state.requested[explain_key] = True
                 set_explain_state(st.session_state, explain_state)
-                st.rerun()
+                # No st.rerun() - let the fragment handle the update
             else:
                 st.caption("Details load on demand.")
 
 
+@fragment
 def _render_alias_cross_links(
     selected_run_id: str, group_id: str, group_data: pd.DataFrame, aliases_state: Any
 ) -> None:
@@ -295,11 +308,12 @@ def _render_alias_cross_links(
                     aliases_state.data[aliases_key] = cross_refs_list
                     aliases_state.requested[aliases_key] = True
                     set_aliases_state(st.session_state, aliases_state)
-                    st.rerun()
+                    # No st.rerun() - let the fragment handle the update
                 else:
                     st.caption("Cross-links load on demand.")
 
 
+@fragment
 def render_group_details_fragment(
     selected_run_id: str, group_id: str, group_size: int, primary_name: str
 ) -> None:
@@ -312,5 +326,4 @@ def render_group_details_fragment(
         group_size: The group size
         primary_name: The primary name
     """
-    with st.experimental_fragment():
-        render_group_details(selected_run_id, group_id, group_size, primary_name)
+    render_group_details(selected_run_id, group_id, group_size, primary_name)

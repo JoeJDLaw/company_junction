@@ -99,30 +99,66 @@ class TestUIHelpers:
             display_name = format_run_display_name("test_run_123")
             assert display_name == "test_run_123"
 
-    @patch("src.utils.ui_helpers.load_run_index")
-    def test_list_runs(self, mock_load_index: Any) -> None:
-        """Test run listing functionality."""
-        mock_index = {
-            "run_1": {
-                "timestamp": "2025-08-30T10:00:00",
-                "status": "complete",
-                "input_paths": ["data/raw/test1.csv"],
-                "config_paths": ["config/settings.yaml"],
-                "input_hash": "hash1",
-                "config_hash": "hash2",
-                "dag_version": "1.0.0",
-            },
-            "run_2": {
-                "timestamp": "2025-08-30T11:00:00",
-                "status": "complete",
-                "input_paths": ["data/raw/test2.csv"],
-                "config_paths": ["config/settings.yaml"],
-                "input_hash": "hash3",
-                "config_hash": "hash4",
-                "dag_version": "1.0.0",
-            },
+    def test_format_run_display_name_temp_file(self) -> None:
+        """Test run display name formatting for temporary files."""
+        mock_metadata = {
+            "input_paths": ["/tmp/tmp123456.csv"],
+            "formatted_timestamp": "2025-08-30 11:00:00",
         }
-        mock_load_index.return_value = mock_index
+
+        with patch("src.utils.ui_helpers.get_run_metadata") as mock_get_metadata:
+            mock_get_metadata.return_value = mock_metadata
+
+            display_name = format_run_display_name("test_run_12345678")
+            # Should use temp_file_ prefix for temporary files
+            assert display_name.startswith("temp_file_")
+            assert "2025-08-30 11:00:00" in display_name
+
+    def test_format_run_display_name_unknown_path(self) -> None:
+        """Test run display name formatting for unknown paths."""
+        mock_metadata = {
+            "input_paths": ["Unknown"],
+            "formatted_timestamp": "2025-08-30 11:00:00",
+        }
+
+        with patch("src.utils.ui_helpers.get_run_metadata") as mock_get_metadata:
+            mock_get_metadata.return_value = mock_metadata
+
+            display_name = format_run_display_name("test_run_12345678")
+            # Should use temp_file_ prefix for unknown paths
+            assert display_name.startswith("temp_file_")
+            assert "2025-08-30 11:00:00" in display_name
+
+    @patch("src.utils.cache_utils.list_runs_deduplicated")
+    def test_list_runs(self, mock_list_deduplicated: Any) -> None:
+        """Test run listing functionality with deduplication."""
+        mock_deduplicated_runs = [
+            (
+                "run_2",
+                {
+                    "timestamp": "2025-08-30T11:00:00",
+                    "status": "complete",
+                    "input_paths": ["data/raw/test2.csv"],
+                    "config_paths": ["config/settings.yaml"],
+                    "input_hash": "hash3",
+                    "config_hash": "hash4",
+                    "dag_version": "1.0.0",
+                },
+            ),
+            (
+                "run_1",
+                {
+                    "timestamp": "2025-08-30T10:00:00",
+                    "status": "complete",
+                    "input_paths": ["data/raw/test1.csv"],
+                    "config_paths": ["config/settings.yaml"],
+                    "input_hash": "hash1",
+                    "config_hash": "hash2",
+                    "dag_version": "1.0.0",
+                },
+            ),
+        ]
+        mock_list_deduplicated.return_value = mock_deduplicated_runs
 
         runs = list_runs()
 

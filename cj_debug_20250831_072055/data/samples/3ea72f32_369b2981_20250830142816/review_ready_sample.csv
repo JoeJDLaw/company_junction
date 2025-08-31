@@ -1,0 +1,200 @@
+account_id,group_id,group_size,is_primary,group_join_reason,weakest_edge_to_primary,shared_tokens_count,Potential Case Employer Junction ID,Company Association,Disposition,relationship,Relationship (If Other),account_name,Cleaned Account Name,Potential Case Employer Junction ID_6,Cleaned Potential Case Name,Potential Case Name: Potential Case Name,Record Type,Employer Name,LR ID,Account Owner: Full Name,Account Record Type,COI,Created By: Full Name,created_date,Format Search Name,Known to have Arbitration Agreements?,Last Modified By: Full Name,Last Modified Date,Main Address,Main Country,Main Country (text only),Last Modified Date_5,Stage,account_id_src,name_raw,name_base,name_core,suffix_class,has_parentheses,has_semicolon,has_multiple_names,alias_candidates,alias_sources,name_core_tokens,block_key,merge_preview_json,disposition_reason,alias_cross_refs,applied_penalties,survivorship_reason
+001Hs000054SD8IIAW,6ed39d1c95,13,True,edge>=high,100.0,3,PCEJ-10541,,Keep,"Per PNC, Company Name",,_24 Hour Fitness,,a09Hs00000cyZL8,PC0866900 - _24 Hour Fitness,PC0866900 - _24 Hour Fitness,Unassigned,_24 Hour Fitness,15686,Sam Silberman,Company Account,0,Sam Silberman,2025-06-14,_24hourfitness,Not Sure,Sam Silberman,45822,United States,United States,United States,45822,Client Signed,001Hs000054SD8I,_24 Hour Fitness,24 hour fitness,24 hour fitness,NONE,False,False,False,[],[],"[""24"", ""hour"", ""fitness""]",24 hour,"{
+  ""primary_record"": {
+    ""index"": 0,
+    ""account_id"": """",
+    ""account_name"": """",
+    ""relationship"": """",
+    ""relationship_rank"": 60
+  },
+  ""group_size"": 26,
+  ""field_comparisons"": {
+    ""Account Owner: Full Name"": {
+      ""primary_value"": ""Sam Silberman"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Address"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    },
+    ""Main Country"": {
+      ""primary_value"": ""United States"",
+      ""alternative_values"": [],
+      ""has_conflict"": false
+    }
+  },
+  ""non_primary_records"": [
+    {
+      ""index"": 297,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 298,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 299,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 300,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 301,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 302,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 303,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 304,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 305,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 306,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 307,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 308,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 309,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 0.0
+    },
+    {
+      ""index"": 310,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 311,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 312,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 313,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 314,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 315,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 316,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 317,
+      ""account_id"": """",
+      ""account_name"": """",
+      ""relationship"": """",
+      ""relationship_rank"": 60,
+      ""weakest_edge_to_primary"": 100.0
+    },
+    {
+      ""index"": 318,
+      ""account_id"": """",
+      ""account_name"": """",

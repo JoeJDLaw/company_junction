@@ -169,17 +169,21 @@ def set_cache_state(state: Any, cache_state: CacheState) -> None:
 # Legacy key migration helpers
 def migrate_legacy_keys(state: Any) -> None:
     """Migrate legacy session state keys to namespaced versions."""
-    # Page state migration
+    # Migrate page state
     if "page" in state and "cj.page.number" not in state:
         state["cj.page.number"] = state["page"]
-
-    # Backend state migration
     if "groups_backend" in state and "cj.backend.groups" not in state:
         state["cj.backend.groups"] = state["groups_backend"]
-
-    # Filters state migration
     if "previous_filters_key" in state and "cj.filters.signature" not in state:
         state["cj.filters.signature"] = state["previous_filters_key"]
+
+    # Migrate backend state (one-time migration)
+    if "groups_backend" in state:
+        # Copy legacy backend state to namespaced version
+        if "cj.backend.groups" not in state:
+            state["cj.backend.groups"] = state["groups_backend"]
+        # Remove legacy key after migration
+        del state["groups_backend"]
 
 
 def clear_legacy_keys(state: Any) -> None:
@@ -188,7 +192,6 @@ def clear_legacy_keys(state: Any) -> None:
         "page",
         "groups_backend",
         "previous_filters_key",
-        # Group details legacy keys
         "group_details_loaded_",
         "group_details_",
         "explain_metadata_",
@@ -197,13 +200,11 @@ def clear_legacy_keys(state: Any) -> None:
         "alias_loaded_",
         "group_list_rendered:",
     ]
-
     keys_to_remove = []
     for key in state.keys():
         for legacy_key in legacy_keys:
             if key.startswith(legacy_key):
                 keys_to_remove.append(key)
                 break
-
     for key in keys_to_remove:
         del state[key]

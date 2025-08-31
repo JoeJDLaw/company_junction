@@ -71,9 +71,12 @@ class TestCacheKeyGeneration:
 
         cache_key = build_cache_key(run_id, sort_key, page, page_size, filters)
 
-        # Should be a hash (not contain raw run_id)
-        assert len(cache_key) == 32  # MD5 hash length
-        assert cache_key.isalnum()  # Should be alphanumeric
+        # Should contain all components
+        assert run_id in cache_key
+        assert sort_key in cache_key
+        assert "1" in cache_key  # page
+        assert "500" in cache_key  # page_size
+        assert "|" in cache_key  # separator
 
     def test_build_cache_key_filter_changes(self) -> None:
         """Test that filter changes generate different cache keys."""

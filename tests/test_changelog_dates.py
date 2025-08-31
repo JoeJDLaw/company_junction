@@ -16,9 +16,9 @@ def extract_phase_headers(changelog_content: str) -> List[Tuple[str, str, str]]:
     Returns:
         List of tuples: (phase_number, date_string, full_header_line)
     """
-        # Pattern to match Phase headers with dates
+    # Pattern to match Phase headers with dates
     pattern = r"## \[Phase(\d+\.\d+(?:[a-z])?)[^\]]*\] - (\d{4}-\d{2}-\d{2})"
-    
+
     # Get the full header lines for context
     lines = changelog_content.split("\n")
     headers = []

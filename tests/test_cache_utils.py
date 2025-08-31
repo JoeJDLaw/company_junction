@@ -13,6 +13,7 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 from src.utils.cache_utils import (
     compute_file_hash,
@@ -33,6 +34,7 @@ from src.utils.cache_utils import (
     list_runs_sorted,
     get_next_latest_run,
     is_run_truly_inflight,
+    list_runs_deduplicated,
 )
 
 
@@ -538,6 +540,55 @@ def test_list_runs_sorted(tmp_path: Path) -> None:
 
     finally:
         os.chdir(original_cwd)
+
+
+def test_list_runs_deduplicated() -> None:
+    """Test run deduplication functionality."""
+    with patch("src.utils.cache_utils.load_run_index") as mock_load:
+        mock_load.return_value = {
+            "run1": {
+                "timestamp": "2025-08-30T10:00:00",
+                "input_hash": "hash1",
+                "config_hash": "hash2",
+            },
+            "run2": {
+                "timestamp": "2025-08-30T11:00:00",
+                "input_hash": "hash1",  # Same as run1
+                "config_hash": "hash2",  # Same as run1
+            },
+            "run3": {
+                "timestamp": "2025-08-30T12:00:00",
+                "input_hash": "hash3",  # Different
+                "config_hash": "hash4",  # Different
+            },
+        }
+
+        runs = list_runs_deduplicated()
+        assert len(runs) == 2  # Should deduplicate run1/run2
+        assert runs[0][0] == "run3"  # Keep the newest one (run3 has latest timestamp)
+        assert runs[1][0] == "run2"  # Keep the deduplicated one
+
+
+def test_list_runs_deduplicated_no_duplicates() -> None:
+    """Test run deduplication with no duplicates."""
+    with patch("src.utils.cache_utils.load_run_index") as mock_load:
+        mock_load.return_value = {
+            "run1": {
+                "timestamp": "2025-08-30T10:00:00",
+                "input_hash": "hash1",
+                "config_hash": "hash2",
+            },
+            "run2": {
+                "timestamp": "2025-08-30T11:00:00",
+                "input_hash": "hash3",
+                "config_hash": "hash4",
+            },
+        }
+
+        runs = list_runs_deduplicated()
+        assert len(runs) == 2  # No deduplication needed
+        assert runs[0][0] == "run2"  # Newest first
+        assert runs[1][0] == "run1"
 
 
 def test_get_next_latest_run(tmp_path: Path) -> None:

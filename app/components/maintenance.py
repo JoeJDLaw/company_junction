@@ -11,12 +11,12 @@ from src.utils.state_utils import get_cache_state, set_cache_state
 
 def render_maintenance(selected_run_id: str) -> None:
     """
-    Render maintenance controls.
+    Render maintenance controls in the sidebar.
 
     Args:
         selected_run_id: The selected run ID
     """
-    st.subheader("Run Maintenance")
+    st.sidebar.subheader("Run Maintenance")
 
     # Cache clearing functionality
     cache_state = get_cache_state(st.session_state)

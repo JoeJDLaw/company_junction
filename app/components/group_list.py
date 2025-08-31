@@ -1,13 +1,14 @@
 """
 Group list component for Phase 1.18.1 refactor.
 
-This module handles paginated group list rendering with fragments.
+This module handles the paginated display of groups with navigation controls.
 """
 
 import streamlit as st
 from typing import Any, Dict, List, Tuple
 
 from src.utils.state_utils import get_page_state, set_page_state, get_backend_state
+from src.utils.fragment_utils import fragment
 from src.utils.ui_helpers import (
     get_groups_page,
     get_total_groups_count,
@@ -144,6 +145,7 @@ def render_group_list(
     return page_groups, total_groups, max_page
 
 
+@fragment
 def render_group_list_fragment(
     selected_run_id: str,
     sort_by: str,
@@ -167,19 +169,16 @@ def render_group_list_fragment(
         st.session_state[key] = True
 
     # Wrap groups list in fragment to prevent page-wide blocking
-    with st.experimental_fragment():
-        page_groups, total_groups, max_page = render_group_list(
-            selected_run_id, sort_by, page, page_size, filters
-        )
+    page_groups, total_groups, max_page = render_group_list(
+        selected_run_id, sort_by, page, page_size, filters
+    )
 
-        # Group by group_id and display each group
-        for group_info in page_groups:
-            group_id = group_info["group_id"]
-            group_size = group_info["group_size"]
-            primary_name = group_info["primary_name"]
+    # Group by group_id and display each group
+    for group_info in page_groups:
+        group_id = group_info["group_id"]
+        group_size = group_info["group_size"]
+        primary_name = group_info["primary_name"]
 
-            with st.expander(
-                f"Group {group_id}: {primary_name} ({group_size} records)"
-            ):
-                # This will be handled by the group_details component
-                st.write("Group details will be loaded here...")
+        with st.expander(f"Group {group_id}: {primary_name} ({group_size} records)"):
+            # This will be handled by the group_details component
+            st.write("Group details will be loaded here...")

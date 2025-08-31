@@ -684,3 +684,101 @@ The following stages are tracked and support resumability:
 - **CHANGELOG updates**: Comprehensive documentation of performance improvements
 - **Usage examples**: Provide clear examples for parallel execution and run management
 - **macOS caveats**: Document multiprocessing limitations and fallback behavior
+
+---
+
+## Phase 1.18 Streamlit Fragment & Backend Rules
+
+### Fragment API (Streamlit ≥ 1.29)
+- **Prefer `st.fragment`**. Do not mix `st.fragment` and `st.experimental_fragment` in the same codebase.
+- Provide a unified decorator alias via `src/utils/fragment_utils.py`:
+  - Export `fragment` that internally resolves to `st.fragment` (or `st.experimental_fragment` if running on older Streamlit).
+  - Log once at app start: `Using fragment API: st.fragment | streamlit=<version>`.
+- Wrap any potentially-slow UI sections in a fragment to avoid blocking the full page (e.g., group list, group details).
+
+### UI Backend Routing (DuckDB-first for large runs)
+- When `ui.use_duckdb_for_groups: true`, **route list fetches to DuckDB immediately**. **Do not** do any PyArrow work first.
+- Persist backend choice per run via **namespaced session state**:  
+  `st.session_state['cj.backend.groups'][run_id] = 'duckdb'`
+- Include `backend` in all **list-level cache keys** to prevent PyArrow/DuckDB key collisions.
+- Emit a pre-query log line:  
+  `Using DuckDB backend for groups | run_id=<RID> reason=flag_true`.
+
+### Per-Group Details (performance-safe)
+- Details loaders **must query a single group only**: `WHERE group_id = ?`.
+- **Strict projection**: only columns visible in the details table. Exclude heavy JSON/blob columns unless rendered.
+- Wrap each group's details body in a **fragment** so only that expander shows a spinner.
+- **Do not call `st.rerun()`** in the details path; drive with session flags (see "Session State Namespacing").
+- Add timing logs for details loads: `details_query_exec`, `to_pandas`, `elapsed`, and a one-liner:  
+  `Group details loaded | run_id=<RID> group_id=<GID> rows=<n> elapsed=<sec>`.
+
+### Session State Namespacing (UI)
+- Use `cj.*` namespaced keys exclusively (no legacy raw keys):
+  - `cj.page.number`, `cj.page.size`
+  - `cj.backend.groups[run_id]`
+  - `cj.details.requested[(run_id, group_id)]`, `cj.details.loaded[(run_id, group_id)]`
+  - `cj.details.data[(run_id, group_id)]`, `cj.explain.data[(run_id, group_id)]`, `cj.aliases.data[(run_id, group_id)]`
+  - `cj.filters.signature`
+  - `cj.cache.clear_requested_for_run_id`
+- If legacy keys exist, add a one-time **migration shim** that reads old keys and writes to the new namespaced equivalents.
+
+### Cache Hygiene (UI)
+- Provide a **"Clear caches for current run"** button that clears **list-level** caches only; do not clear per-group details unless `run_id` changes.
+- Cache keys **must include**:  
+  `(run_id, parquet_fingerprint, sort_key, page, page_size, filters_signature, backend)` for list-level;  
+  `(run_id, group_id, parquet_fingerprint, backend)` for per-group details.
+
+### Legacy Backups & QA Gates
+- Keep legacy snapshots under `deprecated/` and **exclude** them from QA gates (ruff, mypy, pytest). Configure local ignores in tool configs if needed.
+- Never modify files under `deprecated/**` except to add new backups.
+
+### Documentation Consistency
+- For every Phase, update **README.md**, **CHANGELOG.md**, and **cursor_rules.md** together.
+- **Changelog dates must match Git creation dates** of the corresponding `prompts/Cursor_Prompt_Phase*.md` files (use an audit script or `git log --diff-filter=A`).
+- Add a short **Design Note** in PRs summarizing files touched, cache-key changes, and fragment usage.
+
+---
+
+## Phase 1.18.3 Fragment API & Backend Compliance
+
+### Fragment API Unification (Mandatory)
+- **Use `src/utils/fragment_utils.py`** for all fragment decorators. Do not import `st.fragment` or `st.experimental_fragment` directly.
+- **Version detection**: Automatically choose `st.fragment` (≥ 1.29) or `st.experimental_fragment` (< 1.29).
+- **Log once at app start**: `Using fragment API: st.fragment | streamlit=<version>` or `st.experimental_fragment` accordingly.
+- **No mixing**: Do not use both APIs anywhere in the codebase.
+
+### Session State Namespace Compliance
+- **Use only `cj.backend.groups[run_id]`** (not `groups_backend`).
+- **Migration shim**: Add one-time migration that maps legacy keys to namespaced ones, then deletes legacy keys.
+- **Clean legacy keys**: Remove all legacy session state keys after migration.
+
+### DuckDB-First Routing (Performance)
+- **Route immediately**: When `ui.use_duckdb_for_groups: true`, route to DuckDB before any PyArrow work.
+- **Persist choice**: Store backend choice in `st.session_state['cj.backend.groups'][run_id] = "duckdb"`.
+- **Log backend selection**: `Using DuckDB backend for groups | run_id=<RID> reason=flag_true`.
+- **Cache key inclusion**: Ensure every list-level cache key includes backend to avoid cross-backend collisions.
+
+### Per-Group Details Optimization
+- **Strict queries**: Use `WHERE group_id = ?` with projection limited to visible columns only.
+- **No heavy fields**: Exclude JSON/blob fields unless they are actually rendered.
+- **Fragment wrapping**: Wrap details body in individual `@fragment` decorators.
+- **No st.rerun()**: Use session flags like `cj.details.requested[(run_id, group_id)] = True`.
+- **Timing logs**: Include `details_query_exec`, `to_pandas`, `elapsed`, and summary:  
+  `Group details loaded | run_id=<RID> group_id=<GID> rows=<n> elapsed=<sec>`.
+
+### Cache Key Schema Compliance
+- **List-level keys**: Must include `(run_id, parquet_fingerprint, sort_key, page, page_size, filters_signature, backend)`.
+- **Details keys**: Must include `(run_id, group_id, parquet_fingerprint, backend)`.
+- **Backend inclusion**: All cache keys must include backend parameter to prevent collisions.
+
+### Legacy File Exclusions
+- **Exclude `deprecated/**`** from all QA gates (ruff, mypy, pytest).
+- **Configuration updates**: Add to `mypy.ini`, `pytest.ini`, and `pyproject.toml` (ruff).
+- **No modifications**: Do not edit files under `deprecated/**` except to add new backups.
+
+### Testing Requirements
+- **Fragment utility tests**: `tests/test_fragment_utils.py` with availability and decorator smoke tests.
+- **Backend routing tests**: Verify flag true → no PyArrow path invoked.
+- **Details projection tests**: Assert only visible columns selected, no blob fields.
+- **Cache key validation**: Ensure keys include backend parameter.
+- **Import tests**: Update `tests/test_imports.py` to include new utils/components.
