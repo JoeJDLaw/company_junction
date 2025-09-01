@@ -1,0 +1,171 @@
+{
+  "85daafa4_bbf2f05d_20250830192632": {
+    "timestamp": "2025-08-30T19:26:32.137363",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp6mnuwtsj.csv"
+    ],
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp7hztodz0/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_c047cb44_20250831055906": {
+    "timestamp": "2025-08-31T05:59:06.618585",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "c047cb44dbca6e9c9d52376b28ffb08783edbba95907ee339ebece8cf6e19c2f",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_c047cb44_20250831055908": {
+    "timestamp": "2025-08-31T05:59:08.715705",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "c047cb44dbca6e9c9d52376b28ffb08783edbba95907ee339ebece8cf6e19c2f",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_c047cb44_20250831055909": {
+    "timestamp": "2025-08-31T05:59:09.773231",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "c047cb44dbca6e9c9d52376b28ffb08783edbba95907ee339ebece8cf6e19c2f",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_c047cb44_20250831055910": {
+    "timestamp": "2025-08-31T05:59:10.842392",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "c047cb44dbca6e9c9d52376b28ffb08783edbba95907ee339ebece8cf6e19c2f",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_c047cb44_20250831055911": {
+    "timestamp": "2025-08-31T05:59:11.913022",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "c047cb44dbca6e9c9d52376b28ffb08783edbba95907ee339ebece8cf6e19c2f",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "85daafa4_bbf2f05d_20250831055913": {
+    "timestamp": "2025-08-31T05:59:13.050177",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpfnqwz7v8.csv"
+    ],
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpulsk48tc/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_25cd103d_20250831101012": {
+    "timestamp": "2025-08-31T10:10:12.711117",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "25cd103d24621a2b20786e5a79b4c92eb819308f4f36cc82816e1bb7e3d9fdf0",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_25cd103d_20250831101014": {
+    "timestamp": "2025-08-31T10:10:14.863559",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "25cd103d24621a2b20786e5a79b4c92eb819308f4f36cc82816e1bb7e3d9fdf0",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_25cd103d_20250831101015": {
+    "timestamp": "2025-08-31T10:10:15.953704",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "25cd103d24621a2b20786e5a79b4c92eb819308f4f36cc82816e1bb7e3d9fdf0",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_25cd103d_20250831101017": {
+    "timestamp": "2025-08-31T10:10:17.045270",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "25cd103d24621a2b20786e5a79b4c92eb819308f4f36cc82816e1bb7e3d9fdf0",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_25cd103d_20250831101018": {
+    "timestamp": "2025-08-31T10:10:18.136605",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "25cd103d24621a2b20786e5a79b4c92eb819308f4f36cc82816e1bb7e3d9fdf0",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "85daafa4_bbf2f05d_20250831101019": {
+    "timestamp": "2025-08-31T10:10:19.328881",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpb_4tka6y.csv"
+    ],
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpdnvwwlw5/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  }
+}

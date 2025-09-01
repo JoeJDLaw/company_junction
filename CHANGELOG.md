@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase1.19.2] - 2025-09-01
+
+### Test/Demo Artifacts Cleanup
+- **Cleanup Execution**: Removed test/demo artifacts and pruned stale run index via `tools/cleanup_test_artifacts.py`
+  - **13 test artifacts deleted**: 3 temporary file runs + 10 sample_test.csv runs
+  - **Stale index pruned**: All 13 runs were also stale index entries (directories no longer existed)
+  - **Safety backup**: Created backup of run index before deletion: `data/_backups/run_index.20250901_111042.json`
+  - **Verification**: Post-cleanup dry-runs confirm 0 candidates remain
+- **Cleanup Summary**: 
+  ```json
+  {
+    "dry_run": false,
+    "scanned": 0,
+    "candidates": ["13 run IDs"],
+    "deleted": ["13 run IDs"],
+    "pruned_index": 0
+  }
+  ```
+- **Run Index State**: Index is now empty `{}` - all test artifacts successfully removed
+- **Directory Cleanup**: All test run directories removed from `data/interim/` and `data/processed/`
+- **Latest Symlink**: Preserved existing latest symlink pointing to remaining production run
+
 ## [Phase1.19.1] - 2025-08-31
 
 ### Read-Only Hygiene & Cleanup
