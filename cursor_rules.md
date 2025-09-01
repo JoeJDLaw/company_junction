@@ -455,9 +455,17 @@
   - ❌ `col.startswith("_")` (causes attr-defined errors)
 
 ### Import Standards
-- **Absolute imports only**: All imports must be absolute and rooted at `src`
+- **Production code (src/**) and **tests/** must use absolute imports rooted at `src`:
   - ✅ `from src.utils.id_utils import normalize_sfid_series`
-  - ❌ `from utils.id_utils import normalize_sfid_series`
+  - ❌ `from utils.id_utils import ...` (disallowed)
+  - ❌ relative imports like `from .utils import ...` (disallowed)
+
+- **App UI package (app/**)** may use absolute, app-scoped imports for intra-package organization:
+  - ✅ `from app.components import group_list, group_details`
+  - ✅ `from app.components.group_list import render_groups`
+
+- Do not mix `src` and `app` namespaces within the same module unless the module’s role requires it
+  (e.g., UI code in `app/` may import helpers from `src/`, but `src/` must not import from `app/`).
 - **No module path conflicts**: Avoid dual module identities (e.g., `dtypes_map` vs `src.dtypes_map`)
 - **Test imports**: All test files must use absolute imports matching production code
 

@@ -45,7 +45,19 @@ python src/cleaning.py \
 ```
 ### 2b) Specific for my Macbook Pro M4
 ```bash
+source .venv/bin/activate
 
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+
+python src/cleaning.py \
+  --input data/raw/company_junction_range_01.csv \
+  --outdir data/processed \
+  --config config/settings.yaml \
+  --progress \
+  --no-resume \
+  --workers 10 \
+  --chunk-size 2000 \
+  --parallel-backend loky
 
 ```
 
