@@ -1,0 +1,19 @@
+{
+  "dataset_size": "5k",
+  "legacy": {
+    "total_runtime": 109.1921177080003,
+    "memory_delta": 0.03125,
+    "match_count": 0,
+    "exit_code": 0
+  },
+  "optimized": {
+    "total_runtime": 95.4845822089992,
+    "memory_delta": 0.0,
+    "match_count": 0,
+    "exit_code": 0
+  },
+  "speedup_factors": {
+    "total_runtime": 1.143557579473906,
+    "memory_ratio": 0.0
+  }
+}

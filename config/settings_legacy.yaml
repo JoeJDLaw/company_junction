@@ -101,7 +101,7 @@ ui:
 
 # Alias Matching Configuration
 alias:
-  optimize: true  # Enable optimized alias matching (Phase 1.21.1)
+  optimize: false  # Disable optimized alias matching for legacy comparison
   progress_interval_s: 1.0  # Progress log interval in seconds
   page_size_options: [50, 100, 200, 500]
   max_page_fetch_seconds: 30  # Timeout threshold

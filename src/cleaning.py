@@ -362,6 +362,13 @@ def run_pipeline(
     # Load configuration
     settings = load_settings(config_path)
     relationship_ranks = load_relationship_ranks("config/relationship_ranks.csv")
+    
+    # Add CLI worker count to settings if provided
+    if workers is not None:
+        if "parallelism" not in settings:
+            settings["parallelism"] = {}
+        settings["parallelism"]["workers"] = workers
+        logger.info(f"Using CLI worker count: {workers}")
 
     # Setup logging
     setup_logging(settings.get("logging", {}).get("level", "INFO"))

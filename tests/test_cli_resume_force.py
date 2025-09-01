@@ -1,7 +1,6 @@
 """Tests for CLI argument forwarding to run_pipeline."""
 
 import types
-from pathlib import Path
 from unittest.mock import patch
 import src.cleaning as cleaning
 

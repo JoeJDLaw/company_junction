@@ -5,6 +5,7 @@ This module provides parallel execution capabilities using joblib,
 with support for different backends and resource monitoring.
 """
 
+import os
 import threading
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -27,6 +28,60 @@ except ImportError:
 
 # Cache for loky availability test
 _LOKY_AVAILABLE = None
+
+
+def ensure_single_thread_blas() -> None:
+    """Set BLAS environment variables to 1 if not already set by user.
+
+    This prevents oversubscription on Apple Silicon and other multi-core systems
+    when using parallel processing.
+    """
+    blas_vars = [
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "NUMEXPR_MAX_THREADS",
+    ]
+
+    for var in blas_vars:
+        if var not in os.environ:
+            os.environ[var] = "1"
+            logger.debug(f"Set {var}=1 for single-threaded BLAS")
+
+
+def parallel_map(
+    func: Callable,
+    items: List[Any],
+    workers: Optional[int] = None,
+    backend: str = "loky",
+    chunk_size: int = 1000,
+) -> List[Any]:
+    """Parallel map function using joblib with deterministic ordering.
+
+    Args:
+        func: Function to apply to each item
+        items: List of items to process
+        workers: Number of workers (None for auto-detection)
+        backend: Backend to use ('loky' or 'threading')
+        chunk_size: Chunk size for parallel processing
+
+    Returns:
+        List of results in the same order as input items
+    """
+    if not JOBLIB_AVAILABLE or workers is None or workers <= 1:
+        # Sequential fallback
+        return [func(item) for item in items]
+
+    # Ensure BLAS is single-threaded
+    ensure_single_thread_blas()
+
+    # Use joblib parallel execution
+    results = Parallel(n_jobs=workers, backend=backend, batch_size=chunk_size)(
+        delayed(func)(item) for item in items
+    )
+
+    return results
 
 
 def is_loky_available() -> bool:

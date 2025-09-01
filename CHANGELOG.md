@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase1.21.2] - 2025-09-01
+
+### Alias Optimization Validation & Benchmark Harness
+- **Validation Tools**: Comprehensive suite for confirming correctness, determinism, and performance improvements
+  - **Unified Results Checker**: `scripts/check_alias_results.py` handles both equivalence and determinism checking
+  - **Performance Benchmarking**: `scripts/bench_alias.py` measures wall-clock performance with Python-only timing
+  - **Bucket Analysis**: `scripts/check_alias_buckets.py` scans first-token distributions and identifies large buckets
+- **Comprehensive Testing**: Full test coverage for validation tools with synthetic fixtures
+  - **Equivalence Testing**: Verifies identical outputs between legacy and optimized paths
+  - **Determinism Testing**: Confirms consistent checksums across multiple optimized runs
+  - **Edge Case Handling**: Tests mismatched alias_candidates vs alias_sources with structured warnings
+  - **Environment Validation**: Verifies BLAS thread clamping behavior and user override respect
+- **Cross-Platform Compatibility**: All scripts designed for macOS, Linux, and CI environments
+- **Structured Logging**: Consistent with project standards per `cursor_rules.md`
+
+### Technical Implementation Details
+- **Unified Script Design**: Single script with `--mode` parameter for equivalence/determinism checking
+- **Python-Only Benchmarking**: Uses `time.perf_counter()` for reliable cross-platform timing
+- **SHA256 Checksums**: Stable hashing for determinism verification
+- **Bucket Size Warnings**: Configurable thresholds for large first-token bucket detection
+- **Error Handling**: Graceful failure with clear exit codes and detailed difference reporting
+
+### Files Added
+- `scripts/check_alias_results.py`: Unified equivalence and determinism checker
+- `scripts/bench_alias.py`: Performance benchmarking tool
+- `scripts/check_alias_buckets.py`: First-token bucket analysis
+- `tests/test_alias_validation.py`: Comprehensive validation test suite
+
+## [Phase1.21.1] - 2025-09-01
+
+### Optimized Alias Matching with Parallel Processing
+- **Performance Optimization**: Implemented fast-path alias matching with parallel processing and vectorized similarity scoring
+  - **API Choice**: Benchmarked `rapidfuzz.process.extract` vs `process.cdist` - extract is ~1.8x faster for our use case
+  - **Parallelization**: Records with aliases processed in parallel using existing executor infrastructure
+  - **Memory Efficiency**: Precomputed indices and first-token bucketing for efficient candidate filtering
+  - **Safety**: Strict equivalence guarantee between optimized and legacy paths
+- **Configuration**: New `alias.optimize` flag (default: true) with `alias.progress_interval_s` for rate-limited progress logging
+- **Environment Safety**: Automatic BLAS thread clamping to prevent oversubscription on Apple Silicon
+- **Progress Tracking**: Rate-limited progress logs every `alias.progress_interval_s` seconds (default: 1.0s)
+- **Comprehensive Testing**: Full test suite for equivalence, progress logging, and environment handling
+
+### Technical Implementation Details
+- **Vectorized Scoring**: Uses `rapidfuzz.process.extract` with `score_cutoff` for efficient similarity computation
+- **Parallel Processing**: Leverages existing `parallelism.workers` setting with deterministic chunking
+- **Memory Management**: First-token bucket with 10k record warning threshold for large datasets
+- **Edge Case Handling**: Validates alias_candidates vs alias_sources length mismatches with structured warnings
+- **Equivalence Guarantee**: All tests pass with identical outputs between optimized and legacy paths
+
+### Files Modified
+- `src/alias_matching.py`: Added optimized parallel processing with vectorized scoring
+- `src/utils/parallel_utils.py`: Added `ensure_single_thread_blas()` and `parallel_map()` helpers
+- `config/settings.yaml`: Added `alias.optimize` and `alias.progress_interval_s` configuration
+- `tests/test_alias_equivalence.py`: Comprehensive equivalence testing between paths
+- `tests/test_alias_progress_logger.py`: Progress logging functionality verification
+- `tests/test_env_clamp.py`: BLAS environment variable handling tests
+- `CHANGELOG.md`: This entry
+
 ## [Phase1.20.1] - 2025-09-01
 
 ### Critical CLI Bugfix & Comprehensive Repository Audit
