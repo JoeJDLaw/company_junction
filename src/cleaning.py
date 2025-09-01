@@ -1007,20 +1007,20 @@ def main() -> None:
     # Run pipeline with interrupt handling
     try:
         run_pipeline(
-            args.input,
-            args.outdir,
-            args.config,
-            args.progress,
-            args.resume_from,
-            args.force,
-            args.no_resume,
-            args.state_path,
-            args.workers,
-            args.no_parallel,
-            args.chunk_size,
-            args.parallel_backend,
-            args.run_id,
-            args.keep_runs,
+            input_path=args.input,
+            output_dir=args.outdir,
+            config_path=args.config,
+            enable_progress=args.progress,
+            resume_from=args.resume_from,
+            no_resume=args.no_resume,
+            force=args.force,
+            state_path=args.state_path,
+            workers=args.workers,
+            no_parallel=args.no_parallel,
+            chunk_size=args.chunk_size,
+            parallel_backend=args.parallel_backend,
+            run_id=args.run_id,
+            keep_runs=args.keep_runs,
         )
     except KeyboardInterrupt:
         logger.warning("Pipeline interrupted by user (Ctrl+C)")

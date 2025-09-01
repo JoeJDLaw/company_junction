@@ -33,16 +33,22 @@
 
 ### 1) Install
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-### 2) Run the pipeline
+### 2a) Run the pipeline (Generic)
 ```bash
 python src/cleaning.py \
   --input data/raw/company_junction_range_01.csv \
   --outdir data/processed \
   --config config/settings.yaml
 ```
+### 2b) Specific for my Macbook Pro M4
+```bash
+
+
+```
+
 
 #### Progress & Heartbeats
 The pipeline provides detailed progress tracking and heartbeats:
@@ -255,8 +261,8 @@ This project provides a mini data pipeline with a Streamlit GUI for cleaning Sal
 
 ## Getting Started
 1. Activate your virtual environment: `source .venv/bin/activate`
-2. Install dependencies: `pip install -r requirements.txt`  
-3. Install the package in development mode: `pip install -e .`
+2. Install dependencies: `python -m pip install -r requirements.txt`  
+3. Install the package in development mode: `python -m pip install -e .`
 4. Run the Streamlit app: `streamlit run app/main.py`  
 5. Upload your Salesforce CSV and review results interactively.  
 
@@ -535,3 +541,59 @@ The pipeline automatically logs performance summaries including:
 
 ## License
 MIT License - see LICENSE file for details.
+
+---
+
+# Additional commands for reference
+
+## Tarball of codebase
+
+```
+MANIFEST="$(mktemp -t cj_review_manifest.XXXXXX)"
+
+find . \
+  \( -type d \( \
+       -name .git -o \
+       -name .venv -o \
+       -name .pytest_cache -o \
+       -name .mypy_cache -o \
+       -name .ruff_cache -o \
+       -name __pycache__ -o \
+       -name .cache -o \
+       -name deprecated -o \
+       -name docs -o \
+       -name prompts -o \
+       -name samples -o \
+       -name company_junction.egg-info -o \
+       -name data \
+     \) -prune \) -o \
+  \( -type f \( \
+       -path './src/*' -o \
+       -path './app/*' -o \
+       -path './tests/*' -o \
+       -path './config/*' -o \
+       -path './tools/cleanup_test_artifacts.py' -o \
+       -name 'cursor_rules.md' -o \
+       -name 'CHANGELOG.md' -o \
+       -name 'README.md' -o \
+       -name 'requirements.txt' -o \
+       -name 'mypy.ini' -o \
+       -name 'pytest.ini' -o \
+       -name 'setup.py' -o \
+       -name 'run_streamlit.py' -o \
+       -name 'Makefile' -o \
+       -name 'pyproject.toml' \
+     \) \
+     ! -name '.DS_Store' \
+     ! -name '*.tar.gz' \
+     ! -name 'pipeline.log*' \
+  \) -print > "$MANIFEST"
+
+echo "Review list saved to: $MANIFEST"
+wc -l "$MANIFEST"
+
+ARCHIVE="tarballs/company_junction_review_$(date +%Y%m%d_%H%M%S).tar.gz"
+tar -czf "$ARCHIVE" -T "$MANIFEST"
+
+echo "Wrote: $ARCHIVE"
+```
