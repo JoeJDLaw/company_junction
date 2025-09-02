@@ -17,6 +17,14 @@ try:
 except ImportError:
     from src.dtypes_map import ALLOWED_OBJECT_COLUMNS, INTERMEDIATE_COLUMNS_TO_DROP
 
+from src.utils.schema_utils import (
+    GROUP_ID,
+    ACCOUNT_ID,
+    DISPOSITION,
+    SCORE,
+    NAME_CORE,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -183,12 +191,12 @@ def _detect_schema(df: pd.DataFrame) -> Optional[Dict[str, str]]:
     columns = set(df.columns)
 
     # Detect schema based on key columns
-    if "account_id" in columns and "name_core" in columns:
-        if "group_id" in columns and "disposition" in columns:
+    if ACCOUNT_ID in columns and NAME_CORE in columns:
+        if GROUP_ID in columns and DISPOSITION in columns:
             return get_dtypes_for_schema("review_ready")
-        elif "group_id" in columns:
+        elif GROUP_ID in columns:
             return get_dtypes_for_schema("groups")
-        elif "score" in columns:
+        elif SCORE in columns:
             return get_dtypes_for_schema("pairs")
         else:
             return get_dtypes_for_schema("accounts")

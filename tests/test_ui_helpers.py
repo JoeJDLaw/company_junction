@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+from src.utils.ui_helpers import choose_backend
 
 
 from src.utils.ui_helpers import (
@@ -65,6 +66,7 @@ class TestUIHelpers:
 
         for key in expected_keys:
             assert key in paths
+            # Check that paths start with "data/" (relative paths as per cursor_rules.md)
             assert paths[key].startswith("data/")
             assert run_id in paths[key]
 
@@ -226,9 +228,11 @@ class TestUIHelpers:
                 with patch("os.path.exists") as mock_exists:
 
                     def mock_exists_impl(path: str) -> bool:
-                        if "review_ready.csv" in path:
+                        # Convert Path objects to strings for comparison
+                        path_str = str(path)
+                        if "review_ready.csv" in path_str:
                             return True
-                        elif "pipeline_state.json" in path:
+                        elif "pipeline_state.json" in path_str:
                             return True
                         else:
                             return False
@@ -348,3 +352,73 @@ class TestUIHelpers:
         default_run_id = get_default_run_id()
 
         assert default_run_id == ""
+
+
+class TestBackendRouting:
+    """Test backend routing logic."""
+
+    def test_choose_backend_config_prefers_duckdb(self):
+        """Test that config preference for DuckDB is respected."""
+        config_flags = {
+            "ui": {"use_duckdb_for_groups": True},
+            "ui_perf": {
+                "groups": {
+                    "duckdb_prefer_over_pyarrow": False,
+                    "rows_duckdb_threshold": 30000,
+                }
+            },
+        }
+
+        result = choose_backend("duckdb", True, 1000, config_flags, "test_context")
+
+        assert result == "duckdb", "Should choose DuckDB when config prefers it"
+
+    def test_choose_backend_threshold_exceeded(self):
+        """Test that DuckDB is chosen when threshold is exceeded."""
+        config_flags = {
+            "ui": {"use_duckdb_for_groups": False},
+            "ui_perf": {
+                "groups": {
+                    "duckdb_prefer_over_pyarrow": True,
+                    "rows_duckdb_threshold": 1000,
+                }
+            },
+        }
+
+        result = choose_backend("duckdb", True, 5000, config_flags, "test_context")
+
+        assert result == "duckdb", "Should choose DuckDB when threshold exceeded"
+
+    def test_choose_backend_fallback_to_pyarrow(self):
+        """Test that PyArrow is chosen as fallback."""
+        config_flags = {
+            "ui": {"use_duckdb_for_groups": False},
+            "ui_perf": {
+                "groups": {
+                    "duckdb_prefer_over_pyarrow": False,
+                    "rows_duckdb_threshold": 30000,
+                }
+            },
+        }
+
+        result = choose_backend("duckdb", True, 1000, config_flags, "test_context")
+
+        assert (
+            result == "pyarrow"
+        ), "Should fallback to PyArrow when no config preference"
+
+    def test_choose_backend_duckdb_not_available(self):
+        """Test that PyArrow is chosen when DuckDB is not available."""
+        config_flags = {
+            "ui": {"use_duckdb_for_groups": True},
+            "ui_perf": {
+                "groups": {
+                    "duckdb_prefer_over_pyarrow": True,
+                    "rows_duckdb_threshold": 1000,
+                }
+            },
+        }
+
+        result = choose_backend("duckdb", False, 5000, config_flags, "test_context")
+
+        assert result == "pyarrow", "Should choose PyArrow when DuckDB not available"

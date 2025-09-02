@@ -9,6 +9,8 @@ import time
 import os
 import hashlib
 
+from src.utils.path_utils import get_interim_dir
+
 Status = Literal["pending", "running", "completed", "failed", "interrupted"]
 
 
@@ -139,9 +141,11 @@ class MiniDAG:
         return running_stages[0] if running_stages else None
 
     def validate_intermediate_files(
-        self, stage_name: str, interim_dir: Path = Path("data/interim")
+        self, stage_name: str, interim_dir: Optional[Path] = None
     ) -> bool:
         """Check if intermediate files exist for a given stage."""
+        if interim_dir is None:
+            interim_dir = get_interim_dir("default")
         if not interim_dir.exists():
             return False
 
@@ -206,7 +210,7 @@ class MiniDAG:
         return True
 
     def get_smart_resume_stage(
-        self, interim_dir: Path = Path("data/interim")
+        self, interim_dir: Optional[Path] = None
     ) -> Optional[str]:
         """
         Intelligently determine where to resume from based on:
@@ -216,6 +220,8 @@ class MiniDAG:
 
         Returns tuple of (resume_stage, reason_code) for enhanced logging.
         """
+        if interim_dir is None:
+            interim_dir = get_interim_dir("default")
         last_completed = self.get_last_completed_stage()
         if not last_completed:
             self._logger.info("Auto-resume decision: NO_PREVIOUS_RUN - starting fresh")

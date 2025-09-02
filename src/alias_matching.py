@@ -9,13 +9,13 @@ import logging
 import time
 from collections import defaultdict
 from itertools import zip_longest
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 
 import numpy as np
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-from src.utils.parallel_utils import parallel_map
+from src.utils.parallel_utils import ParallelExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -279,7 +279,10 @@ def _process_one_record_optimized(
 
 
 def compute_alias_matches(
-    df_norm: pd.DataFrame, df_groups: pd.DataFrame, settings: Dict[str, Any]
+    df_norm: pd.DataFrame,
+    df_groups: pd.DataFrame,
+    settings: Dict[str, Any],
+    parallel_executor: Optional[ParallelExecutor] = None,
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Compute alias matches across records.
@@ -394,42 +397,45 @@ def compute_alias_matches(
                     debug=record_id in debug_records,
                 )
 
-            # Process records in chunks for progress tracking
-            chunk_size = settings.get("parallelism", {}).get("chunk_size", 1000)
-            chunks = [
-                records_with_aliases[i : i + chunk_size]
-                for i in range(0, len(records_with_aliases), chunk_size)
-            ]
-
-            all_results = []
-            for chunk in chunks:
-                # Process chunk in parallel
-                chunk_results = parallel_map(
-                    process_one_record,
-                    chunk,
-                    workers=workers,
-                    backend=settings.get("parallelism", {}).get("backend", "loky"),
-                    chunk_size=chunk_size,
+            # Use ParallelExecutor for consistent parallelism with similarity module
+            if parallel_executor and parallel_executor.should_use_parallel(
+                len(records_with_aliases)
+            ):
+                logger.info(
+                    f"Using ParallelExecutor for alias matching with {parallel_executor.workers} workers"
                 )
-                all_results.extend(chunk_results)
 
-                # Progress logging after each chunk
-                processed_count += len(chunk)
-                current_time = time.time()
-                if current_time - last_progress_time >= progress_interval:
-                    rate = processed_count / (current_time - start_time + 1e-6)
-                    eta = (total_records - processed_count) / (rate + 1e-6)
-                    logger.info(
-                        f"Alias progress: {processed_count}/{total_records} "
-                        f"({processed_count/total_records*100:.1f}%) "
-                        f"rate: {rate:.1f} rec/s ETA: {eta:.1f}s"
-                    )
-                    last_progress_time = current_time
+                # Process all records using execute_chunked for optimal parallel processing
+                results = parallel_executor.execute_chunked(
+                    process_one_record,
+                    records_with_aliases,
+                    operation_name="alias_matching_parallel",
+                )
 
-            results = all_results
+                # Flatten results like similarity module
+                alias_matches = [match for chunk in results for match in chunk]
+            else:
+                logger.info(
+                    "Using sequential alias matching (ParallelExecutor not available or disabled)"
+                )
 
-            # Flatten results and sort by record IDs first, then alias text and group ID
-            alias_matches = [match for chunk in results for match in chunk]
+                # Sequential processing with progress tracking
+                alias_matches = []
+                for i, record_id in enumerate(records_with_aliases):
+                    chunk_results = process_one_record(record_id)
+                    alias_matches.extend(chunk_results)
+
+                    # Progress logging
+                    if (i + 1) % 100 == 0 or (i + 1) == total_records:
+                        rate = (i + 1) / (time.time() - start_time + 1e-6)
+                        eta = (total_records - (i + 1)) / (rate + 1e-6)
+                        logger.info(
+                            f"Alias progress: {i + 1}/{total_records} "
+                            f"({(i + 1)/total_records*100:.1f}%) "
+                            f"rate: {rate:.1f} rec/s ETA: {eta:.1f}s"
+                        )
+
+            # Sort matches by record IDs first, then alias text and group ID
             alias_matches.sort(
                 key=lambda x: (
                     x["record_id"],

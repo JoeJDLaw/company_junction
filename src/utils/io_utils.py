@@ -1,5 +1,6 @@
 """IO utilities for robust CSV reading and schema inference."""
 
+import functools
 import logging
 import yaml
 import pandas as pd
@@ -7,12 +8,20 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from src.utils.logging_utils import get_logger
+from src.utils.path_utils import get_config_path
 
 logger = get_logger(__name__)
 
+# Settings loading counter for debugging
+_settings_load_count = 0
 
+
+@functools.lru_cache(maxsize=1)
 def load_settings(path: str) -> Dict[str, Any]:
     """Load settings from YAML file with defaults.
+
+    This function is cached to prevent repeated file I/O and parsing.
+    Use reload_settings() to force a fresh load.
 
     Args:
         path: Path to settings YAML file
@@ -20,6 +29,11 @@ def load_settings(path: str) -> Dict[str, Any]:
     Returns:
         Dictionary with settings (user config merged over defaults)
     """
+    global _settings_load_count
+    _settings_load_count += 1
+
+    logger.debug(f"Settings loaded (count: {_settings_load_count}) from {path}")
+
     # Default settings
     DEFAULTS = {
         "data": {
@@ -47,10 +61,10 @@ def load_settings(path: str) -> Dict[str, Any]:
             "file": "pipeline.log",
         },
         "paths": {
-            "raw_data": "data/raw",
-            "interim_data": "data/interim",
-            "processed_data": "data/processed",
-            "test_fixtures": "tests/fixtures",
+            "raw_data": str(get_config_path().parent / "data" / "raw"),
+            "interim_data": str(get_config_path().parent / "data" / "interim"),
+            "processed_data": str(get_config_path().parent / "data" / "processed"),
+            "test_fixtures": str(get_config_path().parent / "tests" / "fixtures"),
         },
         "csv": {
             "engine": "auto",
@@ -84,6 +98,28 @@ def load_settings(path: str) -> Dict[str, Any]:
     except Exception as e:
         logging.error(f"Error loading settings: {e}. Using defaults.")
         return DEFAULTS
+
+
+def reload_settings(path: str) -> Dict[str, Any]:
+    """Force reload settings from file (clears cache).
+
+    Args:
+        path: Path to settings YAML file
+
+    Returns:
+        Freshly loaded settings
+    """
+    load_settings.cache_clear()
+    return load_settings(path)
+
+
+def get_settings_load_count() -> int:
+    """Get the total number of times settings have been loaded.
+
+    Returns:
+        Count of settings loads (for debugging)
+    """
+    return _settings_load_count
 
 
 def load_relationship_ranks(path: str) -> Dict[str, int]:

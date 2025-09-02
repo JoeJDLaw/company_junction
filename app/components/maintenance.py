@@ -26,18 +26,46 @@ def render_maintenance(selected_run_id: str) -> None:
     # Cache clearing functionality
     cache_state = get_cache_state(st.session_state)
 
+    # Phase 1.26.2: Group maintenance buttons together with helpful tooltips
+    st.write("**Cache & Session Management:**")
+
+    # Clear caches button with tooltip
     if st.button(
         "🗑️ Clear Caches for Current Run",
         key=f"clear_caches_maintenance_{selected_run_id}",
+        help="Use this when you see stale data or want to ensure fresh results. Clears cached group lists and details for the current run only.",
     ):
         # Clear list-level caches for current run
         st.cache_data.clear()
         st.cache_resource.clear()
-        st.success(f"Cleared caches for run {selected_run_id}")
+
+        # Phase 1.23.1: Clear details cache for current run
+        try:
+            from src.utils.ui_helpers import _details_cache
+
+            _details_cache.invalidate_run(selected_run_id)
+            st.success(
+                f"Cleared caches for run {selected_run_id} (including details cache)"
+            )
+        except Exception as e:
+            st.warning(f"Cleared Streamlit caches, but details cache clear failed: {e}")
+            st.success(f"Cleared caches for run {selected_run_id}")
 
         # Set one-shot flag
         cache_state.clear_requested_for_run_id = selected_run_id
         set_cache_state(st.session_state, cache_state)
+
+    # Reset session state button with tooltip
+    if st.button(
+        "🔄 Reset Session State",
+        key=f"reset_session_{selected_run_id}",
+        help="Use this when the UI seems stuck or behaves unexpectedly. Resets all UI state and forces a fresh start.",
+    ):
+        # Clear all session state
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.success("Session state reset successfully")
+        st.rerun()
 
     # Run deletion functionality (placeholder)
     st.write("**Run Deletion:**")
@@ -45,9 +73,4 @@ def render_maintenance(selected_run_id: str) -> None:
 
     # Additional maintenance options
     st.write("**Additional Options:**")
-    if st.button("🔄 Reset Session State", key=f"reset_session_{selected_run_id}"):
-        # Clear all session state
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.success("Session state reset successfully")
-        st.rerun()
+    st.info("More maintenance options will be added in future phases.")

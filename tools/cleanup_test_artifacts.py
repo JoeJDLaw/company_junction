@@ -14,20 +14,29 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 import fnmatch
 from datetime import datetime
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src.utils.path_utils import get_processed_dir, get_interim_dir
 
 
 def load_run_index() -> Dict[str, Any]:
     """Load the run index file."""
-    index_path = Path("data/run_index.json")
+    index_path = Path(str(get_processed_dir("index") / "run_index.json"))
     if not index_path.exists():
         return {}
 
     try:
         with open(index_path, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+            else:
+                print(f"Warning: Run index is not a dict, got {type(data)}")
+                return {}
     except (json.JSONDecodeError, IOError) as e:
         print(f"Warning: Could not load run index: {e}")
         return {}
@@ -35,7 +44,7 @@ def load_run_index() -> Dict[str, Any]:
 
 def save_run_index(run_index: Dict[str, Any]) -> None:
     """Save the run index file atomically."""
-    index_path = Path("data/run_index.json")
+    index_path = Path(str(get_processed_dir("index") / "run_index.json"))
     temp_path = index_path.with_suffix(".tmp")
 
     try:
@@ -69,8 +78,8 @@ def is_sample_test_run(run_data: Dict[str, Any]) -> bool:
 
 def is_stale_run(run_id: str, run_data: Dict[str, Any]) -> bool:
     """Check if a run directory no longer exists."""
-    interim_dir = Path(f"data/interim/{run_id}")
-    processed_dir = Path(f"data/processed/{run_id}")
+    interim_dir = get_interim_dir(run_id)
+    processed_dir = get_processed_dir(run_id)
     return not interim_dir.exists() and not processed_dir.exists()
 
 
@@ -91,9 +100,9 @@ def get_run_age_days(run_data: Dict[str, Any]) -> int:
 
 def find_candidate_runs(
     run_index: Dict[str, Any],
-    pattern: str = None,
+    pattern: Optional[str] = None,
     include_sample_test: bool = False,
-    days_older_than: int = None,
+    days_older_than: Optional[int] = None,
     only_stale_index: bool = False,
 ) -> List[Tuple[str, Dict[str, Any], str]]:
     """
@@ -148,7 +157,7 @@ def delete_run_directories(run_id: str) -> bool:
     success = True
 
     # Delete interim directory
-    interim_dir = Path(f"data/interim/{run_id}")
+    interim_dir = get_interim_dir(run_id)
     if interim_dir.exists():
         try:
             import shutil
@@ -159,7 +168,7 @@ def delete_run_directories(run_id: str) -> bool:
             success = False
 
     # Delete processed directory
-    processed_dir = Path(f"data/processed/{run_id}")
+    processed_dir = get_processed_dir(run_id)
     if processed_dir.exists():
         try:
             import shutil
@@ -174,7 +183,7 @@ def delete_run_directories(run_id: str) -> bool:
 
 def update_latest_symlink() -> None:
     """Update the latest symlink if it points to a deleted run."""
-    latest_path = Path("data/processed/latest")
+    latest_path = get_processed_dir("latest")
     if not latest_path.exists() or not latest_path.is_symlink():
         return
 

@@ -7,6 +7,7 @@ internal schema used by the pipeline.
 
 import pandas as pd
 from typing import Dict
+from src.utils.schema_utils import GROUP_ID, ACCOUNT_ID, ACCOUNT_NAME, DISPOSITION
 
 
 def canonicalize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -25,10 +26,10 @@ def canonicalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Column mapping from CSV-style to canonical internal names
     column_mapping = {
         # Account/Company fields
-        "Account ID": "account_id",
-        "Account Name": "account_name",
-        "Id": "account_id",
-        "Name": "account_name",
+        "Account ID": ACCOUNT_ID,
+        "Account Name": ACCOUNT_NAME,
+        "Id": ACCOUNT_ID,
+        "Name": ACCOUNT_NAME,
         # Relationship fields
         "Relationship": "relationship",
         "Relationship (If Other)": "relationship",
@@ -63,7 +64,7 @@ def canonicalize_columns(df: pd.DataFrame) -> pd.DataFrame:
         "Format Search Name": "format_search_name",
         "Employer Name": "employer_name",
         # Disposition fields
-        "Disposition": "Disposition",
+        "Disposition": DISPOSITION,
         "disposition_reason": "disposition_reason",
         "survivorship_reason": "survivorship_reason",
         "applied_penalties": "applied_penalties",
@@ -103,13 +104,13 @@ def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.Data
     for col in required_columns:
         if col not in df_ensured.columns:
             # Add default values based on column type
-            if col == "account_id":
+            if col == ACCOUNT_ID:
                 df_ensured[col] = [f"test_id_{i}" for i in range(len(df_ensured))]
-            elif col == "group_id":
+            elif col == GROUP_ID:
                 df_ensured[col] = [f"group_{i}" for i in range(len(df_ensured))]
             elif col == "name_core":
                 df_ensured[col] = df_ensured.get(
-                    "account_name", ["test_name"] * len(df_ensured)
+                    ACCOUNT_NAME, ["test_name"] * len(df_ensured)
                 )
             elif col == "suffix_class":
                 df_ensured[col] = ["corp"] * len(df_ensured)

@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logging_utils import get_logger
+from src.utils.path_utils import get_processed_dir, get_interim_dir
 
 
 # Phase 1 destructive operations fuse
@@ -27,7 +28,7 @@ logger = get_logger(__name__)
 
 # Default values
 DEFAULT_KEEP_RUNS = 10
-RUN_INDEX_PATH = "data/run_index.json"
+RUN_INDEX_PATH = str(get_processed_dir("index") / "run_index.json")
 
 
 def compute_file_hash(file_path: str) -> str:
@@ -67,8 +68,8 @@ def generate_run_id(input_paths: List[str], config_paths: List[str]) -> str:
 
 def get_cache_directories(run_id: str) -> Tuple[str, str]:
     """Get interim and processed cache directories for a run."""
-    interim_dir = f"data/interim/{run_id}"
-    processed_dir = f"data/processed/{run_id}"
+    interim_dir = str(get_interim_dir(run_id))
+    processed_dir = str(get_processed_dir(run_id))
     return interim_dir, processed_dir
 
 
@@ -162,8 +163,8 @@ def create_latest_pointer(run_id: str) -> None:
         )
         return
 
-    latest_symlink = "data/processed/latest"
-    latest_json = "data/processed/latest.json"
+    latest_symlink = str(get_processed_dir("latest"))
+    latest_json = str(get_processed_dir("latest") / "latest.json")
 
     # Create symlink (may fail on some filesystems)
     try:
@@ -195,8 +196,8 @@ def create_latest_pointer(run_id: str) -> None:
 
 def get_latest_run_id() -> Optional[str]:
     """Get the run ID of the latest successful run."""
-    latest_symlink = "data/processed/latest"
-    latest_json = "data/processed/latest.json"
+    latest_symlink = str(get_processed_dir("latest"))
+    latest_json = str(get_processed_dir("latest") / "latest.json")
 
     # Try JSON first (more reliable)
     if os.path.exists(latest_json):
@@ -492,8 +493,8 @@ def remove_latest_pointer() -> None:
         )
         return
 
-    latest_symlink = "data/processed/latest"
-    latest_json = "data/processed/latest.json"
+    latest_symlink = str(get_processed_dir("latest"))
+    latest_json = str(get_processed_dir("latest") / "latest.json")
 
     # Remove symlink
     if os.path.islink(latest_symlink):
@@ -514,7 +515,7 @@ def remove_latest_pointer() -> None:
 
 def log_deletion_audit(run_ids: List[str], bytes_freed: int) -> None:
     """Log deletion audit information to file."""
-    audit_log_path = "data/run_deletions.log"
+    audit_log_path = str(get_processed_dir("audit") / "run_deletions.log")
 
     audit_entry = {
         "timestamp": datetime.now().isoformat(),

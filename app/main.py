@@ -13,12 +13,12 @@ The original ~1600-line file is preserved at: deprecated/2025-08-31_legacy_files
 
 ## How to Run
 ```bash
-streamlit run app/main.py
+python run_streamlit.py
 ```
 
 ## Expected Data Files
-- **Primary**: `data/processed/review_ready.parquet` (preferred for native types)
-- **Fallback**: `data/processed/review_ready.csv` (if Parquet not available)
+- **Primary**: `data/processed/{run_id}/review_ready.parquet` (preferred for native types)
+- **Fallback**: `data/processed/{run_id}/review_ready.csv` (if Parquet not available)
 
 ## Features
 - **Review Interface**: Browse duplicate groups with disposition assignments
@@ -326,7 +326,50 @@ def main():
         group_size = group_info["group_size"]
         primary_name = group_info["primary_name"]
 
-        render_group_details(selected_run_id, group_id, group_size, primary_name)
+        # Extract additional fields for better decision making
+        max_score = group_info.get("max_score", 0.0)
+        disposition = group_info.get("disposition", "Unknown")
+
+        # Create a more informative expander title with key fields
+        expander_title = f"Group {group_id}: {primary_name} ({group_size} records)"
+        if max_score > 0:
+            expander_title += f" | Score: {max_score:.3f}"
+        if disposition and disposition != "Unknown":
+            expander_title += f" | {disposition}"
+
+        # Display key group information for quick review
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Group Size", group_size)
+        with col2:
+            st.metric(
+                "Account Name",
+                primary_name[:20] + "..." if len(primary_name) > 20 else primary_name,
+            )
+        with col3:
+            if max_score > 0:
+                st.metric("Max Score", f"{max_score:.3f}")
+            else:
+                st.metric("Max Score", "N/A")
+        with col4:
+            if disposition and disposition != "Unknown":
+                # Color-code dispositions for quick visual identification
+                if disposition == "Keep":
+                    st.success(f"✅ {disposition}")
+                elif disposition == "Update":
+                    st.warning(f"⚠️ {disposition}")
+                elif disposition == "Delete":
+                    st.error(f"🗑️ {disposition}")
+                elif disposition == "Verify":
+                    st.info(f"🔍 {disposition}")
+                else:
+                    st.write(f"📋 {disposition}")
+            else:
+                st.write("📋 No disposition")
+
+        render_group_details(
+            selected_run_id, group_id, group_size, primary_name, expander_title
+        )
 
     # Render export
     render_export(filtered_df)

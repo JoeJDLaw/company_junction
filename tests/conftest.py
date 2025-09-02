@@ -8,10 +8,11 @@ import os
 import tempfile
 import pytest
 from pathlib import Path
+from typing import Generator
 
 
 @pytest.fixture
-def enable_destructive_fuse():
+def enable_destructive_fuse() -> Generator[None, None, None]:
     """
     Enable destructive fuse for cache utils tests.
 
@@ -32,7 +33,7 @@ def enable_destructive_fuse():
 
 
 @pytest.fixture
-def temp_workspace():
+def temp_workspace() -> Generator[Path, None, None]:
     """
     Create a temporary workspace for destructive operations.
 
@@ -59,7 +60,9 @@ def temp_workspace():
 
 
 @pytest.fixture
-def cache_utils_workspace(enable_destructive_fuse, temp_workspace):  # noqa: F811
+def cache_utils_workspace(
+    enable_destructive_fuse: Generator[None, None, None], temp_workspace: Path
+) -> Path:  # noqa: F811
     """
     Combined fixture for cache utils tests.
 

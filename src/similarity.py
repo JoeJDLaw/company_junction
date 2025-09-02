@@ -609,12 +609,8 @@ def _compute_similarity_scores_parallel(
     """
     # Process pairs in parallel if executor available
     if parallel_executor:
-        # Split pairs into chunks for parallel processing
-        chunk_size = parallel_executor.chunk_size or 1000
-        pair_chunks = [
-            candidate_pairs[i : i + chunk_size]
-            for i in range(0, len(candidate_pairs), chunk_size)
-        ]
+        # Use execute_chunked for optimal parallel processing with balanced chunks
+        # This will automatically create balanced chunks and handle parallel execution
 
         # Create a closure that uses the memory-mapped arrays
         def process_chunk(chunk):
@@ -636,69 +632,23 @@ def _compute_similarity_scores_parallel(
         pair_progress = ProgressLogger(
             total=len(candidate_pairs),
             label="pair-scoring",
-            step_every=5000,
+            step_every=50000,  # Increased from 5000 for better performance
             secs_every=5.0,
             enable_tqdm=enable_progress,
         )
 
-        # Process chunks in parallel with checkpointing
-        scores = []
-        processed = 0
-        checkpoint_size = 50000  # Save every 50k pairs
-
-        # Load existing checkpoint if available
-        checkpoint_path = (
-            f"{interim_dir}/similarity_checkpoint.parquet"
-            if interim_dir
-            else "data/interim/similarity_checkpoint.parquet"
+        # Process all pairs using execute_chunked for optimal parallel processing
+        scores = parallel_executor.execute_chunked(
+            process_chunk,
+            candidate_pairs,
+            operation_name="similarity_scoring_parallel",
         )
-        try:
-            if os.path.exists(checkpoint_path):
-                checkpoint_df = pd.read_parquet(checkpoint_path)
-                scores = checkpoint_df.to_dict("records")
-                processed = len(scores)
-                logger.info(f"Loaded {processed} pairs from checkpoint")
 
-                # Filter out already processed pairs
-                processed_pairs = set((r["id_a"], r["id_b"]) for r in scores)
-                remaining_pairs = [
-                    (a, b) for a, b in candidate_pairs if (a, b) not in processed_pairs
-                ]
-
-                # Recreate chunks for remaining pairs
-                pair_chunks = [
-                    remaining_pairs[i : i + chunk_size]
-                    for i in range(0, len(remaining_pairs), chunk_size)
-                ]
-                logger.info(f"Processing remaining {len(remaining_pairs)} pairs")
-        except Exception as e:
-            logger.warning(f"Failed to load checkpoint: {e}")
-
-        # Process chunks
-        for chunk_idx, chunk_pairs in enumerate(pair_chunks):
-            chunk_results = parallel_executor.execute(
-                process_chunk,
-                [chunk_pairs],
-                operation_name=f"similarity_scoring_chunk_{chunk_idx}",
-            )
-
-            # Update scores and progress
-            chunk_scores = chunk_results[0]
-            scores.extend(chunk_scores)
-            processed += len(chunk_scores)
-
-            # Log progress (rate-limited)
-            if processed % pair_progress.step_every == 0:
-                logger.info(f"Processed {processed}/{len(candidate_pairs)} pairs")
-
-            # Save checkpoint periodically
-            if processed % checkpoint_size == 0 and interim_dir:
-                try:
-                    checkpoint_df = pd.DataFrame(scores)
-                    checkpoint_df.to_parquet(checkpoint_path, index=False)
-                    logger.info(f"Saved checkpoint with {len(scores)} pairs")
-                except Exception as e:
-                    logger.warning(f"Failed to save checkpoint: {e}")
+        # Flatten the results - execute_chunked returns a list of lists
+        flattened_scores = []
+        for chunk_scores in scores:
+            flattened_scores.extend(chunk_scores)
+        scores = flattened_scores
 
     else:
         # Process pairs sequentially with optimized arrays

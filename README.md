@@ -23,6 +23,8 @@
 
 **Phase 1.16 (Performance & Caching)**: ✅ **Parallel execution and versioned caching** - Joblib-based parallel processing for candidate generation and similarity scoring, run_id-based cache directories, resource monitoring, automatic worker optimization, deterministic outputs.
 
+**Phase 1.26.1 (Schema Resolver & Parallelism Unification)**: ✅ **Dynamic schema resolution and unified parallelism** - CLI column overrides, filename templates, synonym matching, heuristic fallback, ParallelExecutor integration for alias matching, consistent parallelism across pipeline.
+
 **Docs:** see `docs/DLaw_Company_Junction_Dedup_Plan.md` for the detailed plan and acceptance criteria.
 
 **Next:** Phase 2 (future) will add Split detection & parsing, optional LLM "real-company" classifier, and Salesforce sync steps.
@@ -43,6 +45,26 @@ python src/cleaning.py \
   --outdir data/processed \
   --config config/settings.yaml
 ```
+
+#### Schema Resolution & Column Mapping
+The pipeline now supports dynamic schema resolution with multiple fallback strategies:
+
+**CLI column overrides:**
+```bash
+python src/cleaning.py \
+  --input data/raw/your_data.csv \
+  --outdir data/processed \
+  --config config/settings.yaml \
+  --col account_name="Company Name" account_id="ID"
+```
+
+**Automatic resolution order:**
+1. CLI overrides (`--col` flags)
+2. Filename templates (from config)
+3. Synonym matching (case-insensitive)
+4. Heuristic matching (string similarity, type hints)
+
+**Schema mapping is saved to:** `data/processed/{run_id}/schema_mapping.json`
 ### 2b) Specific for my Macbook Pro M4
 ```bash
 source .venv/bin/activate
@@ -551,6 +573,55 @@ The pipeline automatically logs performance summaries including:
 
 ---
 
+## 🚀 Performance Features
+
+### UI Performance Optimizations
+- **DuckDB-First Backend Selection**: Intelligent backend routing for optimal performance
+- **Group Stats Fast Path**: Ultra-fast loading using pre-computed `group_stats.parquet` (≤2s cold load)
+- **Threshold-Based Routing**: Automatic DuckDB routing for large datasets (>30k rows, >10k groups)
+- **Configurable Backend Preferences**: Control backend selection via `config/settings.yaml`
+- **Session State Caching**: Persistent backend choices per run for consistent performance
+
+### Backend Selection Priority
+The UI uses a priority-based backend selection system:
+1. **`group_stats.parquet`** (highest priority) - Uses DuckDB for fastest possible loading
+2. **`ui.use_duckdb_for_groups`** flag - Forces DuckDB routing when enabled
+3. **Threshold-based routing** - Auto-routes to DuckDB for large datasets
+4. **PyArrow fallback** - Final option when DuckDB is unavailable or inappropriate
+
+### Configuration
+```yaml
+# UI Performance Configuration
+ui_perf:
+  groups:
+    use_stats_parquet: true         # Enable fast stats path
+    duckdb_prefer_over_pyarrow: true
+    rows_duckdb_threshold: 30000    # Row count threshold for DuckDB
+    groups_duckdb_threshold: 10000  # Group count threshold for DuckDB
+
+ui:
+  use_duckdb_for_groups: true      # Force DuckDB routing
+  duckdb_threads: 4                # DuckDB thread count
+```
+
+## 🔧 Troubleshooting
+
+### DuckDB Fallback Issues
+If you see logs like `"groups_perf: backend=pyarrow reason=fallback"` when `group_stats.parquet` exists:
+
+1. **Check DuckDB Availability**: Ensure DuckDB is installed and available
+2. **Verify Configuration**: Check `ui.use_duckdb_for_groups: true` in `config/settings.yaml`
+3. **Check Artifacts**: Verify `group_stats.parquet` exists in your run directory
+4. **Review Logs**: Look for specific error messages in the pipeline logs
+
+### Common Issues
+- **"DuckDB query failed"**: Check if the parquet files are corrupted or have schema mismatches
+- **Unexpected PyArrow usage**: Verify backend selection configuration and DuckDB availability
+- **Performance degradation**: Ensure `group_stats.parquet` is being generated during pipeline finalization
+
+### Debug Mode
+Enable enhanced logging by setting `logging.level: "DEBUG"` in your configuration to see detailed backend selection decisions.
+
 ## License
 MIT License - see LICENSE file for details.
 
@@ -610,3 +681,8 @@ tar -czf "$ARCHIVE" -T "$MANIFEST"
 
 echo "Wrote: $ARCHIVE"
 ```
+
+
+---
+
+ find . -type d \( -name "*cache*" -o -name "*venv*" -o -name ".git" -o -name "deprecated" -o -name "tarballs" \) -prune -o -type f -name "*.py" -print

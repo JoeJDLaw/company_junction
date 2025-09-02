@@ -5,6 +5,7 @@ This module provides stable sort key builders and name coalescing functions.
 """
 
 from typing import Optional
+from src.utils.schema_utils import GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME
 
 
 def build_stable_sort_key(sort_by: str, group_id: str) -> str:
@@ -20,15 +21,15 @@ def build_stable_sort_key(sort_by: str, group_id: str) -> str:
     """
     # Map sort keys to their corresponding field names
     sort_mapping = {
-        "Group Size (Desc)": "group_size",
-        "Group Size (Asc)": "group_size",
-        "Max Score (Desc)": "max_score",
-        "Max Score (Asc)": "max_score",
-        "Account Name (Asc)": "primary_name",
-        "Account Name (Desc)": "primary_name",
+        "Group Size (Desc)": GROUP_SIZE,
+        "Group Size (Asc)": GROUP_SIZE,
+        "Max Score (Desc)": MAX_SCORE,
+        "Max Score (Asc)": MAX_SCORE,
+        "Account Name (Asc)": PRIMARY_NAME,
+        "Account Name (Desc)": PRIMARY_NAME,
     }
 
-    field = sort_mapping.get(sort_by, "group_size")
+    field = sort_mapping.get(sort_by, GROUP_SIZE)
 
     # Determine sort direction
     if "(Desc)" in sort_by:
@@ -64,22 +65,22 @@ def build_order_by_clause(sort_by: str) -> str:
     """
     if "Group Size" in sort_by:
         if "(Desc)" in sort_by:
-            return "s.group_size DESC, s.group_id ASC"
+            return f"s.{GROUP_SIZE} DESC, s.{GROUP_ID} ASC"
         else:
-            return "s.group_size ASC, s.group_id ASC"
+            return f"s.{GROUP_SIZE} ASC, s.{GROUP_ID} ASC"
     elif "Max Score" in sort_by:
         if "(Desc)" in sort_by:
-            return "s.max_score DESC, s.group_id ASC"
+            return f"s.{MAX_SCORE} DESC, s.{GROUP_ID} ASC"
         else:
-            return "s.max_score ASC, s.group_id ASC"
+            return f"s.{MAX_SCORE} ASC, s.{GROUP_ID} ASC"
     elif "Account Name" in sort_by:
         if "(Desc)" in sort_by:
-            return "COALESCE(p.primary_name, '') DESC, s.group_id ASC"
+            return f"COALESCE(p.{PRIMARY_NAME}, '') DESC, s.{GROUP_ID} ASC"
         else:
-            return "COALESCE(p.primary_name, '') ASC, s.group_id ASC"
+            return f"COALESCE(p.{PRIMARY_NAME}, '') ASC, s.{GROUP_ID} ASC"
     else:
         # Default to group size descending
-        return "s.group_size DESC, s.group_id ASC"
+        return f"s.{GROUP_SIZE} DESC, s.{GROUP_ID} ASC"
 
 
 def validate_sort_key(sort_by: str) -> bool:

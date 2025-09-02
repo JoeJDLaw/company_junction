@@ -164,14 +164,18 @@ def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
     histogram = {"1": 0, "2": 0, "3": 0, "4_plus": 0}
 
     for size, count in size_counts.items():
-        if size == 1:
-            histogram["1"] = count
-        elif size == 2:
-            histogram["2"] = count
-        elif size == 3:
-            histogram["3"] = count
+        # Convert numpy types to standard Python types for JSON serialization
+        size_int = int(size) if pd.notna(size) else 0
+        count_int = int(count) if pd.notna(count) else 0
+
+        if size_int == 1:
+            histogram["1"] = count_int
+        elif size_int == 2:
+            histogram["2"] = count_int
+        elif size_int == 3:
+            histogram["3"] = count_int
         else:
-            histogram["4_plus"] += count
+            histogram["4_plus"] += count_int
 
     return histogram
 

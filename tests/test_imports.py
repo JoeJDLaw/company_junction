@@ -8,7 +8,7 @@ which helps catch import issues early.
 import pytest
 
 
-def test_absolute_imports():
+def test_absolute_imports() -> None:
     """Test that all modules can be imported using absolute imports."""
     modules_to_test = [
         # Core modules
@@ -53,7 +53,7 @@ def test_absolute_imports():
             pytest.fail(f"Failed to import {module_name}: {e}")
 
 
-def test_component_imports():
+def test_component_imports() -> None:
     """Test that all component modules can be imported."""
     component_modules = [
         "app.components.controls",
@@ -71,7 +71,7 @@ def test_component_imports():
             pytest.fail(f"Failed to import component {module_name}: {e}")
 
 
-def test_utils_imports():
+def test_utils_imports() -> None:
     """Test that all utility modules can be imported."""
     utils_modules = [
         "src.utils.cache_utils",

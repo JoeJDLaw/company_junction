@@ -1,12 +1,12 @@
 """CLI Command Builder utilities for Streamlit UI."""
 
-from pathlib import Path
 from typing import Dict, List, Optional
+from src.utils.path_utils import get_config_path
 
 
 def get_available_input_files() -> List[str]:
     """Get list of available CSV files in data/raw/ directory."""
-    raw_dir = Path("data/raw")
+    raw_dir = get_config_path().parent.parent / "data" / "raw"
     if not raw_dir.exists():
         return []
 
@@ -20,7 +20,7 @@ def get_available_input_files() -> List[str]:
 
 def get_available_config_files() -> List[str]:
     """Get list of available YAML config files in config/ directory."""
-    config_dir = Path("config")
+    config_dir = get_config_path().parent
     if not config_dir.exists():
         return []
 
@@ -42,6 +42,7 @@ def validate_cli_args(
     no_resume: bool = False,
     run_id: Optional[str] = None,
     keep_runs: Optional[int] = None,
+    col_overrides: Optional[List[str]] = None,
 ) -> Dict[str, str]:
     """Validate CLI arguments and return any validation errors.
 
@@ -53,12 +54,12 @@ def validate_cli_args(
     # Required fields
     if not input_file:
         errors["input_file"] = "Input file is required"
-    elif not Path(f"data/raw/{input_file}").exists():
+    elif not (get_config_path().parent.parent / "data" / "raw" / input_file).exists():
         errors["input_file"] = f"Input file 'data/raw/{input_file}' does not exist"
 
     if not config:
         errors["config"] = "Config file is required"
-    elif not Path(f"config/{config}").exists():
+    elif not (get_config_path().parent / config).exists():
         errors["config"] = f"Config file 'config/{config}' does not exist"
 
     # Parallelism validation
@@ -82,13 +83,27 @@ def validate_cli_args(
     if run_id and not run_id.strip():
         errors["run_id"] = "Run ID cannot be empty"
 
+    # Column override validation
+    if col_overrides:
+        for col_override in col_overrides:
+            if "=" not in col_override:
+                errors["col_overrides"] = (
+                    f"Column override '{col_override}' must use format 'canonical_name=actual_name'"
+                )
+            else:
+                canonical_name, actual_name = col_override.split("=", 1)
+                if not canonical_name.strip() or not actual_name.strip():
+                    errors["col_overrides"] = (
+                        f"Column override '{col_override}' has empty canonical or actual name"
+                    )
+
     return errors
 
 
 def build_cli_command(
     input_file: str,
     config: str,
-    outdir: str = "data/processed",
+    outdir: Optional[str] = None,
     no_parallel: bool = False,
     workers: Optional[int] = None,
     parallel_backend: str = "loky",
@@ -97,54 +112,68 @@ def build_cli_command(
     run_id: Optional[str] = None,
     keep_runs: Optional[int] = None,
     extra_args: str = "",
+    col_overrides: Optional[List[str]] = None,
 ) -> str:
-    """Build a CLI command string from the given arguments.
+    """
+    Build CLI command for running the pipeline.
 
     Args:
-        input_file: Input CSV file name (from data/raw/)
-        config: Config YAML file name (from config/)
-        outdir: Output directory (default: data/processed)
-        no_parallel: Whether to disable parallel execution
-        workers: Number of workers (None for auto)
-        parallel_backend: Backend for parallel execution
+        input_file: Input file name
+        config: Config file name
+        outdir: Output directory (optional)
+        no_parallel: Disable parallel processing
+        workers: Number of workers
+        parallel_backend: Parallel backend
         chunk_size: Chunk size for parallel processing
-        no_resume: Whether to disable resume functionality
+        no_resume: Disable resume functionality
         run_id: Custom run ID
         keep_runs: Number of runs to keep
-        extra_args: Extra arguments to append verbatim
+        extra_args: Extra arguments to append
+        col_overrides: Column overrides for schema resolution
 
     Returns:
-        Complete CLI command string
+        CLI command string
     """
     cmd_parts = ["python", "src/cleaning.py"]
 
     # Required arguments
     cmd_parts.extend(["--input", f"data/raw/{input_file}"])
-    cmd_parts.extend(["--outdir", outdir])
     cmd_parts.extend(["--config", f"config/{config}"])
 
-    # Parallelism flags
+    # Optional arguments
+    if outdir:
+        cmd_parts.extend(["--outdir", outdir])
+
+    # Parallelism options
     if no_parallel:
         cmd_parts.append("--no-parallel")
-    else:
-        if workers is not None:
-            cmd_parts.extend(["--workers", str(workers)])
-        if parallel_backend != "loky":  # loky is default
-            cmd_parts.extend(["--parallel-backend", parallel_backend])
-        if chunk_size is not None:
-            cmd_parts.extend(["--chunk-size", str(chunk_size)])
+    elif workers:
+        cmd_parts.extend(["--workers", str(workers)])
 
-    # Run control flags
+    if parallel_backend != "loky":
+        cmd_parts.extend(["--parallel-backend", parallel_backend])
+
+    if chunk_size:
+        cmd_parts.extend(["--chunk-size", str(chunk_size)])
+
+    # Resume options
     if no_resume:
         cmd_parts.append("--no-resume")
+
     if run_id:
         cmd_parts.extend(["--run-id", run_id])
-    if keep_runs is not None:
+
+    if keep_runs:
         cmd_parts.extend(["--keep-runs", str(keep_runs)])
 
+    # Column overrides
+    if col_overrides:
+        for col_override in col_overrides:
+            cmd_parts.extend(["--col", col_override])
+
     # Extra arguments
-    if extra_args.strip():
-        cmd_parts.extend(extra_args.strip().split())
+    if extra_args:
+        cmd_parts.append(extra_args)
 
     return " ".join(cmd_parts)
 

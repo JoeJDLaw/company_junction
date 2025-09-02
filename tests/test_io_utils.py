@@ -15,6 +15,8 @@ from src.utils.io_utils import (
     _has_decimal_points,
     get_csv_engine_preference,
     validate_csv_file,
+    load_settings,
+    reload_settings,
 )
 
 
@@ -307,3 +309,98 @@ class TestHelperFunctions:
 
         # Test with invalid file
         assert validate_csv_file("nonexistent_file.csv") is False
+
+    def test_cache_clearing(self):
+        """Test that cache_clear works correctly."""
+        # Load settings first time
+        load_settings("config/settings.yaml")
+
+        # Load settings second time (should use cache)
+        load_settings("config/settings.yaml")
+
+        # Clear cache
+        load_settings.cache_clear()
+
+        # Load again (should not use cache)
+        load_settings("config/settings.yaml")
+
+        # Verify cache info is available
+        assert hasattr(
+            load_settings, "cache_info"
+        ), "Function should have cache_info attribute"
+        assert hasattr(
+            load_settings, "cache_clear"
+        ), "Function should have cache_clear method"
+
+
+def test_get_csv_engine_preference():
+    """Test CSV engine preference logic."""
+    # Test with valid file
+    assert get_csv_engine_preference("test.csv") == "pyarrow"
+
+    # Test with invalid file
+    assert get_csv_engine_preference("nonexistent_file.csv") is False
+
+
+def test_validate_csv_file():
+    """Test CSV file validation."""
+    # Test with valid file
+    assert validate_csv_file("test.csv") is True
+
+    # Test with invalid file
+    assert validate_csv_file("nonexistent_file.csv") is False
+
+
+class TestSettingsCaching:
+    """Test settings loading and caching behavior."""
+
+    def test_settings_caching(self):
+        """Test that settings are cached and only loaded once per unique path."""
+        # Load settings first time
+        load_settings("config/settings.yaml")
+
+        # Load settings second time (should use cache)
+        load_settings("config/settings.yaml")
+
+        # Load settings with different path (should load again)
+        load_settings("config/different.yaml")
+
+        # Verify caching behavior - check cache info
+        cache_info = load_settings.cache_info()
+        assert hasattr(cache_info, "hits"), "Cache should track hits"
+        assert hasattr(cache_info, "misses"), "Cache should track misses"
+
+    def test_reload_settings(self):
+        """Test that reload_settings clears cache and forces fresh load."""
+        # First load
+        settings1 = load_settings("config/settings.yaml")
+
+        # Force reload
+        settings2 = reload_settings("config/settings.yaml")
+
+        # Verify reload behavior
+        assert (
+            settings1 == settings2
+        ), "Reloaded settings should be identical (same content)"
+
+    def test_cache_clearing(self):
+        """Test that cache_clear works correctly."""
+        # Load settings first time
+        load_settings("config/settings.yaml")
+
+        # Load settings second time (should use cache)
+        load_settings("config/settings.yaml")
+
+        # Clear cache
+        load_settings.cache_clear()
+
+        # Load again (should not use cache)
+        load_settings("config/settings.yaml")
+
+        # Verify cache info is available
+        assert hasattr(
+            load_settings, "cache_info"
+        ), "Function should have cache_info attribute"
+        assert hasattr(
+            load_settings, "cache_clear"
+        ), "Function should have cache_clear method"

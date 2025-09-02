@@ -211,6 +211,74 @@ class TestParallelExecutor:
         assert results == [2, 4]
 
 
+class TestParallelExecutorChunking:
+    """Test improved chunking logic in ParallelExecutor."""
+
+    def test_balanced_chunking_large_input(self):
+        """Test that large inputs create balanced chunks."""
+        # Mock joblib availability
+        with patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True):
+            executor = ParallelExecutor(
+                workers=12, backend="loky", chunk_size=1000, small_input_threshold=10000
+            )
+
+            # Test with large input (366,895 items as mentioned in requirements)
+            large_items = list(range(366895))
+
+            # Mock the function to just return chunk info
+            def mock_func(chunk):
+                return {"size": len(chunk), "first": chunk[0] if chunk else None}
+
+            # Execute chunked operation
+            results = executor.execute_chunked(
+                mock_func, large_items, operation_name="test_chunking"
+            )
+
+            # Verify we get reasonable chunk sizes
+            assert len(results) > 0, "Should return results"
+
+            # Check that chunk sizes are reasonable (not 1-item chunks)
+            # With 12 workers, we should target ~36 chunks (12 * 3)
+            # Each chunk should be around 10,000 items
+            expected_chunk_size = 366895 // 36  # ~10,000
+            tolerance = 0.5  # Allow 50% variation
+
+            for result in results:
+                chunk_size = result["size"]
+                assert chunk_size >= 100, f"Chunk size {chunk_size} should be >= 100"
+                assert chunk_size >= expected_chunk_size * (
+                    1 - tolerance
+                ), f"Chunk size {chunk_size} too small"
+                assert chunk_size <= expected_chunk_size * (
+                    1 + tolerance
+                ), f"Chunk size {chunk_size} too large"
+
+    def test_sequential_fallback_small_input(self):
+        """Test that small inputs fall back to sequential processing."""
+        with patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True):
+            executor = ParallelExecutor(
+                workers=12, backend="loky", chunk_size=1000, small_input_threshold=10000
+            )
+
+            # Test with small input (5,000 items)
+            small_items = list(range(5000))
+
+            def mock_func(chunk):
+                return {"size": len(chunk), "first": chunk[0] if chunk else None}
+
+            results = executor.execute_chunked(
+                mock_func, small_items, operation_name="test_small_input"
+            )
+
+            # Should use sequential processing for small input
+            assert len(results) > 0, "Should return results"
+
+            # Verify chunk sizes are reasonable even for sequential
+            for result in results:
+                chunk_size = result["size"]
+                assert chunk_size >= 100, f"Chunk size {chunk_size} should be >= 100"
+
+
 class TestCreateParallelExecutor:
     """Test create_parallel_executor factory function."""
 

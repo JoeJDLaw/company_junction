@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import streamlit as st
+from src.utils.schema_utils import ACCOUNT_ID, ACCOUNT_NAME
 
 
 def ensure_manual_directory() -> Path:
@@ -71,8 +72,8 @@ def add_manual_disposition(
     # Add new override
     new_override = {
         "record_id": record_id,
-        "account_id": account_id,
-        "account_name": account_name,
+        ACCOUNT_ID: account_id,
+        ACCOUNT_NAME: account_name,
         "name_core": name_core,
         "override": override,
         "reason": reason,

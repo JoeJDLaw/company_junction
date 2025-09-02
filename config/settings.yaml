@@ -53,6 +53,18 @@ ui_perf:
     duckdb_prefer_over_pyarrow: true
     rows_duckdb_threshold: 30000
     groups_duckdb_threshold: 10000
+  details:
+    use_details_parquet: true       # rollback toggle
+    allow_pyarrow_fallback: false   # strict for MVP
+    lru_capacity: 16
+    auto_load_on_expand: true       # auto-load details when expander opens
+    show_load_button: false         # hide button when auto-load enabled
+
+# UI Configuration
+ui:
+  sort:
+    default: "group_size DESC"      # Default sort when unknown sort key provided
+  use_duckdb_for_groups: false     # Legacy flag for DuckDB preference
 
 # Salesforce Integration
 salesforce:
@@ -95,7 +107,7 @@ csv:
   engine: "auto"
   
   # Number of rows to sample for schema inference
-  sample_rows: 20000
+  sample_rows: 10000
   
   # Columns to force to string type
   force_string_cols:
@@ -112,6 +124,11 @@ paths:
 # UI Configuration
 ui:
   page_size_default: 50  # Emergency reduction from 500
+  timeout_seconds: 30  # Timeout for UI operations
+  cache_capacity: 16  # LRU cache capacity for details
+  duckdb_threads: 4  # Number of DuckDB threads
+  max_pyarrow_group_stats_seconds: 5  # Auto-switch threshold for group stats
+  use_duckdb_for_groups: true  # Force DuckDB routing for groups list
 
 # Alias Matching Configuration
 alias:
@@ -123,6 +140,23 @@ alias:
     paging_enabled: true
     emergency_small_pages: true
     hard_timeout_enabled: true
-  use_duckdb_for_groups: true
   duckdb_threads: 4
   max_pyarrow_group_stats_seconds: 5
+
+# Schema Configuration (Phase 1.26.1 preparation)
+schema:
+  # Synonyms for column name mapping (Phase 1.26.1)
+  synonyms:
+    account_name: ["Account Name", "Company", "Company Name", "Customer", "Customer Name", "Name"]
+    account_id: ["Account ID", "Acct ID", "Id", "ID", "External Id", "ExternalID"]
+    parent_account_id: ["Parent Account ID", "Parent Id", "ParentID"]
+    created_date: ["Created Date", "Create Date", "CreatedOn", "Created_On"]
+    suffix_class: ["Suffix", "Company Suffix", "Entity Type"]
+  
+  # Templates for specific file patterns (Phase 1.26.1)
+  templates:
+    - match: "^company_junction_.*\\.csv$"
+      aliases:
+        account_name: ["Account Name"]
+        account_id: ["Account ID"]
+        created_date: ["Created Date"]

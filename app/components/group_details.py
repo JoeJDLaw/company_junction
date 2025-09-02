@@ -18,10 +18,22 @@ from src.utils.state_utils import (
 )
 from src.utils.fragment_utils import fragment
 from src.utils.ui_helpers import get_group_details_lazy, _is_non_empty
+from src.utils.schema_utils import (
+    ACCOUNT_ID,
+    ACCOUNT_NAME,
+    DISPOSITION,
+    IS_PRIMARY,
+    WEAKEST_EDGE_TO_PRIMARY,
+    SUFFIX_CLASS,
+)
 
 
 def render_group_details(
-    selected_run_id: str, group_id: str, group_size: int, primary_name: str
+    selected_run_id: str,
+    group_id: str,
+    group_size: int,
+    primary_name: str,
+    title: str = None,
 ) -> None:
     """
     Render group details within an expander.
@@ -31,6 +43,7 @@ def render_group_details(
         group_id: The group ID
         group_size: The group size
         primary_name: The primary name
+        title: Optional custom title for the expander (if None, uses default format)
     """
     # Get state
     details_state = get_details_state(st.session_state)
@@ -41,46 +54,16 @@ def render_group_details(
     details_key = (selected_run_id, group_id)
     details_loaded = details_state.loaded.get(details_key, False)
 
-    with st.expander(f"Group {group_id}: {primary_name} ({group_size} records)"):
-        # Check if full group details are loaded
-        if details_loaded:
-            # Full details are loaded, display everything
-            group_details = details_state.data.get(details_key, {})
-            if isinstance(group_details, dict) and "error" in group_details:
-                st.error(f"Failed to load group {group_id}: {group_details['error']}")
-                return
+    # Use custom title if provided, otherwise use default format
+    expander_title = (
+        title if title else f"Group {group_id}: {primary_name} ({group_size} records)"
+    )
 
-            # Convert to list if it's not already
-            if isinstance(group_details, list):
-                group_data = pd.DataFrame(group_details)
-            else:
-                st.error(f"Invalid group details format for {group_id}")
-                return
-
-            # Display group info
-            _render_group_info(group_data, group_id)
-
-            # Display group table
-            _render_group_table(group_data)
-
-            # Only show explain metadata and aliases if full group details are loaded
-            _render_explain_metadata(
-                selected_run_id, group_id, group_data, explain_state
-            )
-            _render_alias_cross_links(
-                selected_run_id, group_id, group_data, aliases_state
-            )
-
-        else:
-            # Full details not loaded yet, show load button
-            if st.button("Load Group Details", key=f"load_group_{group_id}"):
-                # Set session flag to request details loading
-                details_state.requested[details_key] = True
-                set_details_state(st.session_state, details_state)
-                # No st.rerun() - let the fragment handle the update
-            else:
-                st.caption("Click 'Load Group Details' to view records and metadata.")
-                st.caption(f"Group {group_id} has {group_size} records.")
+    with st.expander(expander_title):
+        # Phase 1.26.2: Auto-load details when expander is open
+        details_state.requested[details_key] = True
+        set_details_state(st.session_state, details_state)
+        st.caption("Details auto-loading...")
 
         # Check if details were requested and load them
         if details_state.requested.get(details_key, False) and not details_loaded:
@@ -90,12 +73,99 @@ def render_group_details(
                 details_state.data[details_key] = group_details
                 details_state.loaded[details_key] = True
                 set_details_state(st.session_state, details_state)
-                # No st.rerun() - let the fragment handle the update
+
+                # Phase 1.26.2: Render the details table immediately after loading
+                try:
+                    # Convert to DataFrame for rendering
+                    group_data = pd.DataFrame(group_details)
+
+                    # Display group info
+                    _render_group_info(group_data, group_id)
+
+                    # Display group table
+                    _render_group_table(group_data)
+
+                    # Only show explain metadata and aliases if full group details are loaded
+                    _render_explain_metadata(
+                        selected_run_id, group_id, group_data, explain_state
+                    )
+                    _render_alias_cross_links(
+                        selected_run_id, group_id, group_data, aliases_state
+                    )
+                except Exception as render_error:
+                    st.error(f"Failed to render group details: {render_error}")
+                    st.write(
+                        "Raw data:", group_details[:3]
+                    )  # Show first 3 records for debugging
             except Exception as e:
-                st.error(f"Failed to load group details: {e}")
-                details_state.data[details_key] = {"error": str(e)}
+                # Phase 1.23.1: Enhanced error handling for DuckDB failures
+                error_msg = str(e)
+
+                if (
+                    "DuckDB details loading failed and PyArrow fallback is disabled"
+                    in error_msg
+                ):
+                    # Show friendly error for DuckDB failures
+                    st.error("🚨 DuckDB query failed — see logs")
+
+                    # Show diagnostic information
+                    with st.expander("🔍 Error Details", expanded=False):
+                        st.write(f"**Group ID:** {group_id}")
+                        st.write(f"**Run ID:** {selected_run_id}")
+
+                        # Check if group_details.parquet exists
+                        try:
+                            from src.utils.ui_helpers import get_artifact_paths
+
+                            artifact_paths = get_artifact_paths(selected_run_id)
+                            details_path = artifact_paths.get("group_details_parquet")
+
+                            if details_path:
+                                import os
+
+                                if os.path.exists(details_path):
+                                    st.write(
+                                        f"**Details file:** ✅ Exists at `{details_path}`"
+                                    )
+
+                                    # Check schema
+                                    try:
+                                        df = pd.read_parquet(details_path)
+                                        st.write(f"**Schema:** {list(df.columns)}")
+                                        st.write(f"**Rows:** {len(df)}")
+                                        st.write(
+                                            f"**Group ID sample:** {df['group_id'].head(3).tolist()}"
+                                        )
+                                    except Exception as schema_error:
+                                        st.write(
+                                            f"**Schema check failed:** {schema_error}"
+                                        )
+                                else:
+                                    st.write(
+                                        f"**Details file:** ❌ Missing at `{details_path}`"
+                                    )
+                            else:
+                                st.write(
+                                    "**Details file:** ❌ Path not found in artifacts"
+                                )
+                        except Exception as path_error:
+                            st.write(f"**Path check failed:** {path_error}")
+
+                        st.write(f"**Error:** {error_msg}")
+                        st.write(
+                            "**Expected columns:** `group_id`, `account_id`, `account_name`, `suffix_class`, `created_date`, `Disposition`"
+                        )
+                else:
+                    # Generic error
+                    st.error(f"Failed to load group details: {error_msg}")
+
+                details_state.data[details_key] = {"error": error_msg}
                 details_state.loaded[details_key] = True
                 set_details_state(st.session_state, details_state)
+
+        # Render the details table if data is available
+        # Note: This is now handled in the async loading section above
+        # to avoid duplicate rendering and ensure immediate display
 
 
 def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
@@ -108,13 +178,15 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
             suffix_classes = group_data["suffix_class"].unique()
             if len(suffix_classes) > 1:
                 st.error("⚠️ Suffix Mismatch")
+            elif len(suffix_classes) == 1 and suffix_classes[0] == "NONE":
+                st.info("📋 No suffix variations")
             else:
                 st.success(f"✅ {suffix_classes[0]}")
 
         # Blacklist hits
-        if "account_name" in group_data.columns:
+        if ACCOUNT_NAME in group_data.columns:
             blacklist_hits = (
-                group_data["account_name"]
+                group_data[ACCOUNT_NAME]
                 .str.lower()
                 .str.contains(
                     "|".join(
@@ -137,8 +209,8 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
 
     with col2:
         # Primary selection info
-        if "is_primary" in group_data.columns:
-            primary_count = group_data["is_primary"].sum()
+        if IS_PRIMARY in group_data.columns:
+            primary_count = group_data[IS_PRIMARY].sum()
             st.write(f"**Primary Records:** {primary_count}")
 
     with col3:
@@ -151,34 +223,34 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
     st.write("**Records:**")
 
     display_cols = [
-        "account_name",
-        "account_id",
+        ACCOUNT_NAME,
+        ACCOUNT_ID,
         "relationship",
-        "Disposition",
-        "is_primary",
-        "weakest_edge_to_primary",
-        "suffix_class",
+        DISPOSITION,
+        IS_PRIMARY,
+        WEAKEST_EDGE_TO_PRIMARY,
+        SUFFIX_CLASS,
     ]
     display_cols = [col for col in display_cols if col in group_data.columns]
 
     if display_cols:
         # Configure column display for better readability
         column_config = {
-            "account_name": st.column_config.TextColumn(
+            ACCOUNT_NAME: st.column_config.TextColumn(
                 "Account Name", width="large", help="Company name", max_chars=None
             ),
-            "account_id": st.column_config.TextColumn("Account ID", width="medium"),
+            ACCOUNT_ID: st.column_config.TextColumn("Account ID", width="medium"),
             "relationship": st.column_config.TextColumn("Relationship", width="medium"),
-            "Disposition": st.column_config.SelectboxColumn(
+            DISPOSITION: st.column_config.SelectboxColumn(
                 "Disposition",
                 width="small",
                 options=["Keep", "Update", "Delete", "Verify"],
             ),
-            "is_primary": st.column_config.CheckboxColumn("Primary", width="small"),
-            "weakest_edge_to_primary": st.column_config.NumberColumn(
+            IS_PRIMARY: st.column_config.CheckboxColumn("Primary", width="small"),
+            WEAKEST_EDGE_TO_PRIMARY: st.column_config.NumberColumn(
                 "Edge Score", width="small", format="%.1f"
             ),
-            "suffix_class": st.column_config.TextColumn("Suffix", width="small"),
+            SUFFIX_CLASS: st.column_config.TextColumn("Suffix", width="small"),
         }
 
         st.dataframe(
@@ -246,7 +318,7 @@ def _render_explain_metadata(
                         explain_cols.append(col)
 
                 if explain_cols:
-                    explain_data = group_data[["account_name"] + explain_cols].copy()
+                    explain_data = group_data[[ACCOUNT_NAME] + explain_cols].copy()
                     explain_state.data[explain_key] = explain_data
                 else:
                     explain_state.data[explain_key] = pd.DataFrame()

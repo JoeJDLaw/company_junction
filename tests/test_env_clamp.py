@@ -9,7 +9,7 @@ from unittest.mock import patch
 from src.utils.parallel_utils import ensure_single_thread_blas
 
 
-def test_ensure_single_thread_blas_sets_unset_vars():
+def test_ensure_single_thread_blas_sets_unset_vars() -> None:
     """Test that unset BLAS environment variables are set to 1."""
     blas_vars = [
         "OMP_NUM_THREADS",
@@ -35,7 +35,7 @@ def test_ensure_single_thread_blas_sets_unset_vars():
         ), f"Variable {var} should be set to '1', got '{os.environ[var]}'"
 
 
-def test_ensure_single_thread_blas_respects_existing_values():
+def test_ensure_single_thread_blas_respects_existing_values() -> None:
     """Test that existing BLAS environment variables are not overridden."""
     blas_vars = [
         "OMP_NUM_THREADS",
@@ -79,7 +79,7 @@ def test_ensure_single_thread_blas_respects_existing_values():
             ), f"Variable {var} should be set to '1', got '{os.environ[var]}'"
 
 
-def test_ensure_single_thread_blas_mixed_scenario():
+def test_ensure_single_thread_blas_mixed_scenario() -> None:
     """Test mixed scenario with some variables set and others not."""
     # Set only some variables
     os.environ["OMP_NUM_THREADS"] = "6"
@@ -101,7 +101,7 @@ def test_ensure_single_thread_blas_mixed_scenario():
     assert os.environ["NUMEXPR_MAX_THREADS"] == "1"  # Set
 
 
-def test_parallel_map_uses_blas_clamp():
+def test_parallel_map_uses_blas_clamp() -> None:
     """Test that parallel_map calls ensure_single_thread_blas."""
     from src.utils.parallel_utils import parallel_map
 
@@ -117,7 +117,7 @@ def test_parallel_map_uses_blas_clamp():
         assert result == [2, 4, 6]
 
 
-def test_parallel_map_sequential_fallback():
+def test_parallel_map_sequential_fallback() -> None:
     """Test that parallel_map falls back to sequential when workers <= 1."""
     from src.utils.parallel_utils import parallel_map
 

@@ -55,7 +55,7 @@ def validate_date_format(date_string: str) -> bool:
         return False
 
 
-def test_changelog_date_format():
+def test_changelog_date_format() -> None:
     """Test that all Phase headers in CHANGELOG.md have valid YYYY-MM-DD dates."""
     changelog_path = Path("CHANGELOG.md")
 
@@ -91,7 +91,7 @@ def test_changelog_date_format():
     print(f"✅ All {len(headers)} Phase headers have valid YYYY-MM-DD dates")
 
 
-def test_changelog_date_consistency():
+def test_changelog_date_consistency() -> None:
     """Test that Phase headers are in chronological order (newest first)."""
     changelog_path = Path("CHANGELOG.md")
 
@@ -114,7 +114,7 @@ def test_changelog_date_consistency():
 
     # Group by major.minor version to check chronological order within each group
     # This allows sub-phases to have different dates while maintaining overall order
-    phase_groups = {}
+    phase_groups: dict[str, list[tuple[str, datetime, str]]] = {}
     for phase_num, date_obj, date_str in dates:
         # Extract major.minor (e.g., "1.17" from "1.17.5c")
         major_minor = ".".join(phase_num.split(".")[:2])
@@ -142,7 +142,7 @@ def test_changelog_date_consistency():
     )
 
 
-def test_phase_number_format():
+def test_phase_number_format() -> None:
     """Test that Phase numbers follow expected format (e.g., 1.18.1, 1.17.5c)."""
     changelog_path = Path("CHANGELOG.md")
 

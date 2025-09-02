@@ -46,6 +46,11 @@ def render_controls(
 
     # Sorting controls (preserve existing labels and behavior)
     st.sidebar.write("**Sorting**")
+
+    # Store previous sort key to detect changes
+    sort_key_key = f"previous_sort_{selected_run_id}"
+    previous_sort = st.session_state.get(sort_key_key, "Group Size (Desc)")
+
     sort_by = st.sidebar.selectbox(
         "Sort Groups By",
         [
@@ -58,6 +63,15 @@ def render_controls(
         ],
         index=0,
     )
+
+    # Check if sort order changed and force refresh
+    if sort_by != previous_sort:
+        st.session_state[sort_key_key] = sort_by
+        # Reset to page 1 when sort order changes
+        page_state.number = 1
+        set_page_state(st.session_state, page_state)
+        # Force a rerun to apply the new sorting
+        st.rerun()
 
     # Validate sort key
     if not validate_sort_key(sort_by):

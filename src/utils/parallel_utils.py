@@ -7,15 +7,38 @@ with support for different backends and resource monitoring.
 
 import os
 import threading
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.utils.logging_utils import get_logger
 from src.utils.resource_monitor import (
     calculate_optimal_workers,
     monitor_parallel_execution,
 )
+from src.utils.path_utils import get_config_path
 
 logger = get_logger(__name__)
+
+
+def _load_parallelism_settings() -> Dict[str, Any]:
+    """Load parallelism settings from config file."""
+    try:
+        import yaml
+
+        config_path = get_config_path()
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+            if isinstance(config, dict):
+                return config.get("parallelism", {})
+            else:
+                return {}
+    except Exception:
+        # Return default settings if config loading fails
+        return {
+            "backend": "loky",
+            "chunk_size": 1000,
+            "small_input_threshold": 10000,
+        }
+
 
 # Try to import joblib, but don't fail if not available
 try:
@@ -51,11 +74,11 @@ def ensure_single_thread_blas() -> None:
 
 
 def parallel_map(
-    func: Callable,
+    func: Callable[[Any], Any],
     items: List[Any],
     workers: Optional[int] = None,
-    backend: str = "loky",
-    chunk_size: int = 1000,
+    backend: Optional[str] = None,
+    chunk_size: Optional[int] = None,
 ) -> List[Any]:
     """Parallel map function using joblib with deterministic ordering.
 
@@ -69,6 +92,14 @@ def parallel_map(
     Returns:
         List of results in the same order as input items
     """
+    # Load settings if not provided
+    if backend is None or chunk_size is None:
+        settings = _load_parallelism_settings()
+        if backend is None:
+            backend = settings.get("backend", "loky")
+        if chunk_size is None:
+            chunk_size = settings.get("chunk_size", 1000)
+
     if not JOBLIB_AVAILABLE or workers is None or workers <= 1:
         # Sequential fallback
         return [func(item) for item in items]
@@ -81,7 +112,8 @@ def parallel_map(
         delayed(func)(item) for item in items
     )
 
-    return results
+    # Ensure we return a list (joblib Parallel returns Any)
+    return list(results)
 
 
 def _try_import_joblib() -> bool:
@@ -109,16 +141,20 @@ def is_loky_available() -> bool:
         _LOKY_AVAILABLE = False
         return _LOKY_AVAILABLE
 
+    # Test loky backend
+    loky_works = False
     try:
         # Simple test to see if loky works
         result = Parallel(n_jobs=1, backend="loky")(delayed(lambda: 1)() for _ in [0])
-        _LOKY_AVAILABLE = (
+        # Ensure result is a list and contains expected value
+        loky_works = bool(
             isinstance(result, list) and len(result) == 1 and result[0] == 1
         )
     except Exception as e:
         logger.debug(f"loky backend test failed: {e}")
-        _LOKY_AVAILABLE = False
+        loky_works = False
 
+    _LOKY_AVAILABLE = loky_works
     return _LOKY_AVAILABLE
 
 
@@ -187,21 +223,20 @@ class ParallelExecutor:
             self.backend_reason = (
                 "joblib_unavailable" if not JOBLIB_AVAILABLE else "disabled"
             )
-            return
+        else:
+            # Calculate optimal workers
+            self.workers = calculate_optimal_workers(workers)
 
-        # Calculate optimal workers
-        self.workers = calculate_optimal_workers(workers)
+            # Select backend with explicit logging
+            chosen_backend, reason = select_backend(backend)
+            self.backend = chosen_backend
+            self.backend_reason = reason
+            self.chunk_size = chunk_size
 
-        # Select backend with explicit logging
-        chosen_backend, reason = select_backend(backend)
-        self.backend = chosen_backend
-        self.backend_reason = reason
-        self.chunk_size = chunk_size
-
-        logger.info(
-            f"Parallel executor initialized | requested={backend}, chosen={chosen_backend}, "
-            f"reason={reason}, workers={self.workers}"
-        )
+            logger.info(
+                f"Parallel executor initialized | requested={backend}, chosen={chosen_backend}, "
+                f"reason={reason}, workers={self.workers}"
+            )
 
     def should_use_parallel(self, input_size: int) -> bool:
         """
@@ -314,12 +349,40 @@ class ParallelExecutor:
 
         input_size = len(items)
 
+        # Create balanced chunks: target ~N_workers × 2-4 chunks
+        target_chunks = min(
+            max(self.workers * 3, 1),
+            max(1, (input_size + chunk_size - 1) // chunk_size),
+        )
+        balanced_chunk_size = max(1, (input_size + target_chunks - 1) // target_chunks)
+
+        # Ensure minimum chunk size unless input is tiny
+        if input_size > 100:  # Configurable minimum
+            balanced_chunk_size = max(balanced_chunk_size, 100)
+
+        # Create chunks with balanced sizing
+        chunks = [
+            items[i : i + balanced_chunk_size]
+            for i in range(0, len(items), balanced_chunk_size)
+        ]
+
+        # Log parallel plan summary
+        if self.should_use_parallel(input_size):
+            logger.info(
+                f"Parallel plan: N={input_size}, chunks={len(chunks)}, "
+                f"avg_size={balanced_chunk_size}, strategy=parallel "
+                f"(workers={self.workers}, backend={self.backend})"
+            )
+        else:
+            logger.info(
+                f"Sequential plan: N={input_size}, chunks={len(chunks)}, "
+                f"avg_size={balanced_chunk_size}, strategy=sequential "
+                f"(reason=input_size < {self.small_input_threshold})"
+            )
+
         if not self.should_use_parallel(input_size):
             logger.info(f"Executing {operation_name} sequentially (size: {input_size})")
             # For sequential execution, process items in chunks to match parallel behavior
-            chunks = [
-                items[i : i + chunk_size] for i in range(0, len(items), chunk_size)
-            ]
             results = []
             for chunk in chunks:
                 if self.stop_flag.is_set():
@@ -332,41 +395,29 @@ class ParallelExecutor:
                     results.append(chunk_result)
             return results
 
-        # Create chunks
-        chunks = [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
+        # Monitor parallel execution
+        monitor_parallel_execution(self.workers, operation_name)
 
         logger.info(
             f"Executing {operation_name} in parallel: "
             f"workers={self.workers}, backend={self.backend}, "
-            f"chunks={len(chunks)}, chunk_size={chunk_size}, items={input_size}"
+            f"chunks={len(chunks)}, chunk_size={balanced_chunk_size}, items={input_size}"
         )
 
-        # Monitor parallel execution
-        monitor_parallel_execution(self.workers, operation_name)
-
         try:
-            results = Parallel(n_jobs=self.workers, backend=self.backend, verbose=0)(
-                delayed(func)(chunk) for chunk in chunks
-            )
+            results = Parallel(
+                n_jobs=self.workers,
+                backend=self.backend,
+                batch_size=balanced_chunk_size,
+                verbose=0,
+            )(delayed(func)(chunk) for chunk in chunks)
 
-            # Flatten results
-            flattened_results = []
-            for chunk_result in results:
-                if isinstance(chunk_result, list):
-                    flattened_results.extend(chunk_result)
-                else:
-                    flattened_results.append(chunk_result)
-
-            logger.info(f"Completed {operation_name}: {len(flattened_results)} results")
-            return flattened_results
+            logger.info(f"Completed {operation_name}: {len(results)} results")
+            return list(results)
 
         except Exception as e:
             logger.error(f"Parallel execution failed: {e}")
             logger.info(f"Falling back to sequential execution for {operation_name}")
-            # For error fallback, process items in chunks to match parallel behavior
-            chunks = [
-                items[i : i + chunk_size] for i in range(0, len(items), chunk_size)
-            ]
             results = []
             for chunk in chunks:
                 if self.stop_flag.is_set():
@@ -382,9 +433,9 @@ class ParallelExecutor:
 
 def create_parallel_executor(
     workers: Optional[int] = None,
-    backend: str = "loky",
-    chunk_size: int = 1000,
-    small_input_threshold: int = 10000,
+    backend: Optional[str] = None,
+    chunk_size: Optional[int] = None,
+    small_input_threshold: Optional[int] = None,
     disable_parallel: bool = False,
     stop_flag: Optional[threading.Event] = None,
 ) -> ParallelExecutor:
@@ -402,6 +453,16 @@ def create_parallel_executor(
     Returns:
         Configured ParallelExecutor instance
     """
+    # Load settings if not provided
+    if backend is None or chunk_size is None or small_input_threshold is None:
+        settings = _load_parallelism_settings()
+        if backend is None:
+            backend = settings.get("backend", "loky")
+        if chunk_size is None:
+            chunk_size = settings.get("chunk_size", 1000)
+        if small_input_threshold is None:
+            small_input_threshold = settings.get("small_input_threshold", 10000)
+
     return ParallelExecutor(
         workers=workers,
         backend=backend,

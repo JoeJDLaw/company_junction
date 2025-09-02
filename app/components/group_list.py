@@ -128,19 +128,8 @@ def render_group_list(
     end_idx = min(start_idx + page_size, total_groups)
     st.caption(f"Showing {start_idx + 1}–{end_idx} of {total_groups} groups")
 
-    # Cache management
-    col1, col2 = st.columns([3, 1])
-    with col2:
-        if st.button(
-            "🗑️ Clear Caches for Current Run", key=f"clear_caches_list_{selected_run_id}"
-        ):
-            # Clear list-level caches for current run
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            st.success(
-                f"Cleared caches for run {selected_run_id} (backend: {backend_state.groups.get(selected_run_id, "pyarrow")})"
-            )
-            st.rerun()
+    # Phase 1.26.2: Cache management moved to maintenance sidebar for better organization
+    # Cache clearing is now handled in the maintenance component with helpful tooltips
 
     # Phase 1.22.1: Show performance indicator when using fast path
     try:
@@ -196,6 +185,42 @@ def render_group_list_fragment(
         group_size = group_info["group_size"]
         primary_name = group_info["primary_name"]
 
-        with st.expander(f"Group {group_id}: {primary_name} ({group_size} records)"):
+        # Extract additional fields for better decision making
+        max_score = group_info.get("max_score", 0.0)
+        disposition = group_info.get("disposition", "Unknown")
+
+        # Create a more informative expander title with key fields
+        expander_title = f"Group {group_id}: {primary_name} ({group_size} records)"
+        if max_score > 0:
+            expander_title += f" | Score: {max_score:.3f}"
+        if disposition and disposition != "Unknown":
+            expander_title += f" | {disposition}"
+
+        with st.expander(expander_title):
+            # Display key group information for quick review
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Group Size", group_size)
+            with col2:
+                if max_score > 0:
+                    st.metric("Max Score", f"{max_score:.3f}")
+                else:
+                    st.metric("Max Score", "N/A")
+            with col3:
+                if disposition and disposition != "Unknown":
+                    # Color-code dispositions for quick visual identification
+                    if disposition == "Keep":
+                        st.success(f"✅ {disposition}")
+                    elif disposition == "Update":
+                        st.warning(f"⚠️ {disposition}")
+                    elif disposition == "Delete":
+                        st.error(f"🗑️ {disposition}")
+                    elif disposition == "Verify":
+                        st.info(f"🔍 {disposition}")
+                    else:
+                        st.write(f"📋 {disposition}")
+                else:
+                    st.write("📋 No disposition")
+
             # This will be handled by the group_details component
             st.write("Group details will be loaded here...")
