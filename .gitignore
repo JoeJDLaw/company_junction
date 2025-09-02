@@ -68,3 +68,4 @@ prompts/
 # Backup files
 data/_backups/
 tarballs/
+pipeline.log.bak
