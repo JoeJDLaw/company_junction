@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 1.27.2**: Mini-DAG Resume System Critical Audit & Fix
+  - **Pipeline Constants Standardization**: Created `src/utils/pipeline_constants.py` for consistent file naming across all stages
+  - **Enhanced Resume Validation**: Added comprehensive validation with `validate_resume_capability()` method
+  - **State Consistency Checking**: Implemented `_validate_state_consistency()` to detect orphaned or inconsistent stages
+  - **Automatic State Repair**: Added `_repair_state_inconsistency()` with feature flag control for minor state issues
+  - **Resume Decision Logging**: Enhanced logging with standardized decision codes (NO_PREVIOUS_RUN, NEXT_STAGE_READY, etc.)
+  - **Performance Validation**: Resume validation completes in <5 seconds with timeout protection
+  - **Comprehensive Testing**: Added `tests/test_mini_dag_resume.py` with 20+ test cases covering all resume scenarios
+  - **Feature Flagging**: State repair can be disabled via `RESUME_STATE_REPAIR_ENABLED` configuration
+  - **Resume Summary API**: Added `get_resume_validation_summary()` for detailed validation status reporting
 - **Phase 1.26.2**: DuckDB Fallback Fix & Backend Selection Improvements
   - **Critical Fix**: Resolved DuckDB fallback issue where `group_stats.parquet` was found but PyArrow was still used
   - **Simplified Backend Selection**: Replaced complex three-phase logic with clear priority-based routing

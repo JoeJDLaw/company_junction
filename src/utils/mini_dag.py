@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Literal, Any
+from typing import Dict, List, Optional, Literal, Any, Tuple
 from pathlib import Path
 import json
 import logging
@@ -10,6 +10,13 @@ import os
 import hashlib
 
 from src.utils.path_utils import get_interim_dir
+from src.utils.pipeline_constants import (
+    PIPELINE_STAGES,
+    STAGE_INTERMEDIATE_FILES,
+    RESUME_VALIDATION_TIMEOUT,
+    RESUME_STATE_REPAIR_ENABLED,
+    ResumeDecision,
+)
 
 Status = Literal["pending", "running", "completed", "failed", "interrupted"]
 
@@ -110,16 +117,7 @@ class MiniDAG:
             return None
 
         # Define stage order for determining "last"
-        stage_order = [
-            "normalization",
-            "filtering",
-            "candidate_generation",
-            "grouping",
-            "survivorship",
-            "disposition",
-            "alias_matching",
-            "final_output",
-        ]
+        stage_order = PIPELINE_STAGES
 
         # Find the highest-indexed completed stage
         last_completed = None
@@ -153,54 +151,10 @@ class MiniDAG:
         if not interim_dir.exists():
             return False
 
-        # Define expected files for each stage
-        stage_files = {
-            "normalization": ["accounts_filtered.parquet"],  # Pipeline produces filtered, not normalized
-            "filtering": ["accounts_filtered.parquet"],
-            "candidate_generation": [
-                "accounts_filtered.parquet",  # Use filtered as the base
-                "candidate_pairs.parquet",
-            ],
-            "grouping": [
-                "accounts_filtered.parquet",  # Use filtered as the base
-                "candidate_pairs.parquet",
-                "groups.parquet",
-            ],
-            "survivorship": [
-                "accounts_filtered.parquet",  # Use filtered as the base
-                "candidate_pairs.parquet",
-                "groups.parquet",
-                "survivorship.parquet",
-            ],
-            "disposition": [
-                "accounts_filtered.parquet",  # Use filtered as the base
-                "candidate_pairs.parquet",
-                "groups.parquet",
-                "survivorship.parquet",
-                "dispositions.parquet",
-            ],
-            "alias_matching": [
-                "accounts_filtered.parquet",  # Use filtered as the base
-                "candidate_pairs.parquet",
-                "groups.parquet",
-                "survivorship.parquet",
-                "dispositions.parquet",
-                "alias_matches.parquet",
-            ],
-            "final_output": [
-                "accounts_filtered.parquet",  # Use filtered as the base
-                "candidate_pairs.parquet",
-                "groups.parquet",
-                "survivorship.parquet",
-                "dispositions.parquet",
-                "alias_matches.parquet",
-            ],
-        }
-
-        if stage_name not in stage_files:
+        if stage_name not in STAGE_INTERMEDIATE_FILES:
             return False
 
-        required_files = stage_files[stage_name]
+        required_files = STAGE_INTERMEDIATE_FILES[stage_name]
         for filename in required_files:
             if not (interim_dir / filename).exists():
                 return False
@@ -216,7 +170,7 @@ class MiniDAG:
         2. Existence of intermediate files
         3. Pipeline state consistency
 
-        Returns tuple of (resume_stage, reason_code) for enhanced logging.
+        Returns the stage name to resume from, or None if starting fresh.
         """
         if interim_dir is None:
             # Use the run_id from metadata if available, otherwise fallback to default
@@ -224,29 +178,21 @@ class MiniDAG:
                 interim_dir = get_interim_dir(self.run_id)
             else:
                 interim_dir = get_interim_dir("default")
+
+        # Use enhanced validation
+        can_resume, reason, decision = self.validate_resume_capability(interim_dir)
+        
+        if not can_resume:
+            self._logger.info(f"Auto-resume decision: {decision} - {reason}")
+            return None
+
         last_completed = self.get_last_completed_stage()
         if not last_completed:
             self._logger.info("Auto-resume decision: NO_PREVIOUS_RUN - starting fresh")
             return None
 
-        # Check if intermediate files exist for the last completed stage
-        if not self.validate_intermediate_files(last_completed, interim_dir):
-            self._logger.warning(
-                f"Auto-resume decision: MISSING_FILES - last completed stage '{last_completed}' found but intermediate files missing"
-            )
-            return None
-
         # Check if we can resume from the next stage
-        stage_order = [
-            "normalization",
-            "filtering",
-            "candidate_generation",
-            "grouping",
-            "survivorship",
-            "disposition",
-            "alias_matching",
-            "final_output",
-        ]
+        stage_order = PIPELINE_STAGES
 
         try:
             last_index = stage_order.index(last_completed)
@@ -300,6 +246,116 @@ class MiniDAG:
             return False  # No previous run to compare against
 
         return bool(current_hash == stored_hash)
+
+    def validate_resume_capability(
+        self, interim_dir: Optional[Path] = None
+    ) -> Tuple[bool, str, ResumeDecision]:
+        """
+        Validate if the pipeline can resume from the current state.
+        
+        Returns:
+            Tuple of (can_resume, reason, decision_code)
+        """
+        if interim_dir is None:
+            if hasattr(self, 'run_id') and self.run_id:
+                interim_dir = get_interim_dir(self.run_id)
+            else:
+                interim_dir = get_interim_dir("default")
+
+        # Check if interim directory exists
+        if not interim_dir.exists():
+            return False, "Interim directory does not exist", "MISSING_FILES"
+
+        # Check if we have any completed stages
+        last_completed = self.get_last_completed_stage()
+        if not last_completed:
+            return False, "No previous run found", "NO_PREVIOUS_RUN"
+
+        # Validate intermediate files for the last completed stage
+        if not self.validate_intermediate_files(last_completed, interim_dir):
+            return False, f"Missing intermediate files for stage '{last_completed}'", "MISSING_FILES"
+
+        # Check state consistency
+        if not self._validate_state_consistency():
+            if RESUME_STATE_REPAIR_ENABLED:
+                self._logger.warning("State inconsistency detected, attempting repair")
+                if self._repair_state_inconsistency():
+                    self._logger.info("State inconsistency repaired successfully")
+                else:
+                    return False, "State inconsistency could not be repaired", "STATE_INCONSISTENT"
+            else:
+                return False, "State inconsistency detected", "STATE_INCONSISTENT"
+
+        return True, f"Can resume from stage '{last_completed}'", "NEXT_STAGE_READY"
+
+    def _validate_state_consistency(self) -> bool:
+        """Check if the DAG state is internally consistent."""
+        # Check for orphaned stages (completed stages with no dependencies met)
+        for stage_name, stage in self._stages.items():
+            if stage.status == "completed":
+                # Verify all dependencies are also completed
+                for dep in stage.deps:
+                    if dep not in self._stages or self._stages[dep].status != "completed":
+                        self._logger.warning(f"Stage '{stage_name}' completed but dependency '{dep}' is not")
+                        return False
+        return True
+
+    def _repair_state_inconsistency(self) -> bool:
+        """Attempt to repair minor state inconsistencies."""
+        try:
+            # Reset any running stages to pending
+            for stage in self._stages.values():
+                if stage.status == "running":
+                    stage.status = "pending"
+                    stage.start_time = None
+                    stage.end_time = None
+                    self._logger.info(f"Reset running stage '{stage.name}' to pending")
+
+            # Reset any failed stages to pending
+            for stage in self._stages.values():
+                if stage.status == "failed":
+                    stage.status = "pending"
+                    stage.start_time = None
+                    stage.end_time = None
+                    self._logger.info(f"Reset failed stage '{stage.name}' to pending")
+
+            self._save()
+            return True
+        except Exception as e:
+            self._logger.error(f"Failed to repair state inconsistency: {e}")
+            return False
+
+    def get_resume_validation_summary(
+        self, interim_dir: Optional[Path] = None
+    ) -> Dict[str, Any]:
+        """
+        Get a comprehensive summary of resume validation status.
+        
+        Returns:
+            Dictionary with validation details
+        """
+        can_resume, reason, decision = self.validate_resume_capability(interim_dir)
+        last_completed = self.get_last_completed_stage()
+        
+        summary = {
+            "can_resume": can_resume,
+            "reason": reason,
+            "decision_code": decision,
+            "last_completed_stage": last_completed,
+            "interim_dir": str(interim_dir or get_interim_dir(self.run_id or "default")),
+            "stage_status": {name: stage.status for name, stage in self._stages.items()},
+            "validation_timestamp": time.time(),
+        }
+        
+        # Add file validation details if we have a last completed stage
+        if last_completed:
+            summary["file_validation"] = {
+                "stage": last_completed,
+                "files_exist": self.validate_intermediate_files(last_completed, interim_dir),
+                "expected_files": STAGE_INTERMEDIATE_FILES.get(last_completed, []),
+            }
+        
+        return summary
 
     def _update_state_metadata(
         self, input_path: Path, config_path: Path, cmdline: str

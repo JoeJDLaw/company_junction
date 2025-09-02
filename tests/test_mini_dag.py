@@ -47,7 +47,7 @@ def test_validate_intermediate_files() -> None:
         assert not dag.validate_intermediate_files("normalization", interim_dir)
 
         # Create required file for normalization
-        (interim_dir / "accounts_normalized.parquet").touch()
+        (interim_dir / "accounts_filtered.parquet").touch()
         assert dag.validate_intermediate_files("normalization", interim_dir)
 
         # Missing file for candidate_generation
@@ -77,7 +77,7 @@ def test_get_smart_resume_stage() -> None:
         assert dag.get_smart_resume_stage(interim_dir) is None
 
         # Create intermediate files for normalization
-        (interim_dir / "accounts_normalized.parquet").touch()
+        (interim_dir / "accounts_filtered.parquet").touch()
 
         # Should suggest starting from filtering (next stage)
         # But first need to create the filtering stage files
