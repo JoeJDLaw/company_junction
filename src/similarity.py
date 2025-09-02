@@ -10,11 +10,13 @@ This module handles:
 """
 
 import pandas as pd
+import numpy as np
 from rapidfuzz import fuzz
 from typing import List, Tuple, Dict, Any, Optional
 import logging
 from itertools import combinations
 import re
+import os
 from src.utils.progress import ProgressLogger
 from src.utils.parallel_utils import ParallelExecutor, ensure_deterministic_order
 
@@ -58,8 +60,12 @@ def pair_scores(
 
     # Generate candidate pairs using blocking
     candidate_pairs = _generate_candidate_pairs(
-        df_norm, enable_progress, parallel_executor, interim_dir
+        df_norm, enable_progress, parallel_executor, interim_dir, settings
     )
+    
+    # Drop temporary blocking columns
+    if "secondary_key" in df_norm.columns:
+        df_norm.drop(columns=["secondary_key"], inplace=True)
 
     if not candidate_pairs:
         logger.info("No candidate pairs found")
@@ -67,7 +73,7 @@ def pair_scores(
 
     # Compute similarity scores for each pair
     scores = _compute_similarity_scores_parallel(
-        df_norm, candidate_pairs, penalties, enable_progress, parallel_executor
+        df_norm, candidate_pairs, penalties, enable_progress, parallel_executor, interim_dir
     )
 
     # Create DataFrame and filter by medium threshold
@@ -88,12 +94,17 @@ def _generate_candidate_pairs(
     enable_progress: bool = False,
     parallel_executor: Optional[ParallelExecutor] = None,
     interim_dir: Optional[str] = None,
+    settings: Optional[Dict[str, Any]] = None,
 ) -> List[Tuple[int, int]]:
     """
-    Generate candidate pairs using blocking strategy.
+    Generate candidate pairs using blocking strategy with deterministic block cap and secondary blocking.
 
     Args:
         df_norm: DataFrame with normalized name columns
+        enable_progress: Enable progress logging
+        parallel_executor: Optional parallel executor for parallel processing
+        interim_dir: Optional directory for interim files
+        settings: Configuration settings
 
     Returns:
         List of (idx_a, idx_b) tuples
@@ -104,31 +115,37 @@ def _generate_candidate_pairs(
     if df_norm.empty or "name_core" not in df_norm.columns:
         return pairs
 
-    # Stop tokens for first token blocking (common suffixes to avoid)
+    # Get performance settings
+    perf_settings = settings.get("similarity", {}).get("performance", {}) if settings else {}
+    block_cap = perf_settings.get("block_cap", 800)
+    secondary_blocking = perf_settings.get("secondary_blocking", "first_two_tokens")
+    enable_prefilters = perf_settings.get("enable_vectorized_prefilters", True)
+    max_length_diff = perf_settings.get("max_length_diff", 5)
+
+    # Stop tokens for first token blocking
     stop_tokens = get_stop_tokens()
 
-    # Safety limit: if too many records, use more aggressive blocking
-    max_records = 50000  # Conservative limit
-    if len(df_norm) > max_records:
-        logger.warning(
-            f"Large dataset detected ({len(df_norm)} records). Using aggressive blocking strategy."
-        )
-        # Use first two tokens for blocking instead of just first
-        df_norm["block_key"] = (
+    # Primary blocking key
+    def get_first_token(name: str) -> str:
+        tokens = name.split()
+        for token in tokens:
+            if token.lower() not in stop_tokens:
+                return token
+        return tokens[0] if tokens else ""
+
+    df_norm["block_key"] = df_norm["name_core"].apply(get_first_token).fillna("")
+
+    # Secondary blocking key
+    if secondary_blocking == "first_two_tokens":
+        df_norm["secondary_key"] = (
             df_norm["name_core"].str.split().str[:2].str.join(" ").fillna("")
         )
+    elif secondary_blocking == "char_bigrams":
+        def get_bigrams(text: str) -> str:
+            return " ".join([text[i:i+2] for i in range(len(text)-1)])
+        df_norm["secondary_key"] = df_norm["name_core"].apply(get_bigrams).fillna("")
     else:
-        # Use first token for blocking with stop token logic
-        def get_first_token(name: str) -> str:
-            tokens = name.split()
-            for token in tokens:
-                if token.lower() not in stop_tokens:
-                    return token
-            return (
-                tokens[0] if tokens else ""
-            )  # Fallback to first token if all are stop tokens
-
-        df_norm["block_key"] = df_norm["name_core"].apply(get_first_token).fillna("")
+        df_norm["secondary_key"] = df_norm["block_key"]  # Fallback to primary key
 
     # Count pairs to estimate memory usage
     total_pairs = 0
@@ -184,21 +201,67 @@ def _generate_candidate_pairs(
 
         # Get indices for records with this block key
         mask = df_norm["block_key"] == block_key
-        indices = df_norm[mask].index.tolist()
+        block_df = df_norm[mask].copy()
+        block_size = len(block_df)
 
-        # Generate pairs within this block
-        if len(indices) > 1:
-            block_pairs = list(combinations(indices, 2))
+        # Skip tiny blocks
+        if block_size <= 1:
+            continue
+
+        # Apply deterministic block cap if needed
+        if block_size > block_cap:
+            logger.info(f"Block {block_key} exceeds cap ({block_size} > {block_cap}). Using secondary blocking.")
+            
+            # Group by secondary key within the block
+            secondary_groups = block_df.groupby("secondary_key")
+            
+            for _, group_df in secondary_groups:
+                group_indices = group_df.index.tolist()
+                if len(group_indices) > 1:
+                    # Apply vectorized prefilters if enabled
+                    if enable_prefilters:
+                        # Get name lengths
+                        name_lengths = group_df["name_core"].str.len()
+                        
+                        # Create a matrix of length differences
+                        length_diffs = abs(name_lengths.values[:, None] - name_lengths.values)
+                        
+                        # Get valid pairs based on length difference
+                        valid_pairs = np.where(length_diffs <= max_length_diff)
+                        
+                        # Convert to list of tuples
+                        filtered_pairs = list(zip(
+                            [group_indices[i] for i in valid_pairs[0]],
+                            [group_indices[j] for j in valid_pairs[1]]
+                        ))
+                        
+                        # Remove self-pairs and ensure i < j
+                        filtered_pairs = [(i, j) for i, j in filtered_pairs if i < j]
+                    else:
+                        filtered_pairs = list(combinations(group_indices, 2))
+
+                    total_pairs += len(filtered_pairs)
+                    pairs.extend(filtered_pairs)
+
+                    # Safety check: if we're generating too many pairs, skip remaining
+                    if total_pairs > max_pairs:
+                        logger.warning(
+                            f"Too many candidate pairs ({total_pairs}). Skipping remaining blocks."
+                        )
+                        break
+        else:
+            # For small blocks, process all pairs
+            block_indices = block_df.index.tolist()
+            block_pairs = list(combinations(block_indices, 2))
             total_pairs += len(block_pairs)
-
-            # Safety check: if we're generating too many pairs, skip this block
-            if total_pairs > max_pairs:
-                logger.warning(
-                    f"Too many candidate pairs ({total_pairs}). Skipping remaining blocks."
-                )
-                break
-
             pairs.extend(block_pairs)
+
+        # Safety check: if we're generating too many pairs, skip remaining blocks
+        if total_pairs > max_pairs:
+            logger.warning(
+                f"Too many candidate pairs ({total_pairs}). Skipping remaining blocks."
+            )
+            break
 
     # Remove duplicates and return
     unique_pairs = list(set(pairs))
@@ -210,6 +273,77 @@ def _generate_candidate_pairs(
 
     return unique_pairs
 
+
+def _compute_pair_score_optimized(
+    name_core_a: str,
+    name_core_b: str,
+    suffix_class_a: str,
+    suffix_class_b: str,
+    account_id_a: str,
+    account_id_b: str,
+    penalties: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Compute similarity score for a pair of records using optimized data layout.
+
+    Args:
+        name_core_a: First record's name_core
+        name_core_b: Second record's name_core
+        suffix_class_a: First record's suffix_class
+        suffix_class_b: Second record's suffix_class
+        idx_a: First record's index
+        idx_b: Second record's index
+        penalties: Penalty configuration
+
+    Returns:
+        Dictionary with score components
+    """
+    # Compute rapidfuzz ratios with score_cutoff
+    high_threshold = 92  # From settings.yaml
+    ratio_name = fuzz.token_sort_ratio(name_core_a, name_core_b, score_cutoff=high_threshold)
+    ratio_set = fuzz.token_set_ratio(name_core_a, name_core_b, score_cutoff=high_threshold)
+
+    # Compute Jaccard similarity
+    tokens_a = set(name_core_a.split())
+    tokens_b = set(name_core_b.split())
+
+    if tokens_a and tokens_b:
+        intersection = len(tokens_a & tokens_b)
+        union = len(tokens_a | tokens_b)
+        jaccard = intersection / union if union > 0 else 0
+    else:
+        jaccard = 0
+
+    # Check numeric style match
+    num_style_match = _check_numeric_style_match(name_core_a, name_core_b)
+
+    # Check suffix match
+    suffix_match = suffix_class_a == suffix_class_b
+
+    # Compute base score
+    base = 0.45 * ratio_name + 0.35 * ratio_set + 20 * jaccard
+
+    # Apply penalties
+    if not num_style_match:
+        base -= penalties.get("num_style_mismatch", 5)
+
+    if not suffix_match:
+        base -= penalties.get("suffix_mismatch", 25)
+
+    # Clip to 0-100 range
+    score = max(0, min(100, round(base)))
+
+    return {
+        "id_a": account_id_a,
+        "id_b": account_id_b,
+        "score": score,
+        "ratio_name": ratio_name,
+        "ratio_set": ratio_set,
+        "jaccard": jaccard,
+        "num_style_match": num_style_match,
+        "suffix_match": suffix_match,
+        "base_score": base,
+    }
 
 def _compute_pair_score(
     row_a: pd.Series, row_b: pd.Series, penalties: Dict[str, Any]
@@ -382,7 +516,59 @@ def _compute_similarity_scores_parallel(
     penalties: Dict[str, Any],
     enable_progress: bool = False,
     parallel_executor: Optional[ParallelExecutor] = None,
+    interim_dir: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
+    """
+    Compute similarity scores for candidate pairs in parallel with optimized data layout.
+    
+    Args:
+        df_norm: DataFrame with normalized name columns
+        candidate_pairs: List of (idx_a, idx_b) tuples
+        penalties: Dictionary of penalty values
+        enable_progress: Enable progress logging
+        parallel_executor: Optional parallel executor for parallel processing
+        
+    Returns:
+        List of dictionaries with similarity scores and metadata
+    """
+    # Create index mapping from original to filtered indices
+    filtered_indices = df_norm.index.values
+    index_map = {idx: i for i, idx in enumerate(filtered_indices)}
+    
+    # Convert frequently used columns to numpy arrays for better memory layout
+    name_core_array = df_norm["name_core"].values
+    suffix_class_array = df_norm["suffix_class"].values
+    account_id_array = df_norm["account_id"].values
+    
+    # Create memory-mapped arrays for parallel processing
+    if parallel_executor and parallel_executor.backend == "loky":
+        try:
+            from joblib import dump, load
+            import tempfile
+            import os
+            
+            # Create temporary files for memory mapping
+            with tempfile.NamedTemporaryFile(delete=False) as f_name:
+                dump(name_core_array, f_name.name)
+                name_core_mmap = load(f_name.name, mmap_mode="r")
+            
+            with tempfile.NamedTemporaryFile(delete=False) as f_suffix:
+                dump(suffix_class_array, f_suffix.name)
+                suffix_class_mmap = load(f_suffix.name, mmap_mode="r")
+                
+            # Use memory-mapped arrays
+            name_core_array = name_core_mmap
+            suffix_class_array = suffix_class_mmap
+            
+            # Clean up temp files when done
+            def cleanup():
+                os.unlink(f_name.name)
+                os.unlink(f_suffix.name)
+            import atexit
+            atexit.register(cleanup)
+            
+        except ImportError:
+            logger.warning("joblib not available for memory mapping - using regular arrays")
     """
     Compute similarity scores for candidate pairs using parallel execution.
 
@@ -396,64 +582,114 @@ def _compute_similarity_scores_parallel(
     Returns:
         List of score dictionaries
     """
-    if not candidate_pairs:
-        return []
+    # Process pairs in parallel if executor available
+    if parallel_executor:
+        # Split pairs into chunks for parallel processing
+        chunk_size = parallel_executor.chunk_size or 1000
+        pair_chunks = [
+            candidate_pairs[i : i + chunk_size]
+            for i in range(0, len(candidate_pairs), chunk_size)
+        ]
 
-    # Handle both standardized and original column names
-    account_id_col = "account_id" if "account_id" in df_norm.columns else "Account ID"
+        # Create a closure that uses the memory-mapped arrays
+        def process_chunk(chunk):
+            return [
+                _compute_pair_score_optimized(
+                    name_core_array[index_map[idx_a]],
+                    name_core_array[index_map[idx_b]],
+                    suffix_class_array[index_map[idx_a]],
+                    suffix_class_array[index_map[idx_b]],
+                    account_id_array[index_map[idx_a]],
+                    account_id_array[index_map[idx_b]],
+                    penalties,
+                )
+                for idx_a, idx_b in chunk
+            ]
 
-    def score_pair(pair: Tuple[int, int]) -> Optional[Dict[str, Any]]:
-        """Score a single pair of records."""
-        try:
-            idx_a, idx_b = pair
-            score_data = _compute_pair_score(
-                df_norm.loc[idx_a:idx_a].iloc[0],
-                df_norm.loc[idx_b:idx_b].iloc[0],
-                penalties,
-            )
-            account_id_a = df_norm.loc[idx_a, account_id_col]
-            account_id_b = df_norm.loc[idx_b, account_id_col]
-            return {"id_a": account_id_a, "id_b": account_id_b, **score_data}
-        except KeyError as e:
-            logger.warning(f"Skipping pair {pair}: index not found - {e}")
-            return None
-
-    if parallel_executor and parallel_executor.should_use_parallel(
-        len(candidate_pairs)
-    ):
-        # Use parallel execution
-        logger.info(
-            f"Computing similarity scores in parallel for {len(candidate_pairs)} pairs"
-        )
-
-        # Process pairs in parallel
-        results = parallel_executor.execute(
-            score_pair, candidate_pairs, operation_name="similarity_scoring"
-        )
-
-        # Filter out None results and ensure deterministic ordering
-        scores = [result for result in results if result is not None]
-        scores = ensure_deterministic_order(scores, lambda x: (x["id_a"], x["id_b"]))
-
-    else:
-        # Use sequential execution with progress logging
-        logger.info(
-            f"Computing similarity scores sequentially for {len(candidate_pairs)} pairs"
-        )
-
-        scores = []
-        progress = ProgressLogger(
+        # Add progress logging for pair scoring
+        pair_progress = ProgressLogger(
             total=len(candidate_pairs),
             label="pair-scoring",
-            step_every=10_000,
+            step_every=5000,
             secs_every=5.0,
             enable_tqdm=enable_progress,
         )
 
-        for pair in progress.wrap(candidate_pairs):
-            result = score_pair(pair)
-            if result is not None:
-                scores.append(result)
+        # Process chunks in parallel with checkpointing
+        scores = []
+        processed = 0
+        checkpoint_size = 50000  # Save every 50k pairs
+        
+        # Load existing checkpoint if available
+        checkpoint_path = f"{interim_dir}/similarity_checkpoint.parquet" if interim_dir else "data/interim/similarity_checkpoint.parquet"
+        try:
+            if os.path.exists(checkpoint_path):
+                checkpoint_df = pd.read_parquet(checkpoint_path)
+                scores = checkpoint_df.to_dict('records')
+                processed = len(scores)
+                logger.info(f"Loaded {processed} pairs from checkpoint")
+                
+                # Filter out already processed pairs
+                processed_pairs = set((r["id_a"], r["id_b"]) for r in scores)
+                remaining_pairs = [(a, b) for a, b in candidate_pairs if (a, b) not in processed_pairs]
+                
+                # Recreate chunks for remaining pairs
+                pair_chunks = [
+                    remaining_pairs[i : i + chunk_size]
+                    for i in range(0, len(remaining_pairs), chunk_size)
+                ]
+                logger.info(f"Processing remaining {len(remaining_pairs)} pairs")
+        except Exception as e:
+            logger.warning(f"Failed to load checkpoint: {e}")
+        
+        # Process chunks
+        for chunk_idx, chunk_pairs in enumerate(pair_chunks):
+            chunk_results = parallel_executor.execute(
+                process_chunk,
+                [chunk_pairs],
+                operation_name=f"similarity_scoring_chunk_{chunk_idx}",
+            )
+            
+            # Update scores and progress
+            chunk_scores = chunk_results[0]
+            scores.extend(chunk_scores)
+            processed += len(chunk_scores)
+            
+            # Log progress (rate-limited)
+            if processed % pair_progress.step_every == 0:
+                logger.info(f"Processed {processed}/{len(candidate_pairs)} pairs")
+            
+            # Save checkpoint periodically
+            if processed % checkpoint_size == 0 and interim_dir:
+                try:
+                    checkpoint_df = pd.DataFrame(scores)
+                    checkpoint_df.to_parquet(checkpoint_path, index=False)
+                    logger.info(f"Saved checkpoint with {len(scores)} pairs")
+                except Exception as e:
+                    logger.warning(f"Failed to save checkpoint: {e}")
 
-    logger.info(f"Computed scores for {len(scores)} pairs")
+    else:
+        # Process pairs sequentially with optimized arrays
+        pair_progress = ProgressLogger(
+            total=len(candidate_pairs),
+            label="pair-scoring",
+            step_every=5000,
+            secs_every=5.0,
+            enable_tqdm=enable_progress,
+        )
+
+        scores = [
+            _compute_pair_score_optimized(
+                name_core_array[index_map[idx_a]],
+                name_core_array[index_map[idx_b]],
+                suffix_class_array[index_map[idx_a]],
+                suffix_class_array[index_map[idx_b]],
+                account_id_array[index_map[idx_a]],
+                account_id_array[index_map[idx_b]],
+                penalties,
+            )
+            for idx_a, idx_b in pair_progress.wrap(candidate_pairs)
+        ]
+
+    logger.info(f"Computed scores for {len(candidate_pairs)} pairs")
     return scores

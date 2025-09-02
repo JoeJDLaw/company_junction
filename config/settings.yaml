@@ -19,6 +19,12 @@ similarity:
     num_style_mismatch: 5
     punctuation_mismatch: 3
   max_alias_pairs: 100000
+  performance:
+    block_cap: 800  # Deterministic cap per block
+    secondary_blocking: "first_two_tokens"  # or "char_bigrams"
+    pair_threshold_medium: 0.63  # Keep existing threshold if stable
+    enable_vectorized_prefilters: true  # Enable character/token length filters
+    max_length_diff: 5  # Maximum character length difference for prefiltering
 
 grouping:
   edge_gating:
@@ -39,6 +45,14 @@ survivorship:
 
 io:
   interim_format: parquet
+
+# UI Performance Configuration
+ui_perf:
+  groups:
+    use_stats_parquet: true         # rollback toggle
+    duckdb_prefer_over_pyarrow: true
+    rows_duckdb_threshold: 30000
+    groups_duckdb_threshold: 10000
 
 # Salesforce Integration
 salesforce:

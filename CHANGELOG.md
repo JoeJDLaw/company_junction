@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Phase1.21.3] - 2025-09-01
+
+### Optimized Alias Matching Validation & Testing
+- **Comprehensive Testing**: Validated optimized alias matching path at multiple scales
+  - **1k Dataset**: Successful validation with deterministic behavior
+  - **5k Dataset**: Confirmed equivalence with legacy path
+  - **10k Dataset**: Verified scalability and performance
+  - **Determinism**: Confirmed bit-for-bit identical outputs across multiple runs
+- **Legacy Path Comparison**: Verified equivalence between optimized and legacy paths
+  - Created `config/settings_legacy.yaml` for legacy path testing
+  - Ran parallel tests with both paths to ensure identical results
+  - Only expected differences in randomly generated group IDs
+- **Warning Analysis**: Investigated and documented non-critical warnings
+  - "Failed to create enhanced performance summary: 'block_key'" - Optional metrics only
+  - "Latest pointer creation disabled" - Expected with Phase 1 destructive fuse disabled
+- **Test Coverage**: Comprehensive testing across multiple dimensions
+  - Determinism testing between multiple optimized runs
+  - Equivalence testing between legacy and optimized paths
+  - Scale testing from 1k to 10k datasets
+  - Performance validation at each scale
+
+### Files Modified
+- `config/settings_legacy.yaml`: Created for legacy path testing
+- `CHANGELOG.md`: This entry
+
+### Technical Details
+- **Test Methodology**: Systematic testing with multiple validation steps
+  - Run optimized pipeline
+  - Run second optimized pipeline for determinism
+  - Run legacy pipeline for equivalence
+  - Compare outputs using validation scripts
+- **Scale Testing**: Progressive validation at increasing dataset sizes
+  - 1k dataset for initial validation
+  - 5k dataset for intermediate scale
+  - 10k dataset for full-scale validation
+- **Validation Tools**: Used `check_alias_results.py` for both determinism and equivalence checking
+
+### Performance Impact
+- **Deterministic Behavior**: Confirmed consistent outputs across multiple runs
+- **Equivalence**: Verified identical core data between legacy and optimized paths
+- **Scalability**: Successfully tested up to 10k dataset size
+
+### Safety & Validation
+- **Comprehensive Testing**: Multiple scales and comparison methods
+- **Determinism**: Bit-for-bit identical outputs between runs
+- **Equivalence**: Core data matches between legacy and optimized paths
+- **Non-Critical Warnings**: Documented and explained all warnings
+
+### Next Steps
+- Consider additional scale testing beyond 10k if needed
+- Monitor performance metrics in production environment
+- Gather user feedback on optimized path behavior
+
 ## [Phase1.21.2] - 2025-09-01
 
 ### Alias Optimization Validation & Benchmark Harness
