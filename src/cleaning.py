@@ -362,7 +362,7 @@ def run_pipeline(
     # Load configuration
     settings = load_settings(config_path)
     relationship_ranks = load_relationship_ranks("config/relationship_ranks.csv")
-    
+
     # Add CLI worker count to settings if provided
     if workers is not None:
         if "parallelism" not in settings:
@@ -789,6 +789,69 @@ def run_pipeline(
         dag.complete("survivorship")
         logger.info("[stage:end] survivorship")
 
+        # Phase 1.22.1: Generate group stats for UI performance optimization
+        try:
+            logger.info("Generating group stats for UI performance optimization")
+
+            # Create group stats DataFrame with the exact schema specified
+            group_stats = []
+            for group_id in df_primary["group_id"].unique():
+                group_data = df_primary[df_primary["group_id"] == group_id]
+
+                # Get primary record (is_primary = True)
+                primary_record = group_data[group_data["is_primary"]].iloc[0]
+
+                # Calculate max_score within the group (or 0.0 if not applicable)
+                max_score = (
+                    group_data["weakest_edge_to_primary"].max()
+                    if "weakest_edge_to_primary" in group_data.columns
+                    else 0.0
+                )
+
+                group_stats.append(
+                    {
+                        "group_id": group_id,
+                        "group_size": len(group_data),
+                        "max_score": max_score,
+                        "primary_name": primary_record.get("account_name", ""),
+                        "Disposition": primary_record.get(
+                            "Disposition", "Update"
+                        ),  # Default to Update if not set yet
+                    }
+                )
+
+            df_group_stats = pd.DataFrame(group_stats)
+
+            # Ensure deterministic ordering and stable dtypes
+            df_group_stats = df_group_stats.sort_values(
+                "group_id", kind="mergesort"
+            ).reset_index(drop=True)
+
+            # Ensure correct dtypes with explicit casting
+            df_group_stats = df_group_stats.astype(
+                {
+                    "group_id": "string",
+                    "group_size": "int32",
+                    "max_score": "float32",
+                    "primary_name": "string",
+                    "Disposition": "string",  # Use string instead of category for consistency
+                }
+            )
+
+            # Save to processed directory for UI access
+            group_stats_path = os.path.join(processed_dir, "group_stats.parquet")
+            df_group_stats.to_parquet(group_stats_path, index=False)
+
+            logger.info(
+                f"Generated group stats: {len(df_group_stats)} groups, saved to {group_stats_path}"
+            )
+            logger.info(
+                f"Group stats size: {df_group_stats.memory_usage(deep=True).sum() / 1024 / 1024:.2f} MB"
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to generate group stats: {e}")
+
         # Step 6: Apply dispositions
         if not resume_from or resume_from == "disposition":
             logger.info("[stage:start] disposition")
@@ -808,6 +871,54 @@ def run_pipeline(
 
         dag.complete("disposition")
         logger.info("[stage:end] disposition")
+
+        # Phase 1.22.1: Update group stats with final dispositions
+        try:
+            if "df_group_stats" in locals():
+                logger.info("Updating group stats with final dispositions")
+
+                # Update dispositions in group stats
+                for idx, row in df_group_stats.iterrows():
+                    group_id = row["group_id"]
+                    group_dispositions = df_dispositions[
+                        df_dispositions["group_id"] == group_id
+                    ]
+
+                    if len(group_dispositions) > 0:
+                        # Get the disposition from the primary record
+                        primary_disposition = group_dispositions[
+                            group_dispositions["is_primary"]
+                        ]
+                        if len(primary_disposition) > 0:
+                            df_group_stats.at[idx, "Disposition"] = (
+                                primary_disposition.iloc[0]["Disposition"]
+                            )
+
+                # Re-save updated group stats
+                # Ensure deterministic ordering and stable dtypes after update
+                df_group_stats = df_group_stats.sort_values(
+                    "group_id", kind="mergesort"
+                ).reset_index(drop=True)
+
+                # Re-apply dtypes to ensure consistency
+                df_group_stats = df_group_stats.astype(
+                    {
+                        "group_id": "string",
+                        "group_size": "int32",
+                        "max_score": "float32",
+                        "primary_name": "string",
+                        "Disposition": "string",
+                    }
+                )
+
+                group_stats_path = os.path.join(processed_dir, "group_stats.parquet")
+                df_group_stats.to_parquet(group_stats_path, index=False)
+
+                logger.info(
+                    f"Updated group stats with final dispositions, saved to {group_stats_path}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to update group stats with dispositions: {e}")
 
         # Step 7: Compute alias matches and cross-references
         if not resume_from or resume_from == "alias_matching":

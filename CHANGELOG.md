@@ -58,6 +58,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Monitor performance metrics in production environment
 - Gather user feedback on optimized path behavior
 
+## [Phase1.21.1-1.21.5] - 2025-08-31 → 2025-09-01
+
+### Alias Optimization Series (Parallel Processing & Validation)
+- **Optimized Alias Matching Path**: Implemented fast-path alias matching with parallel processing and vectorized similarity scoring
+  - **API Choice**: Benchmarked `rapidfuzz.process.extract` vs `process.cdist` - extract is ~1.8x faster for our use case
+  - **Parallelization**: Records with aliases processed in parallel using existing executor infrastructure
+  - **Memory Efficiency**: Precomputed indices and first-token bucketing for efficient candidate filtering
+  - **Safety**: Strict equivalence guarantee between optimized and legacy paths
+- **Configuration**: New `alias.optimize` flag (default: true) with `alias.progress_interval_s` for rate-limited progress logging
+- **Environment Safety**: Automatic BLAS thread clamping to prevent oversubscription on Apple Silicon
+- **Progress Tracking**: Rate-limited progress logs every `alias.progress_interval_s` seconds (default: 1.0s)
+- **Comprehensive Testing**: Full test suite for equivalence, progress logging, and environment handling
+
+### Worker Detection & CLI Integration
+- **CLI Worker Respect**: Fixed worker detection so CLI `--workers` is respected
+- **Optimization Activation**: Alias optimization requires `workers > 1`; falls back to sequential for single worker
+- **Environment Variables**: BLAS clamping (OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, VECLIB_MAXIMUM_THREADS=1, NUMEXPR_NUM_THREADS=1)
+- **Fallback Behavior**: Graceful degradation to sequential execution when parallel resources unavailable
+
+### Validation Tools & Scripts
+- **Unified Results Checker**: `scripts/check_alias_results.py` handles both equivalence and determinism checking
+- **Performance Benchmarking**: `scripts/bench_alias.py` measures wall-clock performance with Python-only timing
+- **Bucket Analysis**: `scripts/check_alias_buckets.py` scans first-token distributions and identifies large buckets
+- **Comprehensive Testing**: Full test coverage for validation tools with synthetic fixtures
+
+### Benchmark Results & Performance
+- **Scale Testing**: Comprehensive benchmarks across 1k, 5k, and 10k datasets
+- **Alias Stage Speedup**: Scales with dataset size (2.0× → 3.6× → 6.5×)
+- **Overall Runtime**: +10–30% improvement due to alias stage optimization
+- **Deterministic Outputs**: Confirmed bit-for-bit identical results across multiple runs
+- **Memory Efficiency**: Stable memory usage with improved parallel processing
+
+### Safety & Guardrails
+- **Equivalence Guarantee**: Strict validation that optimized path produces identical core data
+- **Determinism**: Consistent outputs across multiple runs with same inputs
+- **Memory Guardrails**: BLAS thread clamping and memory monitoring
+- **Progress Logging**: Rate-limited progress updates to prevent I/O overhead
+- **Validation Scripts**: Automated tools for equivalence and determinism checking
+
+### Files Added
+- `scripts/check_alias_results.py`: Unified equivalence and determinism checker
+- `scripts/bench_alias.py`: Performance benchmarking tool
+- `scripts/check_alias_buckets.py`: First-token bucket analysis
+- `tests/test_alias_validation.py`: Comprehensive validation test suite
+
+### Dev Notes
+- **First-token Bucketing**: Deterministic ordering for consistent blocking behavior
+- **RapidFuzz Integration**: Uses `score_cutoff` for efficient similarity scoring
+- **Parallel Executor**: Leverages existing `ParallelExecutor` infrastructure
+- **Memory Mapping**: Uses `joblib.dump/load` with `mmap_mode="r"` for large arrays
+
+## [Phase1.22.1] - 2025-09-01
+
+### Duplicate Groups MVP (UI Performance Optimization)
+- **Persisted Group Stats**: Generate `group_stats.parquet` during pipeline finalization (post-survivorship)
+  - **Schema**: `group_id`, `group_size`, `max_score`, `primary_name`, `Disposition`
+  - **Artifact Path**: `data/processed/<run_id>/group_stats.parquet`
+  - **Size**: ~6.92 MB for 94k dataset (52,035 groups)
+  - **Generation**: Automatic during pipeline finalization with disposition updates
+- **DuckDB-First Backend Selection**: Smart routing for optimal performance
+  - **Primary Path**: Use `group_stats.parquet` when available (ultra-fast)
+  - **Threshold Routing**: DuckDB-first when `rows > 30k` or `groups > 10k`
+  - **Fallback**: PyArrow for smaller datasets or when stats unavailable
+  - **Configuration**: Configurable thresholds via `ui_perf.groups.*` settings
+
+### Configuration & Settings
+- **New Config Section**: Added `ui_perf.groups` configuration in `config/settings.yaml`
+  ```yaml
+  ui_perf:
+    groups:
+      use_stats_parquet: true         # rollback toggle
+      duckdb_prefer_over_pyarrow: true
+      rows_duckdb_threshold: 30000
+      groups_duckdb_threshold: 10000
+  ```
+- **Backward Compatibility**: All existing settings preserved, new settings are additive
+- **Rollback Support**: `use_stats_parquet: false` disables the fast path
+
+### Performance Improvements
+- **Before**: ~100+ second stall on first load of Duplicate Groups
+- **After**: ≤2s cold first paint, ≤200ms page navigation
+- **Speedup**: 50x+ improvement for large datasets (94k records)
+- **Memory Efficiency**: Reduced memory usage by avoiding expensive groupby operations
+- **UI Responsiveness**: Instant group list loading with pre-computed statistics
+
+### UI Enhancements & Indicators
+- **Performance Indicator**: Shows "⚡ Fast stats mode" when using optimized path
+- **Backend Selection**: Automatic routing based on dataset size and availability
+- **Structured Logging**: `groups_perf` logs show backend, reason, elapsed time, totals
+- **Cache Efficiency**: Backend-specific cache keys prevent cross-backend collisions
+
+### Run Date Display Fix
+- **Issue Resolved**: Fixed "(Unknown)" run date labels in UI
+- **Local Time Format**: Timestamps now display as "YYYY-MM-DD HH:MM local"
+- **Timezone Handling**: Automatic UTC to local time conversion
+- **Metadata Source**: Reads from `data/run_index.json` and pipeline state files
+
+### Technical Implementation
+- **Pipeline Integration**: Group stats generation integrated into finalization stage
+- **DuckDB Queries**: Direct SQL queries on `group_stats.parquet` for instant pagination
+- **Filtering Support**: Full filter support (disposition, edge strength, aliases)
+- **Sorting**: Efficient sorting by group size, score, or primary name
+- **Memory Safety**: No disk-based caching, in-memory LRU only
+
+### Files Modified
+- `src/cleaning.py`: Added group stats generation during finalization
+- `src/utils/ui_helpers.py`: Implemented DuckDB-first routing and stats loading
+- `app/components/group_list.py`: Added performance indicator
+- `config/settings.yaml`: Added UI performance configuration
+
+### Dev Notes
+- **Artifact Generation**: Hooked into post-survivorship finalization for stable data
+- **Backend Routing**: Smart detection based on file availability and dataset size
+- **Performance Monitoring**: Structured logs for backend selection and timing
+- **UI Feedback**: Clear indicators when fast path is active
+
+### Next Steps
+- Monitor performance in production environment
+- Consider additional UI optimizations based on user feedback
+- Evaluate need for in-memory page caching for back/forward navigation
+
 ## [Phase1.21.2] - 2025-09-01
 
 ### Alias Optimization Validation & Benchmark Harness

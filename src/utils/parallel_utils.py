@@ -84,6 +84,16 @@ def parallel_map(
     return results
 
 
+def _try_import_joblib() -> bool:
+    """Try to import joblib - separated for testing."""
+    try:
+        import importlib.util
+
+        return importlib.util.find_spec("joblib") is not None
+    except ImportError:
+        return False
+
+
 def is_loky_available() -> bool:
     """Test if loky backend is available and working.
 
@@ -95,7 +105,7 @@ def is_loky_available() -> bool:
     if _LOKY_AVAILABLE is not None:
         return _LOKY_AVAILABLE
 
-    if not JOBLIB_AVAILABLE:
+    if not _try_import_joblib():
         _LOKY_AVAILABLE = False
         return _LOKY_AVAILABLE
 

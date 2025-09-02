@@ -94,7 +94,7 @@ class TestInterruptResumeIntegration:
     def create_test_csv(self, filename: str, rows: int = 10) -> str:
         """Create a test CSV file for testing."""
         data = {
-            "Account ID": [f"00123456789012{i:03d}" for i in range(rows)],
+            "Account ID": [f"a012345678{i:05d}" for i in range(rows)],  # 15 chars total
             "Account Name": [f"Test Company {i}" for i in range(rows)],
             "Relationship": ["Customer"] * rows,
             "Created Date": ["2023-01-01"] * rows,
@@ -160,8 +160,23 @@ parallelism:
             # Should complete successfully
             assert result.returncode == 0, f"Pipeline failed: {result.stderr}"
 
-            # Check that output files were created
-            output_files = os.listdir(processed_dir)
+            # Extract run ID from output
+            run_id = None
+            for line in result.stdout.split("\n") + result.stderr.split("\n"):
+                if "Pipeline completed successfully with run_id:" in line:
+                    run_id = line.split("run_id:")[1].strip()
+                    break
+
+            assert run_id is not None, "Could not extract run ID from pipeline output"
+
+            # Check that output files were created in the run-scoped directory
+            # Note: Pipeline always creates run-scoped subdirectories under the default data/processed location
+            expected_output_dir = f"data/processed/{run_id}"
+            assert os.path.exists(
+                expected_output_dir
+            ), f"Run-scoped output directory not found: {expected_output_dir}"
+
+            output_files = os.listdir(expected_output_dir)
             assert len(output_files) > 0, "No output files created"
 
         finally:
@@ -173,7 +188,7 @@ parallelism:
                 shutil.rmtree(temp_dir)
 
     @patch("signal.signal")
-    def test_keyboard_interrupt_handling(self, mock_signal) -> None:
+    def test_keyboard_interrupt_handling(self, mock_signal) -> None:  # noqa: F811
         """Test that KeyboardInterrupt is handled gracefully."""
         # This test verifies that the interrupt handling is in place
         # We can't easily test actual Ctrl+C in unit tests, but we can verify

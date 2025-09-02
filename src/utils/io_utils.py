@@ -310,12 +310,18 @@ def _is_likely_id_column(column_name: str, data: pd.Series) -> bool:
         # Check if values look like IDs (consistent length, alphanumeric)
         if len(data) > 0:
             sample_values = data.head(100).astype(str)
-            # Check for consistent length (15 or 18 for Salesforce IDs)
+            # Check for consistent length (common ID lengths)
             lengths = sample_values.str.len()
-            if lengths.nunique() == 1 and lengths.iloc[0] in [15, 18]:
-                # Check if alphanumeric
-                if sample_values.str.match(r"^[a-zA-Z0-9]+$").all():
-                    return True
+            if lengths.nunique() == 1:
+                length = lengths.iloc[0]
+                # Accept common ID lengths: 1-3 digits, 15, 18, or other reasonable lengths
+                if length <= 3 or length in [15, 18] or (length <= 20):
+                    # Check if alphanumeric or just digits (common for test IDs)
+                    if (
+                        sample_values.str.match(r"^[a-zA-Z0-9]+$").all()
+                        or sample_values.str.match(r"^\d+$").all()
+                    ):
+                        return True
     return False
 
 

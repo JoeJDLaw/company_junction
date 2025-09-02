@@ -1,14 +1,274 @@
 {
-  "94k_full_opt": {
-    "timestamp": "2025-09-01T18:44:48.102490",
+  "85daafa4_bbf2f05d_20250901203917": {
+    "timestamp": "2025-09-01T20:39:17.657346",
     "input_paths": [
-      "data/raw/company_junction_range_01.csv"
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmprp0mp6as.csv"
     ],
-    "input_hash": "3ea72f3251b09f5828482e14badb7c27d3994b9a4048532289ab8fe781918d18",
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpff91qi3_/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "85daafa4_bbf2f05d_20250901204847": {
+    "timestamp": "2025-09-01T20:48:47.962019",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp9xh3mke_.csv"
+    ],
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp7omndkq8/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "85daafa4_bbf2f05d_20250901205229": {
+    "timestamp": "2025-09-01T20:52:29.891561",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp0lf416l9.csv"
+    ],
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpp32no2d1/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "85daafa4_bbf2f05d_20250901212201": {
+    "timestamp": "2025-09-01T21:22:01.202613",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp7au_kenj.csv"
+    ],
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpjw04b6dl/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "85daafa4_bbf2f05d_20250901213354": {
+    "timestamp": "2025-09-01T21:33:54.027084",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpmuj300da.csv"
+    ],
+    "input_hash": "85daafa4a7e05af8c7e38338020c9c6a9605d911706222db6893b22e93f5b8b3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpm5l1551a/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "f64620e0_bbf2f05d_20250901213908": {
+    "timestamp": "2025-09-01T21:39:08.503412",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpe16p1m9i.csv"
+    ],
+    "input_hash": "f64620e0d91d61eb42b711f6aaae5ce2953d558dbec0fcdf7dbfdb4e53f83d3f",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp1svev4ig/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "1004cbc7_f12cf4e5_20250901213923": {
+    "timestamp": "2025-09-01T21:39:23.940181",
+    "input_paths": [
+      "/Users/joe.j/Documents/dev/salesforce/apps/company_junction/tmpaf5sav4b.csv"
+    ],
+    "input_hash": "1004cbc7c09285b6118fbde7cbb3cbbd1ebdafc12b59682dc0deedc5cec49986",
     "config_paths": [
       "config/settings.yaml"
     ],
-    "config_hash": "016cf3c50401fd644f77522ee97845188797fe7ec4704d9470293925bb4a9dca",
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "1b925a14_bbf2f05d_20250901213945": {
+    "timestamp": "2025-09-01T21:39:45.894106",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmphgw16wrf.csv"
+    ],
+    "input_hash": "1b925a14f070c2c19da11a7538cdb3f160618f731bb272cb7a65ba95c366fbb3",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpjckudcaw/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "8af4a72e_bbf2f05d_20250901214009": {
+    "timestamp": "2025-09-01T21:40:09.300313",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp8co5ntlc.csv"
+    ],
+    "input_hash": "8af4a72e9dc1d35cb944a7707a07aa3f892f9b31a5a8fbd7c2789938ccb792f2",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpyu5mugbq/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "running",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221114": {
+    "timestamp": "2025-09-01T22:11:14.150927",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221116": {
+    "timestamp": "2025-09-01T22:11:16.447278",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221118": {
+    "timestamp": "2025-09-01T22:11:18.115511",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221119": {
+    "timestamp": "2025-09-01T22:11:19.350700",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221120": {
+    "timestamp": "2025-09-01T22:11:20.576133",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "492bbf50_bbf2f05d_20250901221121": {
+    "timestamp": "2025-09-01T22:11:21.996763",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpy6ikja53.csv"
+    ],
+    "input_hash": "492bbf50281becdd0513bdb8fade6a510c4d8794f88550fa8c501905dc73e37f",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpyt7tk1ts/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221307": {
+    "timestamp": "2025-09-01T22:13:07.319696",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221309": {
+    "timestamp": "2025-09-01T22:13:09.554298",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221311": {
+    "timestamp": "2025-09-01T22:13:11.216447",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221312": {
+    "timestamp": "2025-09-01T22:13:12.506770",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "e673d980_f12cf4e5_20250901221313": {
+    "timestamp": "2025-09-01T22:13:13.743586",
+    "input_paths": [
+      "data/raw/sample_test.csv"
+    ],
+    "input_hash": "e673d980975a3926c3571ed2af8632415104e0d5247621c9ad59c07228fada6d",
+    "config_paths": [
+      "config/settings.yaml"
+    ],
+    "config_hash": "f12cf4e5b8b990b50fa226a80592a902744813f9cec3d4c26ac05c6f7a8bc30b",
+    "status": "complete",
+    "dag_version": "1.0.0"
+  },
+  "492bbf50_bbf2f05d_20250901221315": {
+    "timestamp": "2025-09-01T22:13:15.163786",
+    "input_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmpyu4bj3cp.csv"
+    ],
+    "input_hash": "492bbf50281becdd0513bdb8fade6a510c4d8794f88550fa8c501905dc73e37f",
+    "config_paths": [
+      "/var/folders/gq/t1516q352yn8t_tp9vt_ps4m0000gp/T/tmp_4lu7z8i/test_config.yaml"
+    ],
+    "config_hash": "bbf2f05da5b6a6f61afdaa1aeaa0af0c9aad804fdb2fc6cd0897984165ee063a",
     "status": "complete",
     "dag_version": "1.0.0"
   }

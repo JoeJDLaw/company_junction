@@ -20,25 +20,29 @@ logger = get_logger(__name__)
 
 def load_sorted_alias_matches(path: Path) -> pd.DataFrame:
     """Load and sort alias matches from parquet file with flexible schema handling.
-    
+
     Args:
         path: Path to alias_matches.parquet file
-        
+
     Returns:
         Sorted DataFrame with consistent column order
     """
     try:
         df = pd.read_parquet(path)
-        
+
         # Log actual schema for debugging
         logger.info(f"Loaded {len(df)} alias matches from {path}")
         logger.info(f"Actual columns: {list(df.columns)}")
-        
+
         # Handle different schema versions gracefully
-        if len(df.columns) == 2 and 'alias_text' in df.columns and 'match_group_id' in df.columns:
+        if (
+            len(df.columns) == 2
+            and "alias_text" in df.columns
+            and "match_group_id" in df.columns
+        ):
             # Current schema: ['alias_text', 'match_group_id']
             logger.info("Using current schema (alias_text + match_group_id)")
-            expected_cols = ['alias_text', 'match_group_id']
+            expected_cols = ["alias_text", "match_group_id"]
         else:
             # Full schema: ['record_id', 'alias_text', 'alias_source', 'match_record_id', 'match_group_id', 'score', 'suffix_match']
             logger.info("Using full schema (all columns)")
@@ -51,19 +55,19 @@ def load_sorted_alias_matches(path: Path) -> pd.DataFrame:
                 "score",
                 "suffix_match",
             ]
-        
+
         # Check which expected columns are available
         available_cols = [col for col in expected_cols if col in df.columns]
         if len(available_cols) < len(expected_cols):
             missing = set(expected_cols) - set(available_cols)
             logger.warning(f"Missing expected columns in {path}: {missing}")
             logger.warning("Proceeding with available columns for comparison")
-        
+
         # Select and sort columns for consistent comparison
         df = df[available_cols].sort_values(available_cols).reset_index(drop=True)
-        
+
         return df
-        
+
     except Exception as e:
         logger.error(f"Failed to load {path}: {e}")
         sys.exit(1)

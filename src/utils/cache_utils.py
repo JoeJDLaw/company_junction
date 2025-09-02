@@ -14,8 +14,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logging_utils import get_logger
 
+
 # Phase 1 destructive operations fuse
-PHASE_1_DESTRUCTIVE_FUSE = False  # Disabled by default for read-only Phase 1
+def _get_destructive_fuse() -> bool:
+    """Get the destructive fuse setting from environment."""
+    return os.environ.get("PHASE1_DESTRUCTIVE_FUSE", "false").lower() == "true"
+
+
+PHASE_1_DESTRUCTIVE_FUSE = _get_destructive_fuse()
 
 logger = get_logger(__name__)
 
@@ -150,7 +156,7 @@ def update_run_status(run_id: str, status: str) -> None:
 
 def create_latest_pointer(run_id: str) -> None:
     """Create latest pointer to the most recent successful run."""
-    if not PHASE_1_DESTRUCTIVE_FUSE:
+    if not _get_destructive_fuse():
         logger.warning(
             "Latest pointer creation disabled: Phase 1 destructive fuse not enabled"
         )
@@ -161,7 +167,7 @@ def create_latest_pointer(run_id: str) -> None:
 
     # Create symlink (may fail on some filesystems)
     try:
-        if os.path.exists(latest_symlink):
+        if os.path.islink(latest_symlink) or os.path.exists(latest_symlink):
             os.remove(latest_symlink)
         # Use relative path for symlink
         os.symlink(f"{run_id}", latest_symlink)
@@ -169,13 +175,22 @@ def create_latest_pointer(run_id: str) -> None:
     except OSError as e:
         logger.warning(f"Failed to create symlink: {e}")
 
-    # Create JSON pointer as backup (always create this)
+    # Create JSON pointer as backup (always create this) - use atomic write
     try:
-        with open(latest_json, "w") as f:
+        # Write to temp file first, then atomically replace
+        temp_json = f"{latest_json}.tmp"
+        with open(temp_json, "w") as f:
             json.dump({"run_id": run_id, "timestamp": datetime.now().isoformat()}, f)
+        os.replace(temp_json, latest_json)
         logger.info(f"Created latest JSON pointer: {latest_json}")
     except IOError as e:
         logger.error(f"Failed to create latest JSON pointer: {e}")
+        # Clean up temp file if it exists
+        if os.path.exists(temp_json):
+            try:
+                os.remove(temp_json)
+            except OSError:
+                pass
 
 
 def get_latest_run_id() -> Optional[str]:
@@ -207,7 +222,7 @@ def get_latest_run_id() -> Optional[str]:
 
 def prune_old_runs(keep_runs: int = DEFAULT_KEEP_RUNS) -> None:
     """Prune old completed runs, keeping only the most recent N."""
-    if not PHASE_1_DESTRUCTIVE_FUSE:
+    if not _get_destructive_fuse():
         logger.warning("Prune old runs disabled: Phase 1 destructive fuse not enabled")
         return
 
@@ -245,7 +260,7 @@ def prune_old_runs(keep_runs: int = DEFAULT_KEEP_RUNS) -> None:
 
 def cleanup_failed_runs() -> None:
     """Clean up directories for failed runs."""
-    if not PHASE_1_DESTRUCTIVE_FUSE:
+    if not _get_destructive_fuse():
         logger.warning(
             "Cleanup failed runs disabled: Phase 1 destructive fuse not enabled"
         )
@@ -345,7 +360,7 @@ def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
     Returns:
         Dict with deletion results
     """
-    if not PHASE_1_DESTRUCTIVE_FUSE:
+    if not _get_destructive_fuse():
         logger.warning("Delete runs disabled: Phase 1 destructive fuse not enabled")
         return {
             "deleted": [],
@@ -471,7 +486,7 @@ def recompute_latest_pointer() -> Optional[str]:
 
 def remove_latest_pointer() -> None:
     """Remove the latest pointer (symlink and JSON)."""
-    if not PHASE_1_DESTRUCTIVE_FUSE:
+    if not _get_destructive_fuse():
         logger.warning(
             "Latest pointer removal disabled: Phase 1 destructive fuse not enabled"
         )

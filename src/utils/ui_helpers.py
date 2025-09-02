@@ -144,7 +144,16 @@ def get_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
     # Parse timestamp for display
     try:
         timestamp = datetime.fromisoformat(run_data.get("timestamp", ""))
-        formatted_timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        # Convert to local time if it's UTC
+        if timestamp.tzinfo is None:
+            # Assume UTC if no timezone info
+            from datetime import timezone
+
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+        # Convert to local time
+        local_timestamp = timestamp.astimezone()
+        formatted_timestamp = local_timestamp.strftime("%Y-%m-%d %H:%M local")
     except (ValueError, TypeError) as e:
         logger.warning(f"Failed to parse timestamp: {e}")
         formatted_timestamp = run_data.get("timestamp", "Unknown")
@@ -305,28 +314,42 @@ def load_stage_state(run_id: str) -> Optional[Dict[str, Any]]:
 
 def get_artifact_paths(run_id: str) -> Dict[str, str]:
     """
-    Get paths to artifacts for a run.
+    Get artifact paths for a run.
 
     Args:
-        run_id: The run ID to get paths for
+        run_id: The run ID
 
     Returns:
-        Dictionary mapping artifact names to file paths
+        Dictionary of artifact paths
     """
-    processed_dir = f"data/processed/{run_id}"
+    # Check if run exists in interim or processed
     interim_dir = f"data/interim/{run_id}"
+    processed_dir = f"data/processed/{run_id}"
+
+    # Determine which directory exists and use that
+    if os.path.exists(processed_dir):
+        base_dir = processed_dir
+        interim_format = "parquet"
+    elif os.path.exists(interim_dir):
+        base_dir = interim_dir
+        interim_format = "parquet"
+    else:
+        # Fallback to processed directory
+        base_dir = processed_dir
+        interim_format = "parquet"
 
     return {
-        "review_ready_csv": f"{processed_dir}/review_ready.csv",
-        "review_ready_parquet": f"{processed_dir}/review_ready.parquet",
-        "review_meta": f"{processed_dir}/review_meta.json",
-        "pipeline_state": f"{interim_dir}/pipeline_state.json",
-        "candidate_pairs": f"{interim_dir}/candidate_pairs.parquet",
-        "groups": f"{interim_dir}/groups.parquet",
-        "survivorship": f"{interim_dir}/survivorship.parquet",
-        "dispositions": f"{interim_dir}/dispositions.parquet",
-        "alias_matches": f"{interim_dir}/alias_matches.parquet",
-        "block_top_tokens": f"{interim_dir}/block_top_tokens.csv",
+        "review_ready_csv": f"{base_dir}/review_ready.csv",
+        "review_ready_parquet": f"{base_dir}/review_ready.parquet",
+        "review_meta": f"{base_dir}/review_meta.json",
+        "pipeline_state": f"{base_dir}/pipeline_state.json",
+        "candidate_pairs": f"{base_dir}/candidate_pairs.{interim_format}",
+        "groups": f"{base_dir}/groups.{interim_format}",
+        "survivorship": f"{base_dir}/survivorship.{interim_format}",
+        "dispositions": f"{base_dir}/dispositions.{interim_format}",
+        "alias_matches": f"{base_dir}/alias_matches.{interim_format}",
+        "block_top_tokens": f"{base_dir}/block_top_tokens.csv",
+        "group_stats_parquet": f"{base_dir}/group_stats.parquet",
     }
 
 
@@ -684,6 +707,86 @@ def get_groups_page(
     # Load settings
     with open("config/settings.yaml", "r") as f:
         settings = yaml.safe_load(f)
+
+    # Phase 1.22.1: Check for group_stats.parquet first (Phase A)
+    artifact_paths = get_artifact_paths(run_id)
+    group_stats_path = artifact_paths.get("group_stats_parquet")
+
+    if (
+        group_stats_path
+        and os.path.exists(group_stats_path)
+        and settings.get("ui_perf", {}).get("groups", {}).get("use_stats_parquet", True)
+    ):
+        logger.info(
+            f"Using persisted group stats | run_id={run_id} path={group_stats_path}"
+        )
+
+        # Use DuckDB for fast pagination from group_stats.parquet
+        if DUCKDB_AVAILABLE:
+            logger.info(
+                f"Using DuckDB backend for groups | run_id={run_id} reason=stats_parquet_available"
+            )
+
+            # Persist backend choice in session state
+            import streamlit as st
+
+            if "cj" not in st.session_state:
+                st.session_state["cj"] = {}
+            if "backend" not in st.session_state["cj"]:
+                st.session_state["cj"]["backend"] = {}
+            if "groups" not in st.session_state["cj"]["backend"]:
+                st.session_state["cj"]["backend"]["groups"] = {}
+            st.session_state["cj"]["backend"]["groups"][run_id] = "duckdb"
+
+            return get_groups_page_from_stats_duckdb(
+                run_id, sort_key, page, page_size, filters, group_stats_path
+            )
+
+    # Phase 1.22.1: DuckDB-first for large runs (Phase B)
+    use_duckdb = (
+        settings.get("ui_perf", {})
+        .get("groups", {})
+        .get("duckdb_prefer_over_pyarrow", False)
+    )
+    rows_threshold = (
+        settings.get("ui_perf", {})
+        .get("groups", {})
+        .get("rows_duckdb_threshold", 30000)
+    )
+
+    # Check if we should use DuckDB-first based on thresholds
+    if use_duckdb and DUCKDB_AVAILABLE:
+        # Quick check of data size to determine backend
+        try:
+            review_path = artifact_paths.get("review_ready_parquet")
+            if review_path and os.path.exists(review_path):
+                # Quick row count check
+                dataset = ds.dataset(review_path)
+                total_rows = dataset.count_rows()
+
+                if total_rows > rows_threshold:
+                    logger.info(
+                        f"Using DuckDB backend for groups | run_id={run_id} reason=threshold rows={total_rows} > {rows_threshold}"
+                    )
+
+                    # Persist backend choice in session state
+                    import streamlit as st
+
+                    if "cj" not in st.session_state:
+                        st.session_state["cj"] = {}
+                    if "backend" not in st.session_state["cj"]:
+                        st.session_state["cj"]["backend"] = {}
+                    if "groups" not in st.session_state["cj"]["backend"]:
+                        st.session_state["cj"]["backend"]["groups"] = {}
+                    st.session_state["cj"]["backend"]["groups"][run_id] = "duckdb"
+
+                    return get_groups_page_duckdb(
+                        run_id, sort_key, page, page_size, filters
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to check data size for backend selection: {e}")
+
+    # Fallback to original logic
     use_duckdb = settings.get("ui", {}).get("use_duckdb_for_groups", False)
 
     # DuckDB-first routing: when flag is true, route to DuckDB before any PyArrow work
@@ -1061,213 +1164,340 @@ def build_details_cache_key(run_id: str, group_id: str, backend: str = "duckdb")
     return cache_key
 
 
-def get_groups_page_duckdb(
-    run_id: str, sort_key: str, page: int, page_size: int, filters: Dict[str, Any]
+def get_groups_page_from_stats_duckdb(
+    run_id: str,
+    sort_key: str,
+    page: int,
+    page_size: int,
+    filters: Dict[str, Any],
+    group_stats_path: str,
 ) -> Tuple[List[Dict[str, Any]], int]:
     """
-    Get a page of groups using DuckDB for server-side pagination.
+    Get a page of groups using DuckDB directly from group_stats.parquet.
+
+    This bypasses the expensive groupby computation by using pre-computed stats.
 
     Args:
-        run_id: Run ID to load data from
-        sort_key: Sort key from dropdown
-        page: Page number (1-based)
-        page_size: Number of groups per page
-        filters: Dictionary of active filters
+        run_id: The run ID
+        sort_key: The sort key
+        page: The page number
+        page_size: The page size
+        filters: The filters dictionary
+        group_stats_path: Path to the group_stats.parquet file
 
     Returns:
-        Tuple of (groups_data, total_count)
+        Tuple of (page_data, total_groups)
     """
     start_time = time.time()
-    step_start = time.time()
 
     try:
-        # Get artifact paths
-        artifact_paths = get_artifact_paths(run_id)
-        parquet_path = artifact_paths["review_ready_parquet"]
-
-        if not os.path.exists(parquet_path):
-            logger.warning(f"Parquet file not found: {parquet_path}")
-            return [], 0
-
-        # Check timeout periodically
-        def check_timeout():
-            elapsed = time.time() - start_time
-            if elapsed > 30:  # 30 second timeout
-                raise PageFetchTimeout(
-                    f"Page fetch exceeded 30 second timeout after {elapsed:.1f}s"
-                )
-
-        # Load settings
-        try:
-            from src.utils.config_utils import load_settings
-
-            settings = load_settings()
-            duckdb_threads = settings.get("ui", {}).get("duckdb_threads", 4)
-        except Exception:
-            duckdb_threads = 4
-
-        # Log start
         logger.info(
-            f'DuckDB groups page fetch start | run_id={run_id} sort="{sort_key}" page={page} page_size={page_size}'
+            f"Groups page fetch from stats | run_id={run_id} sort='{sort_key}' page={page} page_size={page_size}"
         )
 
+        # Load settings
+        with open("config/settings.yaml", "r") as f:
+            settings = yaml.safe_load(f)
+        duckdb_threads = settings.get("ui", {}).get("duckdb_threads", 4)
+
         # Step 1: DuckDB connection
-        step_start = time.time()
         conn = duckdb.connect(":memory:")
         conn.execute(f"PRAGMA threads = {duckdb_threads}")
-        connect_time = time.time() - step_start
-
+        connect_time = time.time() - start_time
         logger.info(
             f"DuckDB connection | run_id={run_id} threads={duckdb_threads} elapsed={connect_time:.3f}s"
         )
 
-        check_timeout()
-
-        # Step 2: Build SQL query
+        # Step 2: Build and execute query
         step_start = time.time()
 
         # Build WHERE clause for filters
-        where_conditions = []
+        where_clauses = []
         if filters.get("dispositions"):
             dispositions = filters["dispositions"]
-            disp_list = "', '".join(dispositions)
-            where_conditions.append(f"Disposition IN ('{disp_list}')")
+            dispositions_str = ", ".join([f"'{d}'" for d in dispositions])
+            where_clauses.append(f"Disposition IN ({dispositions_str})")
 
         if filters.get("min_edge_strength", 0.0) > 0.0:
-            where_conditions.append(
-                f"weakest_edge_to_primary >= {filters['min_edge_strength']}"
-            )
+            where_clauses.append(f"max_score >= {filters['min_edge_strength']}")
 
-        where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+        where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
 
         # Build ORDER BY clause
-        order_by_clause = ""
-        if "Group Size" in sort_key:
-            if "(Desc)" in sort_key:
-                order_by_clause = "s.group_size DESC"
-            else:
-                order_by_clause = "s.group_size ASC"
-        elif "Max Score" in sort_key:
-            if "(Desc)" in sort_key:
-                order_by_clause = "s.max_score DESC"
-            else:
-                order_by_clause = "s.max_score ASC"
-        elif "Account Name" in sort_key:
-            if "(Desc)" in sort_key:
-                order_by_clause = "p.primary_name DESC"
-            else:
-                order_by_clause = "p.primary_name ASC"
-        else:
-            order_by_clause = "s.group_id ASC"
+        order_by_map = {
+            "Group Size (Desc)": "group_size DESC",
+            "Group Size (Asc)": "group_size ASC",
+            "Max Score (Desc)": "max_score DESC",
+            "Max Score (Asc)": "max_score ASC",
+            "Primary Name (Asc)": "primary_name ASC",
+            "Primary Name (Desc)": "primary_name DESC",
+        }
+        order_by = order_by_map.get(sort_key, "group_size DESC")
 
-        # Calculate pagination
-        offset = (page - 1) * page_size
-
-        # Build SQL
+        # Build the query
         sql = f"""
-        WITH base AS (
-          SELECT
+        SELECT 
             group_id,
-            account_name,
-            is_primary,
-            weakest_edge_to_primary,
+            group_size,
+            max_score,
+            primary_name,
             Disposition
-          FROM read_parquet('{parquet_path}')
-          WHERE {where_clause}
-        ),
-        stats AS (
-          SELECT 
-            group_id, 
-            COUNT(*) AS group_size, 
-            MAX(weakest_edge_to_primary) AS max_score
-          FROM base
-          GROUP BY group_id
-        ),
-        primary_names AS (
-          SELECT
-            group_id,
-            any_value(account_name) FILTER (WHERE is_primary) AS primary_name
-          FROM base
-          GROUP BY group_id
-        )
-        SELECT
-          s.group_id,
-          s.group_size,
-          s.max_score,
-          COALESCE(p.primary_name, '') AS primary_name
-        FROM stats s
-        LEFT JOIN primary_names p USING (group_id)
-        ORDER BY {order_by_clause}, s.group_id ASC
-        LIMIT {page_size}
-        OFFSET {offset};
+        FROM read_parquet('{group_stats_path}')
+        WHERE {where_clause}
+        ORDER BY {order_by}
+        LIMIT {page_size} OFFSET {(page - 1) * page_size}
         """
 
-        query_build_time = time.time() - step_start
-
         logger.info(
-            f'DuckDB query built | run_id={run_id} where_clause="{where_clause}" order_by="{order_by_clause}" elapsed={query_build_time:.3f}s'
+            f"DuckDB query built | run_id={run_id} where_clause='{where_clause}' order_by='{order_by}' elapsed={time.time() - step_start:.3f}s"
         )
-
-        check_timeout()
 
         # Step 3: Execute query
         step_start = time.time()
         result = conn.execute(sql)
-        query_exec_time = time.time() - step_start
-
+        query_time = time.time() - step_start
         logger.info(
-            f"DuckDB query executed | run_id={run_id} elapsed={query_exec_time:.3f}s"
+            f"DuckDB query executed | run_id={run_id} elapsed={query_time:.3f}s"
         )
-
-        check_timeout()
 
         # Step 4: Convert to pandas
         step_start = time.time()
-        df = result.df()
+        df_result = result.df()
         pandas_time = time.time() - step_start
-
         logger.info(
-            f"DuckDB pandas conversion | run_id={run_id} rows={len(df)} elapsed={pandas_time:.3f}s"
+            f"DuckDB pandas conversion | run_id={run_id} rows={len(df_result)} elapsed={pandas_time:.3f}s"
         )
 
-        # Step 5: Convert to list of dicts
-        page_data = df.to_dict("records")
-
-        # Get total count
+        # Step 5: Get total count for pagination
+        step_start = time.time()
         count_sql = f"""
-        WITH base AS (
-          SELECT group_id
-          FROM read_parquet('{parquet_path}')
-          WHERE {where_clause}
-        )
-        SELECT COUNT(DISTINCT group_id) as total_groups
-        FROM base;
+        SELECT COUNT(*) as total
+        FROM read_parquet('{group_stats_path}')
+        WHERE {where_clause}
         """
-        total_result = conn.execute(count_sql)
-        total_groups = total_result.fetchone()[0]
+        count_result = conn.execute(count_sql)
+        total_groups = count_result.fetchone()[0]
+        count_time = time.time() - step_start
+        logger.info(
+            f"Total count query | run_id={run_id} total={total_groups} elapsed={count_time:.3f}s"
+        )
+
+        # Step 6: Convert to list format
+        page_data = df_result.to_dict("records")
 
         # Close connection
         conn.close()
 
         elapsed = time.time() - start_time
         logger.info(
-            f'DuckDB groups page loaded | run_id={run_id} rows={len(page_data)} offset={offset} sort="{sort_key}" elapsed={elapsed:.3f} projected_cols=["group_id", "group_size", "max_score", "primary_name"]'
+            f"DuckDB groups page loaded from stats | run_id={run_id} rows={len(page_data)} offset={(page - 1) * page_size} sort='{sort_key}' elapsed={elapsed:.3f}s"
+        )
+
+        # Phase 1.22.1: Structured logging for performance tracking
+        logger.info(
+            f"groups_perf: backend=duckdb reason=stats_parquet_available cold_load_s={elapsed:.3f} groups={total_groups} used_stats_parquet=true"
         )
 
         return page_data, total_groups
 
-    except PageFetchTimeout:
-        elapsed = time.time() - start_time
-        logger.error(
-            f"DuckDB groups page load timeout | run_id={run_id} elapsed={elapsed:.3f}"
-        )
-        raise
     except Exception as e:
         elapsed = time.time() - start_time
         logger.error(
-            f'DuckDB groups page load failed | run_id={run_id} error="{str(e)}" elapsed={elapsed:.3f}'
+            f"Groups page load from stats failed | run_id={run_id} error='{str(e)}' elapsed={elapsed:.3f}s"
         )
         return [], 0
+
+
+def get_groups_page_duckdb(
+    run_id: str, sort_key: str, page: int, page_size: int, filters: Dict[str, Any]
+) -> Tuple[List[Dict[str, Any]], int]:
+    """
+    Load groups page data using DuckDB for optimal performance.
+
+    Args:
+        run_id: Run ID to load data for
+        page: Page number (1-based)
+        page_size: Number of groups per page
+        filters: Optional filters to apply
+        sort_by: Field to sort by
+        sort_order: Sort order (asc/desc)
+
+    Returns:
+        Tuple of (page_data, total_groups)
+    """
+    # Load settings
+    with open("config/settings.yaml", "r") as f:
+        settings = yaml.safe_load(f)
+    duckdb_threads = settings.get("ui", {}).get("duckdb_threads", 4)
+
+    # Get artifact paths
+    artifact_paths = get_artifact_paths(run_id)
+    parquet_path = artifact_paths["review_ready_parquet"]
+
+    if not os.path.exists(parquet_path):
+        logger.warning(f"Parquet file not found: {parquet_path}")
+        return [], 0
+
+    # Start timing
+    start_time = time.time()
+
+    # Check timeout periodically
+    def check_timeout():
+        elapsed = time.time() - start_time
+        if elapsed > 30:  # 30 second timeout
+            raise PageFetchTimeout(
+                f"Page fetch exceeded 30 second timeout after {elapsed:.1f}s"
+            )
+
+    # Log start
+    logger.info(
+        f'DuckDB groups page fetch start | run_id={run_id} sort="{sort_key}" page={page} page_size={page_size}'
+    )
+
+    # Step 1: DuckDB connection
+    step_start = time.time()
+    conn = duckdb.connect(":memory:")
+    conn.execute(f"PRAGMA threads = {duckdb_threads}")
+    connect_time = time.time() - step_start
+
+    logger.info(
+        f"DuckDB connection | run_id={run_id} threads={duckdb_threads} elapsed={connect_time:.3f}s"
+    )
+
+    check_timeout()
+
+    # Step 2: Build SQL query
+    step_start = time.time()
+
+    # Build WHERE clause for filters
+    where_conditions = []
+    if filters.get("dispositions"):
+        dispositions = filters["dispositions"]
+        disp_list = "', '".join(dispositions)
+        where_conditions.append(f"Disposition IN ('{disp_list}')")
+
+    if filters.get("min_edge_strength", 0.0) > 0.0:
+        where_conditions.append(
+            f"weakest_edge_to_primary >= {filters['min_edge_strength']}"
+        )
+
+    where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+
+    # Build ORDER BY clause
+    order_by_clause = ""
+    if "Group Size" in sort_key:
+        if "(Desc)" in sort_key:
+            order_by_clause = "s.group_size DESC"
+        else:
+            order_by_clause = "s.group_size ASC"
+    elif "Max Score" in sort_key:
+        if "(Desc)" in sort_key:
+            order_by_clause = "s.max_score DESC"
+        else:
+            order_by_clause = "s.max_score ASC"
+    elif "Account Name" in sort_key:
+        if "(Desc)" in sort_key:
+            order_by_clause = "p.primary_name DESC"
+        else:
+            order_by_clause = "p.primary_name ASC"
+    else:
+        order_by_clause = "s.group_id ASC"
+
+    # Calculate pagination
+    offset = (page - 1) * page_size
+
+    # Build SQL
+    sql = f"""
+    WITH base AS (
+      SELECT
+        group_id,
+        account_name,
+        is_primary,
+        weakest_edge_to_primary,
+        Disposition
+      FROM read_parquet('{parquet_path}')
+      WHERE {where_clause}
+    ),
+    stats AS (
+      SELECT 
+        group_id, 
+        COUNT(*) AS group_size, 
+        MAX(weakest_edge_to_primary) AS max_score
+      FROM base
+      GROUP BY group_id
+    ),
+    primary_names AS (
+      SELECT
+        group_id,
+        any_value(account_name) FILTER (WHERE is_primary) AS primary_name
+      FROM base
+      GROUP BY group_id
+    )
+    SELECT
+      s.group_id,
+      s.group_size,
+      s.max_score,
+      COALESCE(p.primary_name, '') AS primary_name
+    FROM stats s
+    LEFT JOIN primary_names p USING (group_id)
+    ORDER BY {order_by_clause}, s.group_id ASC
+    LIMIT {page_size}
+    OFFSET {offset};
+    """
+
+    query_build_time = time.time() - step_start
+
+    logger.info(
+        f'DuckDB query built | run_id={run_id} where_clause="{where_clause}" order_by="{order_by_clause}" elapsed={query_build_time:.3f}s'
+    )
+
+    check_timeout()
+
+    # Step 3: Execute query
+    step_start = time.time()
+    result = conn.execute(sql)
+    query_exec_time = time.time() - step_start
+
+    logger.info(
+        f"DuckDB query executed | run_id={run_id} elapsed={query_exec_time:.3f}s"
+    )
+
+    check_timeout()
+
+    # Step 4: Convert to pandas
+    step_start = time.time()
+    df = result.df()
+    pandas_time = time.time() - step_start
+
+    logger.info(
+        f"DuckDB pandas conversion | run_id={run_id} rows={len(df)} elapsed={pandas_time:.3f}s"
+    )
+
+    # Step 5: Convert to list of dicts
+    page_data = df.to_dict("records")
+
+    # Get total count
+    count_sql = f"""
+    WITH base AS (
+      SELECT group_id
+      FROM read_parquet('{parquet_path}')
+      WHERE {where_clause}
+    )
+    SELECT COUNT(DISTINCT group_id) as total_groups
+    FROM base;
+    """
+    total_result = conn.execute(count_sql)
+    total_groups = total_result.fetchone()[0]
+
+    # Close connection
+    conn.close()
+
+    elapsed = time.time() - start_time
+    logger.info(
+        f'DuckDB groups page loaded | run_id={run_id} rows={len(page_data)} offset={offset} sort="{sort_key}" elapsed={elapsed:.3f} projected_cols=["group_id", "group_size", "max_score", "primary_name"]'
+    )
+
+    return page_data, total_groups
 
 
 def get_total_groups_count(run_id: str, filters: Dict[str, Any]) -> int:

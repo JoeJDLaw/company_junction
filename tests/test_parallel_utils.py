@@ -19,26 +19,45 @@ class TestLokyAvailability:
         result = is_loky_available()
         assert isinstance(result, bool)
 
-    @patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", False)
-    def test_is_loky_available_when_joblib_unavailable(self) -> None:
+    @patch("src.utils.parallel_utils._try_import_joblib", return_value=False)
+    def test_is_loky_available_when_joblib_unavailable(self, mock_try_import) -> None:
         """Test loky availability when joblib is not available."""
+        # Reset cache to ensure test isolation
+        import src.utils.parallel_utils
+
+        src.utils.parallel_utils._LOKY_AVAILABLE = None
+
         result = is_loky_available()
         assert result is False
 
-    @patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True)
+    @patch("src.utils.parallel_utils._try_import_joblib", return_value=True)
     @patch("src.utils.parallel_utils.Parallel")
-    def test_is_loky_available_when_loky_works(self, mock_parallel) -> None:
+    def test_is_loky_available_when_loky_works(
+        self, mock_parallel, mock_try_import
+    ) -> None:
         """Test loky availability when loky backend works."""
+        # Reset cache to ensure test isolation
+        import src.utils.parallel_utils
+
+        src.utils.parallel_utils._LOKY_AVAILABLE = None
+
         # Mock successful loky execution
         mock_parallel.return_value.return_value = [1]
 
         result = is_loky_available()
         assert result is True
 
-    @patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True)
+    @patch("src.utils.parallel_utils._try_import_joblib", return_value=True)
     @patch("src.utils.parallel_utils.Parallel")
-    def test_is_loky_available_when_loky_fails(self, mock_parallel) -> None:
+    def test_is_loky_available_when_loky_fails(
+        self, mock_parallel, mock_try_import
+    ) -> None:
         """Test loky availability when loky backend fails."""
+        # Reset cache to ensure test isolation
+        import src.utils.parallel_utils
+
+        src.utils.parallel_utils._LOKY_AVAILABLE = None
+
         # Mock failed loky execution
         mock_parallel.side_effect = Exception("loky failed")
 

@@ -3,7 +3,7 @@
 import ast
 import os
 from pathlib import Path
-from typing import Set
+from typing import Set, Union
 import pytest
 
 
@@ -77,12 +77,12 @@ def find_destructive_functions() -> Set[str]:
     return found_functions
 
 
-def is_gated_by_fuse(node: ast.Call, content: str) -> bool:
-    """Check if a function call is gated by a Phase 1 fuse."""
-    # Get the line number of the function call
+def is_gated_by_fuse(node: Union[ast.Call, ast.Delete], content: str) -> bool:
+    """Check if a function call or delete operation is gated by a Phase 1 fuse."""
+    # Get the line number of the operation
     lineno = node.lineno
 
-    # Look at the context around the function call
+    # Look at the context around the operation
     lines = content.split("\n")
     start_line = max(0, lineno - 20)  # Look at 20 lines before
     end_line = min(len(lines), lineno + 5)  # Look at 5 lines after
@@ -93,18 +93,22 @@ def is_gated_by_fuse(node: ast.Call, content: str) -> bool:
     # Check for fuse patterns
     fuse_patterns = [
         "PHASE_1_DESTRUCTIVE_FUSE",
-        "if not PHASE_1_DESTRUCTIVE_FUSE:",
-        "if PHASE_1_DESTRUCTIVE_FUSE:",
+        "_get_destructive_fuse",
+        "if not _get_destructive_fuse():",
+        "if _get_destructive_fuse():",
         "destructive.*fuse",
         "phase.*fuse",
     ]
 
     # Also check if we're inside a function that has a fuse check
     # Look for function definitions that contain fuse checks
-    if "PHASE_1_DESTRUCTIVE_FUSE" in context:
+    if any(
+        pattern in context
+        for pattern in ["PHASE_1_DESTRUCTIVE_FUSE", "_get_destructive_fuse"]
+    ):
         return True
 
-    # Look for the function definition that contains this call
+    # Look for the function definition that contains this operation
     for i in range(start_line, -1, -1):
         line = lines[i].strip()
         if line.startswith("def "):
@@ -118,7 +122,10 @@ def is_gated_by_fuse(node: ast.Call, content: str) -> bool:
                     break
 
             func_content = "\n".join(lines[func_start:func_end])
-            if "PHASE_1_DESTRUCTIVE_FUSE" in func_content:
+            if (
+                "PHASE_1_DESTRUCTIVE_FUSE" in func_content
+                or "_get_destructive_fuse" in func_content
+            ):
                 return True
             break
 

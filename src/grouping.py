@@ -276,8 +276,14 @@ def create_groups_with_edge_gating(
             elif rank[px] > rank[py]:
                 parent[py] = px
             else:
-                parent[py] = px
-                rank[px] += 1
+                # When ranks are equal, always choose the smaller root ID as the new parent
+                # This ensures consistent results across runs
+                if px < py:
+                    parent[py] = px
+                    rank[px] += 1
+                else:
+                    parent[px] = py
+                    rank[py] += 1
 
         # Initialize all accounts as their own groups
         logger.debug(f"Initializing Union-Find for {len(accounts_df)} accounts")
@@ -290,7 +296,11 @@ def create_groups_with_edge_gating(
         explain_metadata: Dict[str, Dict[str, Any]] = {}
 
         # Process candidate pairs in score order (highest first)
-        sorted_pairs = candidate_pairs_df.sort_values("score", ascending=False)
+        # Use deterministic sorting to ensure consistent results across runs
+        # Add additional sorting criteria to ensure complete determinism
+        sorted_pairs = candidate_pairs_df.sort_values(
+            ["score", id_col1, id_col2], ascending=[False, True, True], kind="mergesort"
+        )
 
         # Handle different column naming conventions
         if (

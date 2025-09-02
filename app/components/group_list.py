@@ -142,6 +142,23 @@ def render_group_list(
             )
             st.rerun()
 
+    # Phase 1.22.1: Show performance indicator when using fast path
+    try:
+        from src.utils.ui_helpers import get_artifact_paths
+        import os
+
+        artifact_paths = get_artifact_paths(selected_run_id)
+        group_stats_path = artifact_paths.get("group_stats_parquet")
+
+        if group_stats_path and os.path.exists(group_stats_path):
+            st.success(
+                "⚡ **Fast stats mode**: Using pre-computed group statistics for instant loading"
+            )
+        else:
+            st.info("📊 **Standard mode**: Computing group statistics on-demand")
+    except Exception:
+        pass  # Don't break the UI if this fails
+
     return page_groups, total_groups, max_page
 
 

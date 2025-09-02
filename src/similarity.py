@@ -16,9 +16,8 @@ from typing import List, Tuple, Dict, Any, Optional
 import logging
 from itertools import combinations
 import re
-import os
 from src.utils.progress import ProgressLogger
-from src.utils.parallel_utils import ParallelExecutor, ensure_deterministic_order
+from src.utils.parallel_utils import ParallelExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ def pair_scores(
     candidate_pairs = _generate_candidate_pairs(
         df_norm, enable_progress, parallel_executor, interim_dir, settings
     )
-    
+
     # Drop temporary blocking columns
     if "secondary_key" in df_norm.columns:
         df_norm.drop(columns=["secondary_key"], inplace=True)
@@ -73,7 +72,12 @@ def pair_scores(
 
     # Compute similarity scores for each pair
     scores = _compute_similarity_scores_parallel(
-        df_norm, candidate_pairs, penalties, enable_progress, parallel_executor, interim_dir
+        df_norm,
+        candidate_pairs,
+        penalties,
+        enable_progress,
+        parallel_executor,
+        interim_dir,
     )
 
     # Create DataFrame and filter by medium threshold
@@ -116,7 +120,9 @@ def _generate_candidate_pairs(
         return pairs
 
     # Get performance settings
-    perf_settings = settings.get("similarity", {}).get("performance", {}) if settings else {}
+    perf_settings = (
+        settings.get("similarity", {}).get("performance", {}) if settings else {}
+    )
     block_cap = perf_settings.get("block_cap", 800)
     secondary_blocking = perf_settings.get("secondary_blocking", "first_two_tokens")
     enable_prefilters = perf_settings.get("enable_vectorized_prefilters", True)
@@ -141,8 +147,10 @@ def _generate_candidate_pairs(
             df_norm["name_core"].str.split().str[:2].str.join(" ").fillna("")
         )
     elif secondary_blocking == "char_bigrams":
+
         def get_bigrams(text: str) -> str:
-            return " ".join([text[i:i+2] for i in range(len(text)-1)])
+            return " ".join([text[i : i + 2] for i in range(len(text) - 1)])
+
         df_norm["secondary_key"] = df_norm["name_core"].apply(get_bigrams).fillna("")
     else:
         df_norm["secondary_key"] = df_norm["block_key"]  # Fallback to primary key
@@ -210,11 +218,13 @@ def _generate_candidate_pairs(
 
         # Apply deterministic block cap if needed
         if block_size > block_cap:
-            logger.info(f"Block {block_key} exceeds cap ({block_size} > {block_cap}). Using secondary blocking.")
-            
+            logger.info(
+                f"Block {block_key} exceeds cap ({block_size} > {block_cap}). Using secondary blocking."
+            )
+
             # Group by secondary key within the block
             secondary_groups = block_df.groupby("secondary_key")
-            
+
             for _, group_df in secondary_groups:
                 group_indices = group_df.index.tolist()
                 if len(group_indices) > 1:
@@ -222,19 +232,23 @@ def _generate_candidate_pairs(
                     if enable_prefilters:
                         # Get name lengths
                         name_lengths = group_df["name_core"].str.len()
-                        
+
                         # Create a matrix of length differences
-                        length_diffs = abs(name_lengths.values[:, None] - name_lengths.values)
-                        
+                        length_diffs = abs(
+                            name_lengths.values[:, None] - name_lengths.values
+                        )
+
                         # Get valid pairs based on length difference
                         valid_pairs = np.where(length_diffs <= max_length_diff)
-                        
+
                         # Convert to list of tuples
-                        filtered_pairs = list(zip(
-                            [group_indices[i] for i in valid_pairs[0]],
-                            [group_indices[j] for j in valid_pairs[1]]
-                        ))
-                        
+                        filtered_pairs = list(
+                            zip(
+                                [group_indices[i] for i in valid_pairs[0]],
+                                [group_indices[j] for j in valid_pairs[1]],
+                            )
+                        )
+
                         # Remove self-pairs and ensure i < j
                         filtered_pairs = [(i, j) for i, j in filtered_pairs if i < j]
                     else:
@@ -282,6 +296,7 @@ def _compute_pair_score_optimized(
     account_id_a: str,
     account_id_b: str,
     penalties: Dict[str, Any],
+    threshold: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Compute similarity score for a pair of records using optimized data layout.
@@ -299,9 +314,14 @@ def _compute_pair_score_optimized(
         Dictionary with score components
     """
     # Compute rapidfuzz ratios with score_cutoff
-    high_threshold = 92  # From settings.yaml
-    ratio_name = fuzz.token_sort_ratio(name_core_a, name_core_b, score_cutoff=high_threshold)
-    ratio_set = fuzz.token_set_ratio(name_core_a, name_core_b, score_cutoff=high_threshold)
+    # Use provided threshold or fall back to default
+    score_cutoff = threshold if threshold is not None else 0
+    ratio_name = fuzz.token_sort_ratio(
+        name_core_a, name_core_b, score_cutoff=score_cutoff
+    )
+    ratio_set = fuzz.token_set_ratio(
+        name_core_a, name_core_b, score_cutoff=score_cutoff
+    )
 
     # Compute Jaccard similarity
     tokens_a = set(name_core_a.split())
@@ -344,6 +364,7 @@ def _compute_pair_score_optimized(
         "suffix_match": suffix_match,
         "base_score": base,
     }
+
 
 def _compute_pair_score(
     row_a: pd.Series, row_b: pd.Series, penalties: Dict[str, Any]
@@ -520,55 +541,59 @@ def _compute_similarity_scores_parallel(
 ) -> List[Dict[str, Any]]:
     """
     Compute similarity scores for candidate pairs in parallel with optimized data layout.
-    
+
     Args:
         df_norm: DataFrame with normalized name columns
         candidate_pairs: List of (idx_a, idx_b) tuples
         penalties: Dictionary of penalty values
         enable_progress: Enable progress logging
         parallel_executor: Optional parallel executor for parallel processing
-        
+
     Returns:
         List of dictionaries with similarity scores and metadata
     """
     # Create index mapping from original to filtered indices
     filtered_indices = df_norm.index.values
     index_map = {idx: i for i, idx in enumerate(filtered_indices)}
-    
+
     # Convert frequently used columns to numpy arrays for better memory layout
     name_core_array = df_norm["name_core"].values
     suffix_class_array = df_norm["suffix_class"].values
     account_id_array = df_norm["account_id"].values
-    
+
     # Create memory-mapped arrays for parallel processing
     if parallel_executor and parallel_executor.backend == "loky":
         try:
             from joblib import dump, load
             import tempfile
             import os
-            
+
             # Create temporary files for memory mapping
             with tempfile.NamedTemporaryFile(delete=False) as f_name:
                 dump(name_core_array, f_name.name)
                 name_core_mmap = load(f_name.name, mmap_mode="r")
-            
+
             with tempfile.NamedTemporaryFile(delete=False) as f_suffix:
                 dump(suffix_class_array, f_suffix.name)
                 suffix_class_mmap = load(f_suffix.name, mmap_mode="r")
-                
+
             # Use memory-mapped arrays
             name_core_array = name_core_mmap
             suffix_class_array = suffix_class_mmap
-            
+
             # Clean up temp files when done
             def cleanup():
                 os.unlink(f_name.name)
                 os.unlink(f_suffix.name)
+
             import atexit
+
             atexit.register(cleanup)
-            
+
         except ImportError:
-            logger.warning("joblib not available for memory mapping - using regular arrays")
+            logger.warning(
+                "joblib not available for memory mapping - using regular arrays"
+            )
     """
     Compute similarity scores for candidate pairs using parallel execution.
 
@@ -602,6 +627,7 @@ def _compute_similarity_scores_parallel(
                     account_id_array[index_map[idx_a]],
                     account_id_array[index_map[idx_b]],
                     penalties,
+                    threshold=0,  # No cutoff for scoring, filter later
                 )
                 for idx_a, idx_b in chunk
             ]
@@ -619,20 +645,26 @@ def _compute_similarity_scores_parallel(
         scores = []
         processed = 0
         checkpoint_size = 50000  # Save every 50k pairs
-        
+
         # Load existing checkpoint if available
-        checkpoint_path = f"{interim_dir}/similarity_checkpoint.parquet" if interim_dir else "data/interim/similarity_checkpoint.parquet"
+        checkpoint_path = (
+            f"{interim_dir}/similarity_checkpoint.parquet"
+            if interim_dir
+            else "data/interim/similarity_checkpoint.parquet"
+        )
         try:
             if os.path.exists(checkpoint_path):
                 checkpoint_df = pd.read_parquet(checkpoint_path)
-                scores = checkpoint_df.to_dict('records')
+                scores = checkpoint_df.to_dict("records")
                 processed = len(scores)
                 logger.info(f"Loaded {processed} pairs from checkpoint")
-                
+
                 # Filter out already processed pairs
                 processed_pairs = set((r["id_a"], r["id_b"]) for r in scores)
-                remaining_pairs = [(a, b) for a, b in candidate_pairs if (a, b) not in processed_pairs]
-                
+                remaining_pairs = [
+                    (a, b) for a, b in candidate_pairs if (a, b) not in processed_pairs
+                ]
+
                 # Recreate chunks for remaining pairs
                 pair_chunks = [
                     remaining_pairs[i : i + chunk_size]
@@ -641,7 +673,7 @@ def _compute_similarity_scores_parallel(
                 logger.info(f"Processing remaining {len(remaining_pairs)} pairs")
         except Exception as e:
             logger.warning(f"Failed to load checkpoint: {e}")
-        
+
         # Process chunks
         for chunk_idx, chunk_pairs in enumerate(pair_chunks):
             chunk_results = parallel_executor.execute(
@@ -649,16 +681,16 @@ def _compute_similarity_scores_parallel(
                 [chunk_pairs],
                 operation_name=f"similarity_scoring_chunk_{chunk_idx}",
             )
-            
+
             # Update scores and progress
             chunk_scores = chunk_results[0]
             scores.extend(chunk_scores)
             processed += len(chunk_scores)
-            
+
             # Log progress (rate-limited)
             if processed % pair_progress.step_every == 0:
                 logger.info(f"Processed {processed}/{len(candidate_pairs)} pairs")
-            
+
             # Save checkpoint periodically
             if processed % checkpoint_size == 0 and interim_dir:
                 try:
@@ -687,6 +719,7 @@ def _compute_similarity_scores_parallel(
                 account_id_array[index_map[idx_a]],
                 account_id_array[index_map[idx_b]],
                 penalties,
+                threshold=0,  # No cutoff for scoring, filter later
             )
             for idx_a, idx_b in pair_progress.wrap(candidate_pairs)
         ]

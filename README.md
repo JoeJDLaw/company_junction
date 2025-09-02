@@ -584,6 +584,7 @@ find . \
        -path './app/*' -o \
        -path './tests/*' -o \
        -path './config/*' -o \
+       -path './scripts/*' -o \
        -path './tools/cleanup_test_artifacts.py' -o \
        -name 'cursor_rules.md' -o \
        -name 'CHANGELOG.md' -o \

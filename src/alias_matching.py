@@ -20,7 +20,9 @@ from src.utils.parallel_utils import parallel_map
 logger = logging.getLogger(__name__)
 
 
-def _build_first_token_bucket(name_core: pd.Series) -> Tuple[Dict[str, np.ndarray], Dict[int, int], Dict[int, int]]:
+def _build_first_token_bucket(
+    name_core: pd.Series,
+) -> Tuple[Dict[str, np.ndarray], Dict[int, int], Dict[int, int]]:
     """Build a bucket mapping first tokens to row indices and an index mapping.
 
     Args:
@@ -33,7 +35,7 @@ def _build_first_token_bucket(name_core: pd.Series) -> Tuple[Dict[str, np.ndarra
         - Dictionary mapping new contiguous indices back to original indices
     """
     bucket = defaultdict(list)
-    
+
     # Create index mapping (old index -> new contiguous index)
     index_map = {old_idx: new_idx for new_idx, old_idx in enumerate(name_core.index)}
     reverse_map = {new_idx: old_idx for old_idx, new_idx in index_map.items()}
@@ -47,14 +49,16 @@ def _build_first_token_bucket(name_core: pd.Series) -> Tuple[Dict[str, np.ndarra
             bucket[first_token].append(index_map[idx])
 
     # Convert to numpy arrays for efficiency
-    bucket_arrays = {token: np.array(indices, dtype=int) for token, indices in bucket.items()}
-    
+    bucket_arrays = {
+        token: np.array(indices, dtype=int) for token, indices in bucket.items()
+    }
+
     # Log bucket statistics
     logger.debug("Index mapping stats:")
     logger.debug(f"  Original indices: {min(name_core.index)}..{max(name_core.index)}")
     logger.debug(f"  Mapped indices: 0..{len(name_core)-1}")
     logger.debug(f"  Total buckets: {len(bucket_arrays)}")
-    
+
     return bucket_arrays, index_map, reverse_map
 
 
@@ -116,10 +120,10 @@ def _process_one_record_optimized(
     record = df_norm.loc[record_id]
     alias_candidates = record.get("alias_candidates", [])
     alias_sources = record.get("alias_sources", [])
-    
+
     # Map record_id to new index space
     record_idx = index_map[record_id]
-    
+
     if debug:
         logger.info(f"[DEBUG] Processing record {record_id}:")
         logger.info(f"[DEBUG]   name_core: {record.get('name_core', '')}")
@@ -171,21 +175,31 @@ def _process_one_record_optimized(
             continue
 
         if debug:
-            logger.info(f"[DEBUG]   First token '{first_token}': {len(candidate_indices)} candidates")
+            logger.info(
+                f"[DEBUG]   First token '{first_token}': {len(candidate_indices)} candidates"
+            )
             logger.info(f"[DEBUG]   Record index mapping: {record_id} → {record_idx}")
-            logger.info(f"[DEBUG]   Candidate indices (mapped): {candidate_indices[:5]}...")
+            logger.info(
+                f"[DEBUG]   Candidate indices (mapped): {candidate_indices[:5]}..."
+            )
 
         # Apply suffix and self-match filters using mapped indices
         mask = (suffix_class.iloc[candidate_indices].values == record_suffix) & (
             candidate_indices != record_idx  # Use mapped index for self-match
         )
         if debug:
-            logger.info(f"[DEBUG]   Suffix class '{record_suffix}': {mask.sum()} matches")
-            logger.info(f"[DEBUG]   Candidates before suffix filter: {candidate_indices.size}")
-        
+            logger.info(
+                f"[DEBUG]   Suffix class '{record_suffix}': {mask.sum()} matches"
+            )
+            logger.info(
+                f"[DEBUG]   Candidates before suffix filter: {candidate_indices.size}"
+            )
+
         candidate_indices = candidate_indices[mask]
         if debug:
-            logger.info(f"[DEBUG]   Candidates after suffix filter: {candidate_indices.size}")
+            logger.info(
+                f"[DEBUG]   Candidates after suffix filter: {candidate_indices.size}"
+            )
 
         if candidate_indices.size == 0:
             if debug:
@@ -207,19 +221,29 @@ def _process_one_record_optimized(
 
         if debug:
             logger.info(f"[DEBUG]   Scoring {len(candidate_names)} candidates")
-            logger.info(f"[DEBUG]   Got {len(results)} matches above threshold {high_threshold}")
+            logger.info(
+                f"[DEBUG]   Got {len(results)} matches above threshold {high_threshold}"
+            )
 
-                # Convert results to match dictionaries
+            # Convert results to match dictionaries
         for candidate_name, score, result_idx in results:
-                        # Get mapped index and convert back to original space using reverse_map
+            # Get mapped index and convert back to original space using reverse_map
             mapped_idx = candidate_indices[result_idx]
             original_idx = reverse_map[mapped_idx]
 
             if debug:
-                logger.info(f"[DEBUG]   Match: {candidate_name} (score={score}, idx={mapped_idx}→{original_idx})")
-                logger.info(f"[DEBUG]   Index mapping: result_idx={result_idx}, mapped_idx={mapped_idx}, original_idx={original_idx}")
-                logger.info(f"[DEBUG]   reverse_map[mapped_idx]={reverse_map[mapped_idx]}")
-                logger.info(f"[DEBUG]   df_groups.index[mapped_idx]={df_groups.index[mapped_idx]}")
+                logger.info(
+                    f"[DEBUG]   Match: {candidate_name} (score={score}, idx={mapped_idx}→{original_idx})"
+                )
+                logger.info(
+                    f"[DEBUG]   Index mapping: result_idx={result_idx}, mapped_idx={mapped_idx}, original_idx={original_idx}"
+                )
+                logger.info(
+                    f"[DEBUG]   reverse_map[mapped_idx]={reverse_map[mapped_idx]}"
+                )
+                logger.info(
+                    f"[DEBUG]   df_groups.index[mapped_idx]={df_groups.index[mapped_idx]}"
+                )
 
             # Get group ID with fallback for missing indices
             try:
@@ -228,10 +252,14 @@ def _process_one_record_optimized(
                 match_group_id = ""
 
             if debug:
-                logger.info(f"[DEBUG]   Group ID: {match_group_id} for record {original_idx}")
+                logger.info(
+                    f"[DEBUG]   Group ID: {match_group_id} for record {original_idx}"
+                )
                 logger.info(f"[DEBUG]   Candidate name: {candidate_name}")
                 logger.info(f"[DEBUG]   Original name: {name_core.loc[original_idx]}")
-                logger.info(f"[DEBUG]   Group ID lookup: mask={mask.sum()}, id={match_group_id}")
+                logger.info(
+                    f"[DEBUG]   Group ID lookup: mask={mask.sum()}, id={match_group_id}"
+                )
 
             # Check if this is a valid match
             if score >= high_threshold:
@@ -271,10 +299,14 @@ def compute_alias_matches(
     df_norm = df_norm.sort_index()
     df_groups = df_groups.sort_values(["group_id", "account_id"]).sort_index().copy()
     df_groups = df_groups.sort_values(["group_id", "account_id"]).sort_index().copy()
-    df_groups = df_groups.sort_values(["group_id"]).sort_index().copy()  # Final sort by group_id and index
+    df_groups = (
+        df_groups.sort_values(["group_id"]).sort_index().copy()
+    )  # Final sort by group_id and index
     df_groups = df_groups.copy()  # Make another copy to ensure index is preserved
-    df_groups = df_groups.sort_values(["group_id"]).sort_index().copy()  # Final sort by group_id and index
-    
+    df_groups = (
+        df_groups.sort_values(["group_id"]).sort_index().copy()
+    )  # Final sort by group_id and index
+
     # Enable debug logging for specific records
     debug_records = {243, 2725, 2726, 2727, 2728}  # Aegis records
 
@@ -283,15 +315,15 @@ def compute_alias_matches(
     max_alias_pairs = settings.get("similarity", {}).get("max_alias_pairs", 100000)
     optimize = settings.get("alias", {}).get("optimize", True)
     progress_interval = settings.get("alias", {}).get("progress_interval_s", 1.0)
-    
+
     # Get worker count from multiple sources with fallback logic
     workers = (
-        settings.get("parallelism", {}).get("workers") or  # Config file
-        settings.get("workers") or                         # Direct setting
-        settings.get("effective_workers") or               # Computed/CLI value
-        1                                                  # Fallback to sequential
+        settings.get("parallelism", {}).get("workers")  # Config file
+        or settings.get("workers")  # Direct setting
+        or settings.get("effective_workers")  # Computed/CLI value
+        or 1  # Fallback to sequential
     )
-    
+
     # Enhanced logging for debugging
     logger.info(
         f"Alias optimization config: optimize={optimize}, workers={workers}, "
@@ -310,7 +342,7 @@ def compute_alias_matches(
         # Legacy sequential path
         reason = "optimize=false" if not optimize else f"workers={workers} (≤1)"
         logger.info(f"⚠️ Using legacy sequential alias matching: {reason}")
-        
+
     if optimize and workers and workers > 1:
         # Optimized path with parallelization already logged above
 
@@ -398,12 +430,14 @@ def compute_alias_matches(
 
             # Flatten results and sort by record IDs first, then alias text and group ID
             alias_matches = [match for chunk in results for match in chunk]
-            alias_matches.sort(key=lambda x: (
-                x["record_id"],
-                x["match_record_id"],
-                x["alias_text"],
-                x["match_group_id"]
-            ))
+            alias_matches.sort(
+                key=lambda x: (
+                    x["record_id"],
+                    x["match_record_id"],
+                    x["alias_text"],
+                    x["match_group_id"],
+                )
+            )
 
     else:
         # Legacy sequential path
@@ -433,7 +467,12 @@ def compute_alias_matches(
             for i, (alias, source) in enumerate(zip(normalized_aliases, alias_sources)):
                 alias_matches.extend(
                     _score_alias_against_records(
-                        record, alias, source, df_norm, df_groups, high_threshold,
+                        record,
+                        alias,
+                        source,
+                        df_norm,
+                        df_groups,
+                        high_threshold,
                         debug=idx in debug_records,
                     )
                 )
@@ -449,12 +488,14 @@ def compute_alias_matches(
     # Create DataFrame and sort matches
     if alias_matches:
         # Sort matches by record IDs first, then alias text and group ID
-        alias_matches.sort(key=lambda x: (
-            x["record_id"],
-            x["match_record_id"],
-            x["alias_text"],
-            x["match_group_id"]
-        ))
+        alias_matches.sort(
+            key=lambda x: (
+                x["record_id"],
+                x["match_record_id"],
+                x["alias_text"],
+                x["match_group_id"],
+            )
+        )
         df_matches = pd.DataFrame(alias_matches)
         accepted_matches = len(df_matches)
     else:
@@ -614,7 +655,9 @@ def _score_alias_against_records(
             )
 
             if debug:
-                logger.info(f"[DEBUG-LEGACY]   Match: {other_name_core} (score={score})")
+                logger.info(
+                    f"[DEBUG-LEGACY]   Match: {other_name_core} (score={score})"
+                )
 
             matches.append(
                 {

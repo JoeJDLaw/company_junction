@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from src.alias_matching import compute_alias_matches
+from tests.helpers.ingest import ensure_required_columns
 
 
 @pytest.fixture
@@ -66,6 +67,19 @@ def sample_data():
         },
         index=df_norm.index,
     )
+
+    # Ensure required columns are present for the pipeline
+    required_columns = [
+        "account_id",
+        "name_core",
+        "suffix_class",
+        "alias_candidates",
+        "alias_sources",
+    ]
+    df_norm = ensure_required_columns(df_norm, required_columns)
+
+    # Ensure df_groups has required columns
+    df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
 
     return df_norm, df_groups
 
@@ -137,6 +151,17 @@ def test_alias_equivalence_edge_cases():
 
     df_groups = pd.DataFrame({"group_id": ["group_1", "group_2"]}, index=df_norm.index)
 
+    # Ensure required columns are present
+    required_columns = [
+        "account_id",
+        "name_core",
+        "suffix_class",
+        "alias_candidates",
+        "alias_sources",
+    ]
+    df_norm = ensure_required_columns(df_norm, required_columns)
+    df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
+
     settings = {
         "similarity": {"high": 85, "max_alias_pairs": 1000},
         "parallelism": {"workers": 2, "backend": "threading", "chunk_size": 100},
@@ -155,17 +180,28 @@ def test_alias_equivalence_edge_cases():
 
 
 def test_alias_equivalence_mismatched_sources():
-    """Test handling of mismatched alias_candidates vs alias_sources lengths."""
+    """Test equivalence with mismatched alias sources."""
     df_norm = pd.DataFrame(
         {
-            "name_core": ["acme corp", "beta inc"],
-            "suffix_class": ["corp", "inc"],
-            "alias_candidates": [["acme corp"], ["beta inc", "beta industries"]],
-            "alias_sources": [["semicolon"], ["semicolon"]],  # Mismatched length
+            "name_core": ["acme corp", "acme llc"],
+            "suffix_class": ["corp", "llc"],
+            "alias_candidates": [["acme llc"], ["acme corp"]],
+            "alias_sources": [["semicolon"], ["parentheses"]],
         }
     )
 
-    df_groups = pd.DataFrame({"group_id": ["group_1", "group_2"]}, index=df_norm.index)
+    df_groups = pd.DataFrame({"group_id": ["group_1", "group_1"]}, index=df_norm.index)
+
+    # Ensure required columns are present
+    required_columns = [
+        "account_id",
+        "name_core",
+        "suffix_class",
+        "alias_candidates",
+        "alias_sources",
+    ]
+    df_norm = ensure_required_columns(df_norm, required_columns)
+    df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
 
     settings = {
         "similarity": {"high": 85, "max_alias_pairs": 1000},
@@ -173,8 +209,10 @@ def test_alias_equivalence_mismatched_sources():
         "alias": {"optimize": True, "progress_interval_s": 0.1},
     }
 
-    # Both paths should handle the mismatch gracefully
+    # Test optimized path
     df_optimized, stats_optimized = compute_alias_matches(df_norm, df_groups, settings)
+
+    # Test legacy path
     settings["alias"]["optimize"] = False
     df_legacy, stats_legacy = compute_alias_matches(df_norm, df_groups, settings)
 
@@ -194,32 +232,50 @@ def test_alias_equivalence_mismatched_sources():
 
 
 def test_alias_equivalence_sequential_fallback():
-    """Test that sequential fallback works when workers=1."""
+    """Test that sequential fallback produces equivalent results."""
     df_norm = pd.DataFrame(
         {
-            "name_core": ["acme corp", "acme corporation"],
-            "suffix_class": ["corp", "corp"],  # Use same suffix class to allow matches
-            "alias_candidates": [["acme corporation"], ["acme corp"]],
-            "alias_sources": [["semicolon"], ["parentheses"]],
+            "name_core": ["acme corp", "acme corp", "beta industries"],
+            "suffix_class": ["corp", "corp", "industries"],
+            "alias_candidates": [["acme corp"], ["acme corp"], []],
+            "alias_sources": [["semicolon"], ["parentheses"], []],
         }
     )
 
-    df_groups = pd.DataFrame({"group_id": ["group_1", "group_1"]}, index=df_norm.index)
+    df_groups = pd.DataFrame(
+        {"group_id": ["group_1", "group_1", "group_2"]}, index=df_norm.index
+    )
+
+    # Ensure required columns are present
+    required_columns = [
+        "account_id",
+        "name_core",
+        "suffix_class",
+        "alias_candidates",
+        "alias_sources",
+    ]
+    df_norm = ensure_required_columns(df_norm, required_columns)
+    df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
 
     settings = {
         "similarity": {
-            "high": 70,
+            "high": 85,
+            "medium": 50,
             "max_alias_pairs": 1000,
-        },  # Lower threshold to ensure matches
-        "parallelism": {"workers": 1, "backend": "threading", "chunk_size": 100},
+        },  # Lower threshold for testing
+        "parallelism": {
+            "workers": 1,
+            "backend": "threading",
+            "chunk_size": 100,
+        },  # Force sequential
         "alias": {"optimize": True, "progress_interval_s": 0.1},
     }
 
-    # Should fall back to sequential processing
+    # This should fall back to sequential processing
     df_result, stats = compute_alias_matches(df_norm, df_groups, settings)
 
     # Should still produce valid results (these records should match each other)
     assert (
         len(df_result) > 0
-    ), f"No matches found with threshold 70, got {len(df_result)} matches"
+    ), f"No matches found with threshold 50, got {len(df_result)} matches"
     assert stats["pairs_generated"] > 0

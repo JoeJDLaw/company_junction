@@ -52,6 +52,13 @@
   - Provide a CLI/config override: `--workers N`, `--no-parallel` to force single‑process.
   - Ensure all parallel code **degrades to sequential** if resources are constrained or library not available.
 
+### Alias optimization activation (Phase 1.21.1+)
+- **Default behavior**: `alias.optimize: true` enables optimized parallel alias matching
+- **Worker requirement**: Optimization activates when `workers > 1`; falls back to sequential for single worker
+- **CLI precedence**: CLI `--workers` flag has precedence over config file settings
+- **Environment safety**: Automatic BLAS thread clamping (OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, VECLIB_MAXIMUM_THREADS=1, NUMEXPR_NUM_THREADS=1)
+- **Fallback behavior**: Graceful degradation to sequential execution when parallel resources unavailable
+
 ### Project path reference (source of truth)
 - **Pipeline entrypoint:** `src/cleaning.py`
 - **MiniDAG / Smart resume:** `src/utils/mini_dag.py`
@@ -790,3 +797,74 @@ The following stages are tracked and support resumability:
 - **Details projection tests**: Assert only visible columns selected, no blob fields.
 - **Cache key validation**: Ensure keys include backend parameter.
 - **Import tests**: Update `tests/test_imports.py` to include new utils/components.
+
+---
+
+## Phase 1 Rules (Aliases) - Phase 1.21.1+
+
+### Alias Matching Requirements
+- **Equivalence guarantee**: Optimized path must produce identical core data to legacy path
+- **Determinism**: Consistent outputs across multiple runs with same inputs
+- **Validation scripts**: Use `scripts/check_alias_results.py` for equivalence and determinism verification
+- **First-token bucketing**: Deterministic ordering for consistent blocking behavior
+- **Forbidden changes**: No behavior modifications that break equivalence between optimized and legacy paths
+
+### Alias Optimization Configuration
+- **Default state**: `alias.optimize: true` enables parallel processing
+- **Worker activation**: Requires `workers > 1`; single worker falls back to sequential
+- **Progress logging**: Rate-limited progress updates every `alias.progress_interval_s` seconds
+- **Memory guardrails**: `max_alias_pairs` limit and automatic BLAS thread clamping
+- **Environment variables**: OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1, VECLIB_MAXIMUM_THREADS=1, NUMEXPR_NUM_THREADS=1
+
+### Validation & Testing
+- **Equivalence testing**: Run both paths and compare outputs using validation scripts
+- **Determinism testing**: Multiple runs of optimized path must produce identical results
+- **Performance benchmarking**: Use `scripts/bench_alias.py` for wall-clock measurements
+- **Bucket analysis**: Use `scripts/check_alias_buckets.py` for first-token distribution analysis
+- **Test coverage**: All new functionality must include comprehensive tests
+
+### Safety & Guardrails
+- **Memory monitoring**: Track memory usage during parallel processing
+- **Progress tracking**: Rate-limited logging to prevent I/O overhead
+- **Fallback behavior**: Graceful degradation when parallel resources unavailable
+- **Error handling**: Comprehensive error handling with clear failure modes
+
+---
+
+## UI Backend Routing (Groups) - Phase 1.22.1+
+
+### Duplicate Groups MVP Backend Selection
+- **Primary Path**: `group_stats.parquet` is the first source for group list queries when available
+  - **Artifact Path**: `data/processed/<run_id>/group_stats.parquet`
+  - **Schema**: `group_id`, `group_size`, `max_score`, `primary_name`, `Disposition`
+  - **Ultra-fast loading**: Direct DuckDB queries on pre-computed stats (≤2s cold load)
+- **DuckDB-first routing**: When `ui_perf.groups.duckdb_prefer_over_pyarrow: true`
+  - **Threshold detection**: Auto-route to DuckDB when `rows > rows_duckdb_threshold` or `groups > groups_duckdb_threshold`
+  - **Smart fallback**: PyArrow for smaller datasets or when DuckDB unavailable
+- **Backend persistence**: Store choice in `st.session_state['cj.backend.groups'][run_id]`
+- **Cache hygiene**: Include `backend` in all cache keys to prevent cross-backend collisions
+
+### Configuration Integration
+- **Config section**: `ui_perf.groups.*` settings in `config/settings.yaml`
+  - `use_stats_parquet: true` - Enable fast path when stats available
+  - `duckdb_prefer_over_pyarrow: true` - Enable threshold-based routing
+  - `rows_duckdb_threshold: 30000` - Row count threshold for DuckDB routing
+  - `groups_duckdb_threshold: 10000` - Group count threshold for DuckDB routing
+- **Rollback support**: `use_stats_parquet: false` disables fast path entirely
+
+### Observability & Logging
+- **Backend selection logs**: Required structured logs for groups performance tracking
+  - `groups_perf: backend=<backend> reason=<reason> cold_load_s=<time> groups=<count> used_stats_parquet=<bool>`
+- **UI indicators**: Show "⚡ Fast stats mode" when using pre-computed stats
+- **Performance monitoring**: Track cold load times and navigation performance
+
+### Artifacts & Caching Policy
+- **Run-scoped artifacts**: Maintain `data/processed/<run_id>/group_stats.parquet` per run
+- **No disk-persisted caches**: In-memory LRU only for page navigation
+- **Cache key schema**: Include `(run_id, backend, filters_signature, sort_key, page, page_size)`
+- **Automatic generation**: Pipeline generates stats during finalization (post-survivorship)
+
+### Documentation Discipline
+- **Consistency requirement**: For every CLI flag or config change, update README.md, CHANGELOG.md, and cursor_rules.md together
+- **Module path accuracy**: Ensure references to modules/paths match reality (e.g., `src/alias_matching.py`, `scripts/check_alias_results.py`, `app/main.py`)
+- **Streamlit/fragment consistency**: Maintain consistency with DuckDB-first approach for groups backend routing

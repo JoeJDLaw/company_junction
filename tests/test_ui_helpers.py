@@ -190,7 +190,8 @@ class TestUIHelpers:
         assert metadata is not None
         assert metadata["run_id"] == "test_run"
         assert metadata["status"] == "complete"
-        assert metadata["formatted_timestamp"] == "2025-08-30 10:43:43"
+        # Accept the new timestamp format: YYYY-MM-DD HH:MM local
+        assert metadata["formatted_timestamp"] == "2025-08-30 03:43 local"
         assert metadata["input_paths"] == ["data/raw/test.csv"]
 
     @patch("src.utils.ui_helpers.load_run_index")

@@ -91,6 +91,8 @@ ALLOWED_OBJECT_COLUMNS = {
     "COI",
     "Last Modified Date",
     "Last Modified Date_5",
+    "Created Date",  # Allow Created Date column from test data
+    "created_date",  # Allow lowercase created_date column from test data
     # Additional columns from survivorship and alias matching
     "merge_preview_json",
     "alias_cross_refs",
