@@ -13,10 +13,8 @@ from typing import List, Dict, Optional, Any
 import logging
 
 try:
-    from src.normalize import excel_serial_to_datetime
     from src.utils.progress import ProgressLogger
 except ImportError:
-    from src.normalize import excel_serial_to_datetime
     from src.utils.progress import ProgressLogger
 
 logger = logging.getLogger(__name__)
@@ -29,19 +27,118 @@ def select_primary_records(
     enable_progress: bool = False,
 ) -> pd.DataFrame:
     """
-    Select primary records for each group based on relationship rank and tie-breakers.
-
-    Args:
-        df_groups: DataFrame with group assignments
-        relationship_ranks: Dictionary mapping relationship names to ranks
-        settings: Configuration settings
-
-    Returns:
-        DataFrame with primary records selected
+    Optimized primary selection with safe vectorization:
+    - Vectorized relationship rank mapping
+    - Vectorized marking of singleton groups
+    - Preserve existing multi-record selection via _select_primary_from_group
     """
-    logger.info("Selecting primary records for each group")
+    # Check if optimization is enabled
+    if not settings.get("survivorship", {}).get("optimized", True):
+        logger.info("Selecting primary records for each group (original)")
+        return _select_primary_records_original(
+            df_groups, relationship_ranks, settings, enable_progress
+        )
+
+    logger.info("Selecting primary records for each group (optimized)")
+
+    df = df_groups.copy()
+
+    # Vectorized relationship rank (default 60)
+    rel_series = df.get("Relationship")
+    if rel_series is not None:
+        df["relationship_rank"] = (
+            rel_series.astype("string")
+            .map(pd.Series(relationship_ranks, dtype="int64"))
+            .fillna(60)
+            .astype("int64")  # Use int64 for JSON compatibility
+        )
+    else:
+        df["relationship_rank"] = 60
+
+    # Improve cache locality
+    if "group_id" in df.columns:
+        df = df.sort_values("group_id", kind="mergesort")
+
+    # Vectorized singletons → primary=True
+    group_sizes = df.groupby("group_id").size()
+    singleton_groups = set(group_sizes[group_sizes == 1].index.tolist())
+
+    # Micro-profiling: singleton statistics
+    total_groups = len(group_sizes)
+    singleton_count = len(singleton_groups)
+    singleton_pct = (singleton_count / total_groups * 100) if total_groups > 0 else 0
+    logger.info(
+        f"survivorship_breakdown | total_groups={total_groups} | singletons={singleton_count} ({singleton_pct:.1f}%) | multi_groups={total_groups - singleton_count}"
+    )
+
+    df["is_primary"] = False
+    if singleton_groups:
+        singleton_mask = df["group_id"].isin(singleton_groups)
+        df.loc[singleton_mask, "is_primary"] = True
+
+    # Multi-record groups: preserve existing business rules
+    multi_groups = [g for g, sz in group_sizes.items() if sz > 1 and g != -1]
+
+    # Multi-group profiling
+    if multi_groups:
+        multi_group_sizes = [group_sizes[g] for g in multi_groups]
+        avg_size = sum(multi_group_sizes) / len(multi_group_sizes)
+        p50_size = sorted(multi_group_sizes)[len(multi_group_sizes) // 2]
+        p90_size = sorted(multi_group_sizes)[int(len(multi_group_sizes) * 0.9)]
+        logger.info(
+            f"multi_group_stats | count={len(multi_groups)} | avg_size={avg_size:.1f} | p50_size={p50_size} | p90_size={p90_size}"
+        )
+
+    if enable_progress:
+        prog = ProgressLogger(
+            total=len(multi_groups),
+            label="survivorship",
+            step_every=2_000,
+            secs_every=5.0,
+            enable_tqdm=True,
+        )
+        multi_iter = prog.wrap(multi_groups)
+    else:
+        multi_iter = multi_groups
+
+    for gid in multi_iter:
+        group_mask = df["group_id"] == gid
+        group_data = df.loc[group_mask]
+
+        primary_idx = _select_primary_from_group(
+            group_data, relationship_ranks, settings
+        )
+
+        df.loc[group_mask, "is_primary"] = False
+        df.loc[primary_idx, "is_primary"] = True
+
+    return df
+
+
+def _select_primary_records_original(
+    df_groups: pd.DataFrame,
+    relationship_ranks: Dict[str, int],
+    settings: Dict[str, Any],
+    enable_progress: bool = False,
+) -> pd.DataFrame:
+    """
+    Original primary selection logic (fallback when optimization is disabled).
+    """
+    logger.info("Selecting primary records for each group (original)")
 
     result_df = df_groups.copy()
+
+    # Add relationship_rank column for consistency with optimized version
+    rel_series = result_df.get("Relationship")
+    if rel_series is not None:
+        result_df["relationship_rank"] = (
+            rel_series.astype("string")
+            .map(pd.Series(relationship_ranks, dtype="int64"))
+            .fillna(60)
+            .astype("int64")  # Use int64 for JSON compatibility
+        )
+    else:
+        result_df["relationship_rank"] = 60
 
     # Process each group
     unique_groups = result_df["group_id"].unique()
@@ -153,7 +250,7 @@ def generate_merge_preview(
         # Default fields to compare
         selected_fields = [
             "account_name",  # Use canonical name
-            "account_id",    # Use canonical name
+            "account_id",  # Use canonical name
             "Relationship",  # Keep original name if not mapped
             "created_date",  # Use canonical name
             "Account Owner: Full Name",  # Keep original name if not mapped
@@ -205,6 +302,7 @@ def _generate_group_merge_preview(
     Returns:
         Dictionary with merge preview information
     """
+
     # Helper function to safely convert values to strings
     def safe_str(val):
         """Safely convert value to string, handling NA values."""
@@ -225,8 +323,10 @@ def _generate_group_merge_preview(
             "index": int(str(primary_record.name)),
             "account_id": safe_str(primary_record.get("account_id", "")),
             "account_name": safe_str(primary_record.get("account_name", "")),
-            "relationship": safe_str(primary_record.get("Relationship", "")),  # Keep original name if not mapped
-            "relationship_rank": primary_record.get("relationship_rank", 60),
+            "relationship": safe_str(
+                primary_record.get("Relationship", "")
+            ),  # Keep original name if not mapped
+            "relationship_rank": int(primary_record.get("relationship_rank", 60)),
         },
         "group_size": len(group_data),
         "field_comparisons": {},
@@ -263,8 +363,10 @@ def _generate_group_merge_preview(
                 "index": int(str(record.name)),
                 "account_id": safe_str(record.get("account_id", "")),
                 "account_name": safe_str(record.get("account_name", "")),
-                "relationship": safe_str(record.get("Relationship", "")),  # Keep original name if not mapped
-                "relationship_rank": record.get("relationship_rank", 60),
+                "relationship": safe_str(
+                    record.get("Relationship", "")
+                ),  # Keep original name if not mapped
+                "relationship_rank": int(record.get("relationship_rank", 60)),
                 "weakest_edge_to_primary": record.get("weakest_edge_to_primary", 0.0),
             }
         )

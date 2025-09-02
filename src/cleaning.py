@@ -514,9 +514,9 @@ def run_pipeline(
             logger.info(f"Resuming from stage: {resume_from}")
             interim_format = settings.get("io", {}).get("interim_format", "parquet")
 
-            # Load normalized data
+            # Load filtered data (pipeline produces filtered, not normalized)
             normalized_path = str(
-                get_interim_dir(run_id) / f"accounts_normalized.{interim_format}"
+                get_interim_dir(run_id) / f"accounts_filtered.{interim_format}"
             )
             if Path(normalized_path).exists():
                 logger.info(f"Loading normalized data from {normalized_path}")

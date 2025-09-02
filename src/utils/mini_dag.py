@@ -145,43 +145,42 @@ class MiniDAG:
     ) -> bool:
         """Check if intermediate files exist for a given stage."""
         if interim_dir is None:
-            interim_dir = get_interim_dir("default")
+            # Use the run_id from metadata if available, otherwise fallback to default
+            if hasattr(self, 'run_id') and self.run_id:
+                interim_dir = get_interim_dir(self.run_id)
+            else:
+                interim_dir = get_interim_dir("default")
         if not interim_dir.exists():
             return False
 
         # Define expected files for each stage
         stage_files = {
-            "normalization": ["accounts_normalized.parquet"],
+            "normalization": ["accounts_filtered.parquet"],  # Pipeline produces filtered, not normalized
             "filtering": ["accounts_filtered.parquet"],
             "candidate_generation": [
-                "accounts_normalized.parquet",
-                "accounts_filtered.parquet",
+                "accounts_filtered.parquet",  # Use filtered as the base
                 "candidate_pairs.parquet",
             ],
             "grouping": [
-                "accounts_normalized.parquet",
-                "accounts_filtered.parquet",
+                "accounts_filtered.parquet",  # Use filtered as the base
                 "candidate_pairs.parquet",
                 "groups.parquet",
             ],
             "survivorship": [
-                "accounts_normalized.parquet",
-                "accounts_filtered.parquet",
+                "accounts_filtered.parquet",  # Use filtered as the base
                 "candidate_pairs.parquet",
                 "groups.parquet",
                 "survivorship.parquet",
             ],
             "disposition": [
-                "accounts_normalized.parquet",
-                "accounts_filtered.parquet",
+                "accounts_filtered.parquet",  # Use filtered as the base
                 "candidate_pairs.parquet",
                 "groups.parquet",
                 "survivorship.parquet",
                 "dispositions.parquet",
             ],
             "alias_matching": [
-                "accounts_normalized.parquet",
-                "accounts_filtered.parquet",
+                "accounts_filtered.parquet",  # Use filtered as the base
                 "candidate_pairs.parquet",
                 "groups.parquet",
                 "survivorship.parquet",
@@ -189,8 +188,7 @@ class MiniDAG:
                 "alias_matches.parquet",
             ],
             "final_output": [
-                "accounts_normalized.parquet",
-                "accounts_filtered.parquet",
+                "accounts_filtered.parquet",  # Use filtered as the base
                 "candidate_pairs.parquet",
                 "groups.parquet",
                 "survivorship.parquet",
@@ -221,7 +219,11 @@ class MiniDAG:
         Returns tuple of (resume_stage, reason_code) for enhanced logging.
         """
         if interim_dir is None:
-            interim_dir = get_interim_dir("default")
+            # Use the run_id from metadata if available, otherwise fallback to default
+            if hasattr(self, 'run_id') and self.run_id:
+                interim_dir = get_interim_dir(self.run_id)
+            else:
+                interim_dir = get_interim_dir("default")
         last_completed = self.get_last_completed_stage()
         if not last_completed:
             self._logger.info("Auto-resume decision: NO_PREVIOUS_RUN - starting fresh")

@@ -56,6 +56,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Safety Rails**: Protects latest symlink, pinned runs, and requires double confirmation for prod runs
   - **Configuration-Driven**: Pinned runs and protection settings from `config/settings.yaml`
   - **Deterministic Output**: Same inputs always produce same cleanup plan with sorted candidates
+- **Survivorship Hybrid Optimization**: Vectorized singletons and relationship ranking while preserving business logic
+  - **Vectorized Operations**: Singleton groups marked as primary without Python loops
+  - **Relationship Ranking**: Vectorized mapping with default rank 60 for unknown relationships
+  - **Cache Locality**: Pre-sorting by group_id for better memory access patterns
+  - **Feature Flagged**: Controlled via `survivorship.optimized` in config
+  - **Micro-Profiling**: Added detailed timing and statistics for performance analysis
+  - **Identical Results**: Ensured optimization produces exactly same output as original logic
 
 ## [Phase 1.26.5] - 2025-09-02
 

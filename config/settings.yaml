@@ -42,6 +42,7 @@ llm:
 
 survivorship:
   tie_breakers: [created_date, account_id]
+  optimized: true   # controls the hybrid fast-path
 
 io:
   interim_format: parquet
