@@ -458,3 +458,50 @@ def load_schema_mapping(run_id: str) -> Optional[Dict[str, str]]:
     except Exception as e:
         logger.error(f"Failed to load schema mapping: {e}")
         return None
+
+
+def invert_mapping(mapping: Dict[str, str]) -> Dict[str, str]:
+    """
+    Invert mapping from canonical -> actual to actual -> canonical.
+
+    Args:
+        mapping: Mapping from canonical column names to actual column names
+
+    Returns:
+        Inverted mapping from actual column names to canonical column names
+    """
+    return {v: k for k, v in mapping.items()}
+
+
+def apply_canonical_rename(
+    df: pd.DataFrame, mapping_canonical_to_actual: Dict[str, str]
+) -> pd.DataFrame:
+    """
+    Rename columns from ACTUAL -> CANONICAL using the inverted mapping.
+    This must be called immediately after resolving schema and BEFORE any canonical constant is used.
+
+    Args:
+        df: DataFrame with actual column names
+        mapping_canonical_to_actual: Mapping from canonical to actual column names
+
+    Returns:
+        DataFrame with canonical column names
+
+    Raises:
+        ValueError: If required canonical columns are missing after renaming
+    """
+    actual_to_canonical = invert_mapping(mapping_canonical_to_actual)
+    df_renamed = df.rename(columns=actual_to_canonical)
+
+    # Validate that required canonical columns exist after renaming
+    required_columns = [ACCOUNT_NAME]
+    missing_columns = [col for col in required_columns if col not in df_renamed.columns]
+
+    if missing_columns:
+        raise ValueError(
+            f"Required canonical columns missing after renaming: {missing_columns}. "
+            f"Available columns: {list(df_renamed.columns)}"
+        )
+
+    logger.info(f"Applied canonical rename: {len(actual_to_canonical)} columns renamed")
+    return df_renamed

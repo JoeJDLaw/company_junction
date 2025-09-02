@@ -120,14 +120,12 @@ def _select_primary_from_group(
 
     # Add tie-breakers
     for tie_breaker in tie_breakers:
-        if tie_breaker == "created_date" and "Created Date" in group_data.columns:
-            # Convert to datetime for proper sorting
-            group_data["created_date_sort"] = group_data["Created Date"].apply(
-                excel_serial_to_datetime
-            )
-            sort_columns.append("created_date_sort")
-        elif tie_breaker == "account_id" and "Account ID" in group_data.columns:
-            sort_columns.append("Account ID")
+        if tie_breaker == "created_date" and "created_date" in group_data.columns:
+            # For sorting, string dates in ISO format (YYYY-MM-DD) work fine
+            # No conversion needed - just use the original column
+            sort_columns.append("created_date")
+        elif tie_breaker == "account_id" and "account_id" in group_data.columns:
+            sort_columns.append("account_id")
 
     # Sort and select first record
     group_data_sorted = group_data.sort_values(sort_columns)
@@ -154,13 +152,13 @@ def generate_merge_preview(
     if selected_fields is None:
         # Default fields to compare
         selected_fields = [
-            "Account Name",
-            "Account ID",
-            "Relationship",
-            "Created Date",
-            "Account Owner: Full Name",
-            "Main Address",
-            "Main Country",
+            "account_name",  # Use canonical name
+            "account_id",    # Use canonical name
+            "Relationship",  # Keep original name if not mapped
+            "created_date",  # Use canonical name
+            "Account Owner: Full Name",  # Keep original name if not mapped
+            "Main Address",  # Keep original name if not mapped
+            "Main Country",  # Keep original name if not mapped
         ]
 
     # Filter to fields that exist in the DataFrame
@@ -207,6 +205,13 @@ def _generate_group_merge_preview(
     Returns:
         Dictionary with merge preview information
     """
+    # Helper function to safely convert values to strings
+    def safe_str(val):
+        """Safely convert value to string, handling NA values."""
+        if pd.isna(val):
+            return ""
+        return str(val)
+
     # Find primary record
     primary_mask = group_data["is_primary"]
     if not primary_mask.any():
@@ -218,9 +223,9 @@ def _generate_group_merge_preview(
     preview: Dict[str, Any] = {
         "primary_record": {
             "index": int(str(primary_record.name)),
-            "account_id": primary_record.get("Account ID", ""),
-            "account_name": primary_record.get("Account Name", ""),
-            "relationship": primary_record.get("Relationship", ""),
+            "account_id": safe_str(primary_record.get("account_id", "")),
+            "account_name": safe_str(primary_record.get("account_name", "")),
+            "relationship": safe_str(primary_record.get("Relationship", "")),  # Keep original name if not mapped
             "relationship_rank": primary_record.get("relationship_rank", 60),
         },
         "group_size": len(group_data),
@@ -235,18 +240,18 @@ def _generate_group_merge_preview(
         if len(field_values) > 1:
             # Field has conflicts
             preview["field_comparisons"][field] = {
-                "primary_value": str(primary_record.get(field, "")),
+                "primary_value": safe_str(primary_record.get(field, "")),
                 "alternative_values": [
-                    str(val)
+                    safe_str(val)
                     for val in field_values
-                    if str(val) != str(primary_record.get(field, ""))
+                    if safe_str(val) != safe_str(primary_record.get(field, ""))
                 ],
                 "has_conflict": True,
             }
         else:
             # Field is consistent
             preview["field_comparisons"][field] = {
-                "primary_value": str(primary_record.get(field, "")),
+                "primary_value": safe_str(primary_record.get(field, "")),
                 "alternative_values": [],
                 "has_conflict": False,
             }
@@ -256,9 +261,9 @@ def _generate_group_merge_preview(
         preview["non_primary_records"].append(
             {
                 "index": int(str(record.name)),
-                "account_id": record.get("Account ID", ""),
-                "account_name": record.get("Account Name", ""),
-                "relationship": record.get("Relationship", ""),
+                "account_id": safe_str(record.get("account_id", "")),
+                "account_name": safe_str(record.get("account_name", "")),
+                "relationship": safe_str(record.get("Relationship", "")),  # Keep original name if not mapped
                 "relationship_rank": record.get("relationship_rank", 60),
                 "weakest_edge_to_primary": record.get("weakest_edge_to_primary", 0.0),
             }

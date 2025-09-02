@@ -33,21 +33,36 @@
 
 ## Phase 1 Quick Start
 
-### 1) Install
+### 1) Setup (macOS + `.venv` required)
 ```bash
+# Create and activate the project virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies into the venv (never globally)
 python -m pip install -r requirements.txt
+
+# (Optional) install the package in development mode
+python -m pip install -e .
 ```
 
-### 2a) Run the pipeline (Generic)
+### 2a) Run the pipeline (generic)
 ```bash
+# BLAS thread clamp to prevent oversubscription during parallel work
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+
+# Give this run a unique ID (recommended)
+RUN_ID="cj$(date +%Y%m%d%H%M%S)"
+
 python src/cleaning.py \
   --input data/raw/company_junction_range_01.csv \
   --outdir data/processed \
-  --config config/settings.yaml
+  --config config/settings.yaml \
+  --run-id "$RUN_ID"
 ```
 
 #### Schema Resolution & Column Mapping
-The pipeline now supports dynamic schema resolution with multiple fallback strategies:
+The pipeline supports dynamic schema resolution with multiple fallback strategies.
 
 **CLI column overrides:**
 ```bash
@@ -55,7 +70,8 @@ python src/cleaning.py \
   --input data/raw/your_data.csv \
   --outdir data/processed \
   --config config/settings.yaml \
-  --col account_name="Company Name" account_id="ID"
+  --run-id "cj$(date +%Y%m%d%H%M%S)" \
+  --col account_name="Account Name" account_id="Account ID"
 ```
 
 **Automatic resolution order:**
@@ -65,22 +81,32 @@ python src/cleaning.py \
 4. Heuristic matching (string similarity, type hints)
 
 **Schema mapping is saved to:** `data/processed/{run_id}/schema_mapping.json`
-### 2b) Specific for my Macbook Pro M4
+
+### 2b) Performance‑tuned example (Apple Silicon)
 ```bash
 source .venv/bin/activate
 
+# BLAS thread clamp (safe defaults on macOS)
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+
+RUN_ID="cj$(date +%Y%m%d%H%M%S)"
 
 python src/cleaning.py \
   --input data/raw/company_junction_range_01.csv \
   --outdir data/processed \
   --config config/settings.yaml \
+  --run-id "$RUN_ID" \
   --progress \
   --no-resume \
   --workers 10 \
   --chunk-size 2000 \
   --parallel-backend loky
+```
 
+### 2c) Launch Streamlit (wrapper recommended)
+```bash
+source .venv/bin/activate
+python run_streamlit.py
 ```
 
 

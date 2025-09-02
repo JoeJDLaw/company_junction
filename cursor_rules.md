@@ -26,6 +26,13 @@
 - **Backend Consistency**: Same sort key mapping must work across all backend implementations
 - **Schema Validation**: Ensure constants resolve correctly across all data sources
 
+### 5. **Cleanup Tool Standards**
+- **Deterministic Discovery**: Use `run_index.json` as the only source of truth, no filesystem walking
+- **Configuration-Driven**: Pinned runs and protection policies must come from `config/settings.yaml`
+- **Safety First**: Always protect latest symlink and pinned runs by default
+- **Double Confirmation**: Require explicit confirmation for production run deletion
+- **Exit Code Standards**: Use standard exit codes (0=no candidates, 2=candidates found, >0=errors)
+
 ## Implementation Standards
 
 ### **Sort Key Mapping**
@@ -98,6 +105,12 @@ logger.info(f"DuckDB query built | order_by='{order_by}'")  # Which function?
 - Verify default sort comes from config, not hardcoded values
 - Test fallback behavior uses configuration values
 - Ensure all performance thresholds are configurable
+
+### **Cleanup Tool Tests**
+- Verify deterministic discovery produces same results for same inputs
+- Test type filtering, age filtering, and prod-sweep modes
+- Confirm latest symlink and pinned run protection works correctly
+- Test JSON output format and exit codes
 
 ### **Logging Tests**
 - Verify distinct log messages for each backend path

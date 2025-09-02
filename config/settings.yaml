@@ -98,6 +98,12 @@ parallelism:
 # Logging Configuration
 logging:
   level: "INFO"
+
+# Cleanup Configuration
+cleanup:
+  protect_latest: true
+  pinned_runs: []
+  max_age_days: null  # no default age limit
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "pipeline.log"
 

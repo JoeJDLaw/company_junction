@@ -81,6 +81,7 @@ from src.utils.schema_utils import (
     GROUP_SIZE,
     MAX_SCORE,
     PRIMARY_NAME,
+    apply_canonical_rename,
 )
 from src.utils.perf_utils import log_perf
 from src.utils.dtypes import optimize_dataframe_memory
@@ -308,15 +309,15 @@ def validate_required_columns(df: pd.DataFrame) -> bool:
     Raises:
         ValueError: If required columns are missing
     """
-    required_columns = ["Account ID", "Account Name", "Relationship", "Created Date"]
+    # Use canonical column names since DataFrame has been renamed
+    # Only check for columns that are actually mapped and renamed
+    required_columns = [ACCOUNT_ID, ACCOUNT_NAME, CREATED_DATE]
 
-    # Check for Account Name or fallback to Employer Name
-    name_columns = ["Account Name", "Employer Name"]
-    has_name_column = any(col in df.columns for col in name_columns)
+    # Check for Account Name (required)
+    if ACCOUNT_NAME not in df.columns:
+        raise ValueError(f"Missing required name column: {ACCOUNT_NAME}")
 
-    if not has_name_column:
-        raise ValueError(f"Missing required name column. Need one of: {name_columns}")
-
+    # Check for other required columns
     missing_columns = []
     for col in required_columns:
         if col not in df.columns:
@@ -631,8 +632,9 @@ def run_pipeline(
             f"heuristics_used={'heuristic' in str(schema_mapping)}"
         )
 
-        # Rename columns using resolved schema
-        df = df.rename(columns=schema_mapping)
+        # Apply canonical rename using helper function
+        # This renames columns from ACTUAL -> CANONICAL before any canonical constants are used
+        df = apply_canonical_rename(df, schema_mapping)
 
         # Validate required columns after renaming
         validate_required_columns(df)

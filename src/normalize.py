@@ -423,13 +423,22 @@ def excel_serial_to_datetime(val: Any) -> Optional[pd.Timestamp]:
                 # Try different date formats
                 for fmt in ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]:
                     try:
-                        return pd.to_datetime(val, format=fmt)
-                    except (ValueError, TypeError):
+                        result = pd.to_datetime(val, format=fmt)
+                        if pd.notna(result):
+                            return result
+                    except (ValueError, TypeError) as e:
                         continue
                 # If no specific format works, try pandas default parsing
-                return pd.to_datetime(val)
-            except (ValueError, TypeError):
-                return None
+                try:
+                    result = pd.to_datetime(val)
+                    if pd.notna(result):
+                        return result
+                except (ValueError, TypeError):
+                    pass
+            except Exception as e:
+                # Log the specific error for debugging
+                logger.debug(f"Date parsing failed for '{val}': {e}")
+                pass
 
         # If it's a number, try Excel serial conversion
         if isinstance(val, (int, float)):

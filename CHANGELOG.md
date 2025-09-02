@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Sorting Refresh**: Added automatic page refresh when sort order changes to ensure new sorting is applied immediately
   - **Enhanced Group Display**: Added Max Score, Disposition, and other useful fields to group list for better data review decisions
   - **Sorting Debug**: Added debug logging to help diagnose Account Name sorting issues
+- **Schema Mapping Fix**: Added helper functions to resolve pipeline column renaming issues
+  - **`invert_mapping()`**: Converts canonical → actual mapping to actual → canonical for DataFrame renaming
+  - **`apply_canonical_rename()`**: Safely renames DataFrame columns from actual to canonical names with validation
+  - **Pipeline Integration**: Integrated into cleaning.py to ensure columns are renamed before canonical constants are used
+- **JSON Serialization Fix**: Added `safe_str()` helper function to handle `pd.NA` values in survivorship stage
+  - **`safe_str(val)`**: Safely converts values to strings, handling `pd.NA` by returning empty string to prevent JSON serialization errors
+  - **Updated survivorship.py**: Uses `safe_str()` for all JSON serialization to prevent `TypeError: Object of type NAType is not JSON serializable`
+  - **Performance Fix**: Eliminated unnecessary datetime conversion warnings in survivorship by using string dates directly for sorting
 
 ### Changed
 - **Backend Selection Logic**: Simplified from complex three-phase to clear priority-based system
@@ -38,6 +46,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI Cleanup**: Removed redundant "Load Details" button since details now load automatically when expanding groups
 - **UI Organization**: Consolidated maintenance buttons together and added helpful tooltips for better user guidance
 - **Sorting Fix**: Fixed account name sorting issue where "Account Name (Asc)" wasn't working correctly due to sort key mapping mismatch
+- **Critical Pipeline Bug**: Fixed schema mapping order issue where pipeline tried to use canonical column names before DataFrame was renamed
+- **Column Access Error**: Resolved `KeyError: 'account_id'` by ensuring columns are renamed from ACTUAL → CANONICAL before any canonical constants are used
+- **JSON Serialization Error**: Fixed `TypeError: Object of type NAType is not JSON serializable` in survivorship stage by using `safe_str()` helper
+- **Performance Issue**: Eliminated hundreds of unnecessary datetime conversion warnings by using ISO-formatted string dates directly for sorting
+- **Cleanup Tool Rewrite**: Complete refactor of `tools/cleanup_test_artifacts.py` for simplified MVP
+  - **Deterministic Discovery**: Uses only `run_index.json` as source of truth, no filesystem walking
+  - **Slim Flags**: Replaced complex profiles with simple `--types`, `--older-than`, `--prod-sweep`
+  - **Safety Rails**: Protects latest symlink, pinned runs, and requires double confirmation for prod runs
+  - **Configuration-Driven**: Pinned runs and protection settings from `config/settings.yaml`
+  - **Deterministic Output**: Same inputs always produce same cleanup plan with sorted candidates
 
 ## [Phase 1.26.5] - 2025-09-02
 
