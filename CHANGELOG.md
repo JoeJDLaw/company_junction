@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 1.28.3**: Path Invariants, UI Flag Fix, Cleanup Guard, and Code Cleanup
+  - **Path Safety**: Added validation to prevent empty run_id values in processed paths with comprehensive test coverage
+  - **UI Configuration Fix**: Fixed UI flag drift to read from `ui_perf.groups.duckdb_prefer_over_pyarrow` instead of legacy key
+  - **Cleanup Guard Enforcement**: Added keep-at-least enforcement to cleanup tool with `--allow-empty` and `--keep-at-least 0` overrides
+  - **Code Quality**: Quarantined orphan modules (`salesforce.py`, `ui_utils.py`, `validation_utils.py`) and added Ruff configuration
+  - **Test Coverage**: Added comprehensive tests for path scoping, cleanup guards, and empty state handling
+  - **Safety Improvements**: Enhanced cache directory creation and path utility functions with proper error handling
+
 - **Phase 1.27.4**: Cleanup Reconciler & Dry-Run UX
   - **Reconciliation Mode**: Added `--reconcile` to detect orphan directories (on disk, not in index) and stale index entries (in index, not on disk)
   - **Explicit Dry-Run**: Added `--dry-run` flag while keeping default no-delete behavior unless `--really-delete` is present
