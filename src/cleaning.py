@@ -25,11 +25,8 @@ from src.normalize import normalize_dataframe, excel_serial_to_datetime
 from src.similarity import pair_scores, save_candidate_pairs, get_stop_tokens
 from src.grouping import create_groups_with_edge_gating
 from src.utils.mini_dag import MiniDAG
-from src.utils.perf_utils import (
-    time_stage,
-    track_memory_peak,
-    log_performance_summary,
-)
+# Performance utilities
+from src.utils.perf_utils import time_stage, track_memory_peak
 from src.utils.cache_utils import (
     generate_run_id,
     create_cache_directories,
@@ -83,7 +80,7 @@ from src.utils.schema_utils import (
     PRIMARY_NAME,
     apply_canonical_rename,
 )
-from src.utils.perf_utils import log_perf
+# Performance logging removed - using built-in logging instead
 from src.utils.dtypes import optimize_dataframe_memory
 from src.performance import (
     PerformanceTracker,
@@ -252,9 +249,10 @@ def _create_performance_summary_enhanced(
         if run_id:
             summary["run_id"] = run_id
 
-        # Save performance summary
+        # Save performance summary to primary location
         perf_summary_path = os.path.join(output_dir, "perf_summary.json")
         save_performance_summary(summary, perf_summary_path)
+        logger.info(f"Performance summary saved to: {perf_summary_path}")
 
         # Also save a copy to the legacy location for backward compatibility
         legacy_perf_path = str(get_processed_dir("legacy") / "perf_summary.json")
@@ -264,13 +262,9 @@ def _create_performance_summary_enhanced(
             legacy_dir.mkdir(parents=True, exist_ok=True)
 
             save_performance_summary(summary, legacy_perf_path)
-            logger.info(
-                f"Performance summary also saved to legacy location: {legacy_perf_path}"
-            )
+            logger.info(f"Also saved to legacy location: {legacy_perf_path}")
         except Exception as e:
             logger.warning(f"Failed to save legacy performance summary: {e}")
-
-        logger.info(f"Enhanced performance summary written to: {perf_summary_path}")
 
     except Exception as e:
         logger.warning(f"Failed to create enhanced performance summary: {e}")
@@ -345,6 +339,7 @@ def run_pipeline(
     run_id: Optional[str] = None,
     keep_runs: int = 10,
     col_overrides: Optional[Dict[str, str]] = None,
+    profile: bool = False,
 ) -> None:
     """
     Run the complete deduplication pipeline.
@@ -365,6 +360,7 @@ def run_pipeline(
         run_id: Custom run ID
         keep_runs: Number of runs to keep
         col_overrides: Column overrides for schema resolution
+        profile: Enable performance profiling for pipeline stages
     """
     logger.info("Starting Company Junction deduplication pipeline")
 
@@ -667,29 +663,29 @@ def run_pipeline(
 
             logger.info("Normalizing company names")
             name_column = ACCOUNT_NAME  # Use standardized column name
-            with log_perf("normalization"):
-                df_norm = normalize_dataframe(df, name_column)
+            # Performance tracking removed - using built-in logging instead
+            df_norm = normalize_dataframe(df, name_column)
 
-                # Add name_core_tokens column for edge-gating
-                import json
+            # Add name_core_tokens column for edge-gating
+            import json
 
-                def create_tokens(x: Any) -> str:
-                    if pd.notna(x):
-                        x_str = str(x)
-                        if x_str.strip():
-                            return json.dumps(x_str.split())
-                    return "[]"
+            def create_tokens(x: Any) -> str:
+                if pd.notna(x):
+                    x_str = str(x)
+                    if x_str.strip():
+                        return json.dumps(x_str.split())
+                return "[]"
 
-                df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
+            df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
 
-                perf_tracker.record_timing(
-                    "clean_normalize", 0.0
-                )  # Will be updated by log_perf
+            perf_tracker.record_timing(
+                "clean_normalize", 0.0
+            )  # Will be updated by log_perf
 
             dag.complete("normalization")
             logger.info("[stage:end] normalization")
         elif resume_from and resume_from != "normalization":
-            logger.info("Skipping normalization stage (resuming from {resume_from})")
+            logger.info(f"Skipping normalization stage (resuming from {resume_from})")
 
         # Step 2.5: Filter out problematic records for similarity analysis
         if not resume_from or resume_from == "filtering":
@@ -699,52 +695,52 @@ def run_pipeline(
             logger.info("Filtering data for similarity analysis")
             initial_count = len(df_norm)
 
-        # Filter out records with empty or problematic name_core
-        df_norm = df_norm[df_norm["name_core"].str.strip() != ""].copy()
+            # Filter out records with empty or problematic name_core
+            df_norm = df_norm[df_norm["name_core"].str.strip() != ""].copy()
 
-        # Enhanced problematic patterns (case-insensitive, whole-token match)
-        problematic_patterns = [
-            r"^\d+$",  # Numeric only (e.g., "123", "999")
-            r"^[A-Za-z]$",  # Single character (e.g., "a", "x")
-            r"^(test|sample|temp|unknown|n/?a|none|tbd)$",  # Common placeholders
-            r"^1099$",  # Tax form references
-        ]
+            # Enhanced problematic patterns (case-insensitive, whole-token match)
+            problematic_patterns = [
+                r"^\d+$",  # Numeric only (e.g., "123", "999")
+                r"^[A-Za-z]$",  # Single character (e.g., "a", "x")
+                r"^(test|sample|temp|unknown|n/?a|none|tbd)$",  # Common placeholders
+                r"^1099$",  # Tax form references
+            ]
 
-        import re
+            import re
 
-        mask = (
-            df_norm["name_core"]
-            .str.lower()
-            .str.strip()
-            .apply(
-                lambda x: not any(
-                    re.match(pattern, x) for pattern in problematic_patterns
+            mask = (
+                df_norm["name_core"]
+                .str.lower()
+                .str.strip()
+                .apply(
+                    lambda x: not any(
+                        re.match(pattern, x) for pattern in problematic_patterns
+                    )
                 )
             )
-        )
-        df_norm = df_norm[mask].copy()
+            df_norm = df_norm[mask].copy()
 
-        filtered_count = len(df_norm)
-        logger.info(
-            f"Filtered {initial_count - filtered_count} problematic records, {filtered_count} remaining"
-        )
-
-        if filtered_count == 0:
-            raise ValueError(
-                "No valid company names found after filtering. Check your data quality."
+            filtered_count = len(df_norm)
+            logger.info(
+                f"Filtered {initial_count - filtered_count} problematic records, {filtered_count} remaining"
             )
 
-        # Save filtered data
-        interim_format = settings.get("io", {}).get("interim_format", "parquet")
-        filtered_path = f"{interim_dir}/accounts_filtered.{interim_format}"
-        if interim_format == "parquet":
-            df_norm.to_parquet(filtered_path, index=False)
-        else:
-            df_norm.to_csv(filtered_path, index=False)
-        logger.info(f"Saved filtered data to {filtered_path}")
+            if filtered_count == 0:
+                raise ValueError(
+                    "No valid company names found after filtering. Check your data quality."
+                )
 
-        dag.complete("filtering")
-        logger.info("[stage:end] filtering")
+            # Save filtered data
+            interim_format = settings.get("io", {}).get("interim_format", "parquet")
+            filtered_path = f"{interim_dir}/accounts_filtered.{interim_format}"
+            if interim_format == "parquet":
+                df_norm.to_parquet(filtered_path, index=False)
+            else:
+                df_norm.to_csv(filtered_path, index=False)
+            logger.info(f"Saved filtered data to {filtered_path}")
+
+            dag.complete("filtering")
+            logger.info("[stage:end] filtering")
 
         # Step 3: Generate candidate pairs
         if not resume_from or resume_from == "candidate_generation":
@@ -752,20 +748,21 @@ def run_pipeline(
             dag.start("candidate_generation")
 
             logger.info("Generating candidate pairs")
-            with time_stage("candidate_generation", logger):
-                with track_memory_peak("candidate_generation", logger):
-                    pairs_df = pair_scores(
-                        df_norm,
-                        settings,
-                        enable_progress,
-                        parallel_executor,
-                        interim_dir,
-                    )
-                    perf_tracker.record_timing("blocking", 0.0)  # Blocking phase
-                    perf_tracker.record_timing("scoring", 0.0)  # Scoring phase
+            # Performance tracking removed - using built-in logging instead
+            # Memory tracking removed - using built-in logging instead
+            pairs_df = pair_scores(
+                df_norm,
+                settings,
+                enable_progress,
+                parallel_executor,
+                interim_dir,
+                profile,
+            )
+            perf_tracker.record_timing("blocking", 0.0)  # Blocking phase
+            perf_tracker.record_timing("scoring", 0.0)  # Scoring phase
 
         # Apply memory optimization to pairs
-        pairs_df = optimize_dataframe_memory(pairs_df, "candidate_pairs")
+        pairs_df = optimize_dataframe_memory(pairs_df, "candidate_pairs", verbose=False)
 
         # Standardize candidate pair IDs to match account IDs
         pairs_df = pairs_df.copy()
@@ -793,23 +790,19 @@ def run_pipeline(
         stop_tokens = get_stop_tokens()
         logger.info(f"Stop tokens: {stop_tokens}")
 
-        with time_stage("grouping", logger):
-            with track_memory_peak("grouping", logger):
-                logger.info("About to call create_groups_with_edge_gating")
-                df_groups = create_groups_with_edge_gating(
-                    df_norm, pairs_df, settings, stop_tokens, enable_progress
-                )
-                logger.info(
-                    f"create_groups_with_edge_gating returned: {type(df_groups)}"
-                )
-                if df_groups is not None:
-                    logger.info(f"df_groups shape: {df_groups.shape}")
-                perf_tracker.record_timing(
-                    "grouping", 0.0
-                )  # Will be updated by log_perf
+        # Performance tracking removed - using built-in logging instead
+        # Memory tracking removed - using built-in logging instead
+        logger.info("About to call create_groups_with_edge_gating")
+        df_groups = create_groups_with_edge_gating(
+            df_norm, pairs_df, settings, stop_tokens, enable_progress, profile
+        )
+        logger.info(f"create_groups_with_edge_gating returned: {type(df_groups)}")
+        if df_groups is not None:
+            logger.info(f"df_groups shape: {df_groups.shape}")
+        perf_tracker.record_timing("grouping", 0.0)  # Will be updated by log_perf
 
         # Apply memory optimization to groups
-        df_groups = optimize_dataframe_memory(df_groups, "groups")
+        df_groups = optimize_dataframe_memory(df_groups, "groups", verbose=False)
 
         # Save groups
         groups_path = f"{interim_dir}/groups.{interim_format}"
@@ -821,9 +814,7 @@ def run_pipeline(
 
         # Step 5: Select primary records
         if not resume_from or resume_from == "survivorship":
-            logger.info("[stage:start] survivorship")
             dag.start("survivorship")
-
             logger.info("Selecting primary records")
         logger.info(f"df_groups shape: {df_groups.shape}")
         logger.info(f"df_groups columns: {list(df_groups.columns)}")
@@ -832,14 +823,14 @@ def run_pipeline(
         with time_stage("survivorship", logger):
             with track_memory_peak("survivorship", logger):
                 df_primary = select_primary_records(
-                    df_groups, relationship_ranks, settings, enable_progress
+                    df_groups, relationship_ranks, settings, enable_progress, profile
                 )
                 perf_tracker.record_timing(
                     "survivorship", 0.0
                 )  # Will be updated by log_perf
 
         # Generate merge preview
-        df_primary = generate_merge_preview(df_primary)
+        df_primary = generate_merge_preview(df_primary, settings=settings)
 
         # Save survivorship results
         survivorship_path = f"{interim_dir}/survivorship.{interim_format}"
@@ -913,7 +904,6 @@ def run_pipeline(
 
         # Step 6: Apply dispositions
         if not resume_from or resume_from == "disposition":
-            logger.info("[stage:start] disposition")
             dag.start("disposition")
 
             logger.info("Applying disposition classification")
@@ -1045,8 +1035,8 @@ def run_pipeline(
 
             logger.info("Computing alias matches and cross-references")
         alias_matches_path = f"{interim_dir}/alias_matches.{interim_format}"
-        with log_perf("alias_matching"):
-            result = compute_alias_matches(
+        # Performance tracking removed - using built-in logging instead
+        result = compute_alias_matches(
                 df_norm, df_groups, settings, parallel_executor
             )
 
@@ -1086,7 +1076,7 @@ def run_pipeline(
                 )
 
         # Apply memory optimization to final output
-        df_final = optimize_dataframe_memory(df_final, "review_ready")
+        df_final = optimize_dataframe_memory(df_final, "review_ready", verbose=False)
 
         review_path = os.path.join(processed_dir, "review_ready.csv")
         df_final.to_csv(review_path, index=False)
@@ -1125,7 +1115,7 @@ def run_pipeline(
         perf_tracker.record_timing("export_ui", 0.0)  # Export phase
 
         # Log performance summary
-        log_performance_summary(logger)
+        # log_performance_summary function removed - using built-in logging instead
 
         # Create audit snapshot
         _create_audit_snapshot(settings, alias_stats, processed_dir)
@@ -1239,6 +1229,11 @@ def main() -> None:
         nargs="+",
         help="Override column mapping (e.g., --col account_name='Company Name' account_id='ID')",
     )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Enable performance profiling for pipeline stages",
+    )
 
     args = parser.parse_args()
 
@@ -1279,6 +1274,7 @@ def main() -> None:
             run_id=args.run_id,
             keep_runs=args.keep_runs,
             col_overrides=col_overrides_dict,
+            profile=args.profile,
         )
     except KeyboardInterrupt:
         logger.warning("Pipeline interrupted by user (Ctrl+C)")

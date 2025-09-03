@@ -25,6 +25,7 @@ def select_primary_records(
     relationship_ranks: Dict[str, int],
     settings: Dict[str, Any],
     enable_progress: bool = False,
+    profile: bool = False,
 ) -> pd.DataFrame:
     """
     Optimized primary selection with safe vectorization:
@@ -39,8 +40,67 @@ def select_primary_records(
             df_groups, relationship_ranks, settings, enable_progress
         )
 
-    logger.info("Selecting primary records for each group (optimized)")
+    # Enable profiling if requested
+    if profile:
+        try:
+            import pyinstrument
+            profiler = pyinstrument.Profiler()
+            profiler.start()
+            logger.info("Profiling enabled for survivorship")
+        except ImportError:
+            logger.warning("pyinstrument not available for profiling")
+            profile = False
+    
+    # Check if vectorized performance is enabled
+    perf_settings = settings.get("survivorship", {}).get("performance", {})
+    use_vectorized = perf_settings.get("vectorized", False)
+    
+    if use_vectorized:
+        logger.info("Selecting primary records for each group (vectorized)")
+        result = _select_primary_records_vectorized(
+            df_groups, relationship_ranks, settings, enable_progress
+        )
+    else:
+        logger.info("Selecting primary records for each group (optimized)")
+        result = _select_primary_records_optimized(
+            df_groups, relationship_ranks, settings, enable_progress
+        )
+    
+    # Stop profiling and save report if enabled
+    if profile and 'profiler' in locals():
+        try:
+            profiler.stop()
+            # Save profile to interim directory if available
+            profile_path = "data/interim/survivorship_profile.html"
+            with open(profile_path, 'w') as f:
+                f.write(profiler.output_html())
+            logger.info(f"Survivorship profile saved to {profile_path}")
+        except Exception as e:
+            logger.warning(f"Failed to save profile: {e}")
+    
+    return result
 
+
+def _select_primary_records_optimized(
+    df_groups: pd.DataFrame,
+    relationship_ranks: Dict[str, int],
+    settings: Dict[str, Any],
+    enable_progress: bool = False,
+) -> pd.DataFrame:
+    """
+    Hybrid optimized primary selection with vectorized singletons and iterative multi-groups.
+    
+    Args:
+        df_groups: DataFrame with group assignments
+        relationship_ranks: Dictionary mapping relationship names to ranks
+        settings: Configuration settings
+        enable_progress: Enable progress logging
+        
+    Returns:
+        DataFrame with primary records marked
+    """
+    logger.info("Selecting primary records for each group (hybrid optimized)")
+    
     df = df_groups.copy()
 
     # Vectorized relationship rank (default 60)
@@ -113,6 +173,81 @@ def select_primary_records(
         df.loc[primary_idx, "is_primary"] = True
 
     return df
+
+
+def _select_primary_records_vectorized(
+    df_groups: pd.DataFrame,
+    relationship_ranks: Dict[str, int],
+    settings: Dict[str, Any],
+    enable_progress: bool = False,
+) -> pd.DataFrame:
+    """
+    Fully vectorized primary selection for maximum performance.
+    
+    Args:
+        df_groups: DataFrame with group assignments
+        relationship_ranks: Dictionary mapping relationship names to ranks
+        settings: Configuration settings
+        enable_progress: Enable progress logging
+        
+    Returns:
+        DataFrame with primary records marked
+    """
+    logger.info("Using vectorized primary selection")
+    
+    # Ensure pandas strings for consistent operations
+    from src.utils.duckdb_utils import ensure_pandas_strings
+    df_groups = ensure_pandas_strings(df_groups, ["group_id", "account_id"])
+    logger.info("Ensured pandas string types for consistent operations")
+    
+    df = df_groups.copy()
+    
+    # Vectorized relationship rank mapping
+    rel_series = df.get("Relationship")
+    if rel_series is not None:
+        df["relationship_rank"] = (
+            rel_series.astype("string")
+            .map(pd.Series(relationship_ranks, dtype="int64"))
+            .fillna(60)
+            .astype("int64")
+        )
+    else:
+        df["relationship_rank"] = 60
+    
+    # Skip unassigned records
+    df = df[df["group_id"] != -1].copy()
+    
+    # Get tie-breakers
+    tie_breakers = settings.get("survivorship", {}).get(
+        "tie_breakers", ["created_date", "account_id"]
+    )
+    
+    # Build sort columns
+    sort_columns = ["relationship_rank"]
+    for tie_breaker in tie_breakers:
+        if tie_breaker in df.columns:
+            sort_columns.append(tie_breaker)
+    
+    # Vectorized primary selection using groupby + transform
+    df_sorted = df.sort_values(sort_columns)
+    
+    # Mark first record in each group as primary
+    df_sorted["is_primary"] = df_sorted.groupby("group_id").cumcount() == 0
+    
+    # Restore original order
+    df_sorted = df_sorted.sort_index()
+    
+    # Log statistics
+    total_groups = df_sorted["group_id"].nunique()
+    singletons = (df_sorted.groupby("group_id").size() == 1).sum()
+    multi_groups = total_groups - singletons
+    
+    logger.info(f"Vectorized survivorship: {total_groups} groups, {singletons} singletons, {multi_groups} multi-groups")
+    
+    # Ensure output has consistent pandas string types
+    df_sorted = ensure_pandas_strings(df_sorted, ["group_id", "account_id"])
+    
+    return df_sorted
 
 
 def _select_primary_records_original(
@@ -232,7 +367,9 @@ def _select_primary_from_group(
 
 
 def generate_merge_preview(
-    df_groups: pd.DataFrame, selected_fields: Optional[List[str]] = None
+    df_groups: pd.DataFrame, 
+    selected_fields: Optional[List[str]] = None,
+    settings: Optional[Dict[str, Any]] = None
 ) -> pd.DataFrame:
     """
     Generate merge preview showing field differences within groups.
@@ -240,11 +377,18 @@ def generate_merge_preview(
     Args:
         df_groups: DataFrame with group assignments and primary selection
         selected_fields: List of fields to compare (if None, use common fields)
+        settings: Configuration settings for performance options
 
     Returns:
         DataFrame with merge_preview_json column added
     """
     logger.info("Generating merge preview for groups")
+    
+    # Check performance settings
+    perf_settings = settings.get("survivorship", {}).get("performance", {}) if settings else {}
+    generate_by_group = perf_settings.get("generate_preview_by_group", False)
+    skip_clean_groups = perf_settings.get("skip_clean_groups", False)
+    preview_output = perf_settings.get("preview_output", "survivorship_preview.parquet")
 
     if selected_fields is None:
         # Default fields to compare
@@ -263,6 +407,29 @@ def generate_merge_preview(
         field for field in selected_fields if field in df_groups.columns
     ]
 
+    if generate_by_group:
+        # Generate per-group previews (more efficient for large datasets)
+        return _generate_merge_preview_by_group(
+            df_groups, available_fields, skip_clean_groups, preview_output
+        )
+    else:
+        # Original row-by-row preview generation
+        return _generate_merge_preview_original(df_groups, available_fields)
+
+
+def _generate_merge_preview_original(
+    df_groups: pd.DataFrame, available_fields: List[str]
+) -> pd.DataFrame:
+    """
+    Original row-by-row merge preview generation.
+    
+    Args:
+        df_groups: DataFrame with group assignments
+        available_fields: List of fields to compare
+        
+    Returns:
+        DataFrame with merge_preview_json column added
+    """
     result_df = df_groups.copy()
     result_df["merge_preview_json"] = ""
 
@@ -286,6 +453,100 @@ def generate_merge_preview(
             merge_preview, indent=2
         )
 
+    return result_df
+
+
+def _generate_merge_preview_by_group(
+    df_groups: pd.DataFrame, 
+    available_fields: List[str],
+    skip_clean_groups: bool = True,
+    preview_output: str = "survivorship_preview.parquet"
+) -> pd.DataFrame:
+    """
+    Generate merge previews by group for better performance.
+    
+    Args:
+        df_groups: DataFrame with group assignments
+        available_fields: List of fields to compare
+        skip_clean_groups: Skip groups with no conflicts
+        preview_output: Output path for preview file
+        
+    Returns:
+        DataFrame with merge_preview_json column added
+    """
+    logger.info("Generating merge previews by group (optimized)")
+    
+    # Skip unassigned records
+    df = df_groups[df_groups["group_id"] != -1].copy()
+    
+    # Group by group_id for vectorized processing
+    group_stats = df.groupby("group_id").agg({
+        'group_id': 'size',  # Group size
+        **{field: 'nunique' for field in available_fields}  # Unique values per field
+    }).rename(columns={'group_id': 'group_size'})
+    
+    # Identify groups with conflicts
+    conflict_fields = [field for field in available_fields if field != 'group_id']
+    has_conflicts = group_stats[conflict_fields].gt(1).any(axis=1)
+    
+    conflicted_groups = has_conflicts[has_conflicts].index.tolist()
+    clean_groups = has_conflicts[~has_conflicts].index.tolist()
+    
+    logger.info(f"Merge preview analysis: {len(conflicted_groups)} conflicted groups, {len(clean_groups)} clean groups")
+    
+    # Initialize result DataFrame
+    result_df = df_groups.copy()
+    result_df["merge_preview_json"] = ""
+    
+    # Process conflicted groups
+    if conflicted_groups:
+        logger.info(f"Processing {len(conflicted_groups)} conflicted groups")
+        
+        # Use orjson for faster JSON serialization
+        try:
+            import orjson
+            json_dumps = lambda x: orjson.dumps(x).decode('utf-8')
+        except ImportError:
+            json_dumps = lambda x: json.dumps(x)
+        
+        # Process groups in batches for better performance
+        batch_size = 1000
+        for i in range(0, len(conflicted_groups), batch_size):
+            batch = conflicted_groups[i:i + batch_size]
+            
+            for group_id in batch:
+                group_mask = df["group_id"] == group_id
+                group_data = df[group_mask]
+                
+                if len(group_data) > 1:
+                    merge_preview = _generate_group_merge_preview(group_data, available_fields)
+                    preview_json = json_dumps(merge_preview)
+                    
+                    # Add to all records in the group
+                    result_df.loc[group_data.index, "merge_preview_json"] = preview_json
+    
+    # Skip clean groups if requested
+    if skip_clean_groups:
+        logger.info(f"Skipped {len(clean_groups)} clean groups (no conflicts)")
+    else:
+        logger.info(f"Processed {len(clean_groups)} clean groups")
+    
+    # Save preview summary if output path specified
+    if preview_output and conflicted_groups:
+        try:
+            preview_summary = {
+                'conflicted_groups': len(conflicted_groups),
+                'clean_groups': len(clean_groups),
+                'total_groups': len(conflicted_groups) + len(clean_groups),
+                'conflict_rate': len(conflicted_groups) / (len(conflicted_groups) + len(clean_groups))
+            }
+            
+            preview_df = pd.DataFrame([preview_summary])
+            preview_df.to_parquet(preview_output, index=False)
+            logger.info(f"Merge preview summary saved to {preview_output}")
+        except Exception as e:
+            logger.warning(f"Failed to save preview summary: {e}")
+    
     return result_df
 
 

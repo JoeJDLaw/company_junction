@@ -13,7 +13,6 @@ from src.utils.path_utils import get_interim_dir
 from src.utils.pipeline_constants import (
     PIPELINE_STAGES,
     STAGE_INTERMEDIATE_FILES,
-    RESUME_VALIDATION_TIMEOUT,
     RESUME_STATE_REPAIR_ENABLED,
     ResumeDecision,
 )

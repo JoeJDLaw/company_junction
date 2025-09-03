@@ -40,6 +40,38 @@ def _load_parallelism_settings() -> Dict[str, Any]:
         }
 
 
+def get_optimal_workers() -> int:
+    """Get optimal number of workers based on system resources."""
+    import os
+    
+    # Get CPU count
+    cpu_count = os.cpu_count() or 1
+    
+    # Default to min(8, cpu_count) for stability
+    optimal = min(8, cpu_count)
+    
+    # Load from config if available
+    try:
+        settings = _load_parallelism_settings()
+        if settings.get("workers") == "auto":
+            return optimal
+        elif "workers" in settings and settings["workers"] is not None:
+            return max(1, min(settings["workers"], cpu_count))
+    except Exception:
+        pass
+    
+    return optimal
+
+
+def get_chunk_size_pairs() -> int:
+    """Get chunk size for pair processing."""
+    try:
+        settings = _load_parallelism_settings()
+        return settings.get("chunk_size_pairs", 300000)
+    except Exception:
+        return 300000
+
+
 # Try to import joblib, but don't fail if not available
 try:
     from joblib import Parallel, delayed  # type: ignore
@@ -114,6 +146,65 @@ def parallel_map(
 
     # Ensure we return a list (joblib Parallel returns Any)
     return list(results)
+
+
+def execute_chunked(
+    func: Callable[[List[Any]], List[Any]],
+    items: List[Any],
+    workers: Optional[int] = None,
+    backend: Optional[str] = None,
+    chunk_size: Optional[int] = None,
+) -> List[Any]:
+    """Execute function on chunks of items in parallel.
+    
+    This is optimized for processing large datasets where the function
+    can handle batches efficiently.
+    
+    Args:
+        func: Function to apply to chunks of items
+        items: List of items to process
+        workers: Number of workers (None for auto-detection)
+        backend: Backend to use ('loky' or 'threading')
+        chunk_size: Chunk size for parallel processing
+        
+    Returns:
+        List of results in the same order as input items
+    """
+    if not items:
+        return []
+    
+    # Load settings if not provided
+    if workers is None:
+        workers = get_optimal_workers()
+    if backend is None:
+        backend = _load_parallelism_settings().get("backend", "loky")
+    if chunk_size is None:
+        chunk_size = get_chunk_size_pairs()
+    
+    # Create chunks
+    chunks = [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
+    
+    if not JOBLIB_AVAILABLE or workers <= 1:
+        # Sequential fallback
+        results = []
+        for chunk in chunks:
+            results.extend(func(chunk))
+        return results
+    
+    # Ensure BLAS is single-threaded
+    ensure_single_thread_blas()
+    
+    # Use joblib parallel execution on chunks
+    chunk_results = Parallel(n_jobs=workers, backend=backend)(
+        delayed(func)(chunk) for chunk in chunks
+    )
+    
+    # Flatten results
+    results = []
+    for chunk_result in chunk_results:
+        results.extend(chunk_result)
+    
+    return results
 
 
 def _try_import_joblib() -> bool:

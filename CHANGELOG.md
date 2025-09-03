@@ -8,6 +8,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 1.32.1**: Performance Pack - Similarity Scoring, Survivorship, and Grouping Optimizations
+  - **Similarity Scoring Performance**: Major optimizations for candidate generation and scoring
+    - Length-window prefilter replaces NxN length-diff matrix in large secondary blocks
+    - Deterministic jumbo-block sharding after block_cap (third_token_initial, first_bigram)
+    - Top-N frequent blocking tokens auto-ban (configurable, excludes most frequent first tokens)
+    - Bulk scoring with RapidFuzz `process.cdist` (two-phase: token_set_ratio gate + full scoring)
+    - Vectorized penalties (suffix mismatch, numeric-style signature, punctuation flags)
+    - Pairs deduplication using numpy.unique over packed uint64 keys
+    - Parallelization defaults to loky (processes) with optimal chunk sizes
+    - Pre-allocated narrow views for sorting to reduce memory traffic
+  - **Survivorship Performance**: Vectorized primary selection and merge preview generation
+    - Vectorized primary selection using groupby + transform for maximum performance
+    - Per-group merge previews (configurable, skips clean groups with no conflicts)
+    - orjson for faster JSON serialization in preview generation
+    - Batch processing for large group sets
+  - **Grouping Engine Performance**: Edge-gating and Union-Find optimizations
+    - Vectorized edge_scores building without iterrows
+    - Optimized token parsing with auto-detection (orjson fallback)
+    - Union-Find size tracking for O(1) canopy checks
+    - Narrow sorting optimization to reduce memory copies
+    - Performance metrics: ops/sec, pairs processed, unions performed, canopy rejections
+  - **Shared Performance Utilities**: New utility modules for common optimizations
+    - `src/utils/perf_utils.py`: Arrow strings, narrow sorting, token parsing, vectorized masks
+    - `src/utils/union_find.py`: DisjointSet with size tracking for canopy bounds
+    - `src/utils/hash_utils.py`: Stable content-only hashing for resume functionality
+    - Enhanced `src/utils/parallel_utils.py`: execute_chunked, optimal workers, chunk sizes
+  - **Configuration & Feature Flags**: Comprehensive performance configuration
+    - Similarity: shard_jumbo_blocks, ban_top_tokens, use_bulk_cdist, gate_cutoff
+    - Grouping: vectorize_edge_scores, token_parse, maintain_unionfind_size
+    - Survivorship: vectorized, generate_preview_by_group, skip_clean_groups
+    - Disposition: vectorized, compile_token_regex_once
+    - IO: use_arrow_strings, PyArrow string optimization at DataFrame boundaries
+  - **Performance Profiling**: Built-in profiling support with pyinstrument
+    - `--profile` flag enables stage-by-stage performance profiling
+    - HTML reports saved to interim directory for analysis
+    - Automatic fallback if pyinstrument not available
+  - **Hash Guard Stabilization**: Content-only hashing for stable resume functionality
+    - Normalizes newlines and trailing whitespace for consistent hashing
+    - Ignores file metadata (path, size, mtime) for stable results
+    - Backward compatibility with existing hash functions
+  - **Dependencies**: Enhanced requirements for performance features
+    - rapidfuzz>=3.6, orjson>=3.9, pyinstrument>=4.0
+    - joblib>=1.3, pyarrow>=15 (already available)
+  - **Performance Metrics**: Comprehensive logging and monitoring
+    - Stage timing, memory usage, throughput metrics
+    - Pair generation efficiency, gate survival rates
+    - Grouping ops/sec, union operations, canopy rejections
+    - Survivorship group analysis, conflict detection rates
+
 - **Phase 1.31.1**: MiniDAG Cleanup Validation & Pipeline Performance Analysis
   - **Cleanup Tool Validation**: Executed cleanup utility in dry-run mode with reconciliation enabled
     - Identified 3 test runs for cleanup (all using synthetic_test_data.csv)

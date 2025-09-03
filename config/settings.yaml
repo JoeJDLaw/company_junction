@@ -25,6 +25,20 @@ similarity:
     pair_threshold_medium: 0.63  # Keep existing threshold if stable
     enable_vectorized_prefilters: true  # Enable character/token length filters
     max_length_diff: 5  # Maximum character length difference for prefiltering
+    shard_jumbo_blocks: true  # NEW: shard large blocks deterministically
+    shard_strategy: "third_token_initial"  # NEW: "third_token_initial" | "first_bigram"
+    ban_top_tokens:
+      enable: true  # NEW: exclude most frequent first tokens from primary blocking
+      top_k: 30  # NEW: number of top tokens to ban
+
+  scoring:
+    use_bulk_cdist: true  # NEW: use RapidFuzz bulk scoring
+    gate_cutoff: 72  # NEW: token_set_ratio gate cutoff
+    medium: 84  # existing threshold
+    penalty:
+      num_style_mismatch: 5
+      suffix_mismatch: 25
+      punctuation_mismatch: 3
 
 grouping:
   edge_gating:
@@ -35,6 +49,11 @@ grouping:
     canopy_bound:
       enabled: true
       max_without_high_edge: 8
+    performance:
+      vectorize_edge_scores: true  # NEW: build dict without iterrows
+      token_parse: auto  # NEW: 'auto'|'json'|'list'; auto skips parse if already list
+      maintain_unionfind_size: true  # NEW: enable size[] for canopy checks
+      pair_columns: [id_a, id_b, score]  # NEW: restrict columns during sort to reduce copy
 
 llm:
   enabled: false
@@ -43,9 +62,24 @@ llm:
 survivorship:
   tie_breakers: [created_date, account_id]
   optimized: true   # controls the hybrid fast-path
+  performance:
+    vectorized: true  # NEW: enable vectorized primary selection
+    generate_preview_by_group: true  # NEW: generate per-group previews
+    skip_clean_groups: true  # NEW: skip groups with no conflicts
+  preview_output: "survivorship_preview.parquet"  # NEW: output path for previews
 
 io:
   interim_format: parquet
+  use_arrow_strings: false  # DISABLED: PyArrow backend removed, using DuckDB + pandas strings
+
+disposition:
+  performance:
+    vectorized: true  # NEW: enable np.select path
+    compile_token_regex_once: true  # NEW
+    suspicious_singleton_regex: "(?i)\\b(unknown|unsure|not sure|no idea|test|sample|example|dummy|temp|temporary|temp agency|none|n/?a|tbd|delete|remove|do not use)\\b"
+  manual_overrides:
+    enabled: true
+    key_column: "account_id"  # adjust to actual id column if not index
 
 # UI Performance Configuration
 ui_perf:
@@ -79,16 +113,26 @@ salesforce:
   max_retries: 3
   retry_delay: 5
 
+# Engine Configuration
+engine:
+  duckdb:
+    enabled: true  # DuckDB is the single engine for non-pandas work
+    threads: auto  # auto-detect optimal thread count
+    preserve_order: true  # deterministic ordering where needed
+
 # Parallelism Configuration
 parallelism:
   # Default number of workers (None for auto-detection)
-  workers: null
+  workers: auto  # NEW: resolve to min(8, cpu_count)
   
   # Backend to use ('loky' for processes, 'threading' for threads)
-  backend: "loky"
+  backend: "loky"  # prefer processes
   
   # Chunk size for parallel processing
   chunk_size: 1000
+  
+  # Chunk size for pair processing (NEW)
+  chunk_size_pairs: 300000  # NEW: hint for execute_chunked
   
   # Threshold for auto-switching to sequential execution
   small_input_threshold: 10000

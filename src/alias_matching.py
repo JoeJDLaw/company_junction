@@ -339,15 +339,25 @@ def compute_alias_matches(
     capped_blocks = 0
     accepted_matches = 0
 
-    if optimize and workers and workers > 1:
+    # Check if we can actually use parallel execution
+    can_parallel = optimize and workers and workers > 1 and parallel_executor and parallel_executor.should_use_parallel(len(df_norm))
+    
+    if can_parallel:
         # Optimized path with parallelization
         logger.info(f"✅ Using optimized alias matching with {workers} workers")
     else:
-        # Legacy sequential path
-        reason = "optimize=false" if not optimize else f"workers={workers} (≤1)"
-        logger.info(f"⚠️ Using legacy sequential alias matching: {reason}")
+        # Sequential path - determine reason
+        if not optimize:
+            reason = "optimize=false"
+        elif not workers or workers <= 1:
+            reason = f"workers={workers} (≤1)"
+        elif not parallel_executor:
+            reason = "ParallelExecutor not available"
+        else:
+            reason = "input size below parallel threshold"
+        logger.info(f"Using sequential alias matching: {reason}")
 
-    if optimize and workers and workers > 1:
+    if can_parallel:
         # Optimized path with parallelization already logged above
 
         # Precompute indices and data structures
@@ -416,9 +426,7 @@ def compute_alias_matches(
                 # Flatten results like similarity module
                 alias_matches = [match for chunk in results for match in chunk]
             else:
-                logger.info(
-                    "Using sequential alias matching (ParallelExecutor not available or disabled)"
-                )
+                # Sequential processing already logged above
 
                 # Sequential processing with progress tracking
                 alias_matches = []
