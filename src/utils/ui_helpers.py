@@ -1415,6 +1415,8 @@ def get_group_details_lazy(run_id: str, group_id: str) -> List[Dict[str, Any]]:
         .get("allow_pyarrow_fallback", False)
     )
 
+# Debug logging removed - issue resolved
+
     # Phase 1.23.1: Try DuckDB with group_details.parquet first
     if use_details_parquet and DUCKDB_AVAILABLE:
         try:
@@ -1462,6 +1464,7 @@ def get_group_details_lazy(run_id: str, group_id: str) -> List[Dict[str, Any]]:
                 raise
 
     # Fallback to PyArrow if details parquet is disabled or DuckDB unavailable
+    
     if allow_pyarrow_fallback:
         result = get_group_details_pyarrow(run_id, group_id)
         elapsed = time.time() - start_time

@@ -11,8 +11,6 @@ from typing import Any
 from src.utils.state_utils import (
     get_details_state,
     set_details_state,
-    get_explain_state,
-    set_explain_state,
     get_aliases_state,
     set_aliases_state,
 )
@@ -47,7 +45,6 @@ def render_group_details(
     """
     # Get state
     details_state = get_details_state(st.session_state)
-    explain_state = get_explain_state(st.session_state)
     aliases_state = get_aliases_state(st.session_state)
 
     # Create keys for lazy loading
@@ -63,7 +60,6 @@ def render_group_details(
         # Phase 1.26.2: Auto-load details when expander is open
         details_state.requested[details_key] = True
         set_details_state(st.session_state, details_state)
-        st.caption("Details auto-loading...")
 
         # Check if details were requested and load them
         if details_state.requested.get(details_key, False) and not details_loaded:
@@ -85,10 +81,7 @@ def render_group_details(
                     # Display group table
                     _render_group_table(group_data)
 
-                    # Only show explain metadata and aliases if full group details are loaded
-                    _render_explain_metadata(
-                        selected_run_id, group_id, group_data, explain_state
-                    )
+                    # Only show aliases if full group details are loaded
                     _render_alias_cross_links(
                         selected_run_id, group_id, group_data, aliases_state
                     )
@@ -222,6 +215,7 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
     """Render the group data table."""
     st.write("**Records:**")
 
+    # Enhanced display columns with more useful information
     display_cols = [
         ACCOUNT_NAME,
         ACCOUNT_ID,
@@ -230,6 +224,11 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
         IS_PRIMARY,
         WEAKEST_EDGE_TO_PRIMARY,
         SUFFIX_CLASS,
+        "created_date",
+        "group_join_reason",
+        "shared_tokens_count",
+        "applied_penalties",
+        "survivorship_reason",
     ]
     display_cols = [col for col in display_cols if col in group_data.columns]
 
@@ -251,6 +250,11 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
                 "Edge Score", width="small", format="%.1f"
             ),
             SUFFIX_CLASS: st.column_config.TextColumn("Suffix", width="small"),
+            "created_date": st.column_config.DateColumn("Created Date", width="small"),
+            "group_join_reason": st.column_config.TextColumn("Join Reason", width="medium"),
+            "shared_tokens_count": st.column_config.NumberColumn("Shared Tokens", width="small"),
+            "applied_penalties": st.column_config.TextColumn("Penalties", width="medium"),
+            "survivorship_reason": st.column_config.TextColumn("Survivorship", width="medium"),
         }
 
         st.dataframe(
@@ -263,71 +267,7 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
         st.warning("No displayable columns found in group data")
 
 
-@fragment
-def _render_explain_metadata(
-    selected_run_id: str, group_id: str, group_data: pd.DataFrame, explain_state: Any
-) -> None:
-    """Render explain metadata expander."""
-    explain_key = (selected_run_id, group_id)
-    explain_loaded = explain_state.requested.get(explain_key, False)
-
-    with st.expander("🔍 Explain Metadata", expanded=False):
-        if explain_loaded:
-            # Display cached explain metadata
-            explain_data = explain_state.data.get(explain_key, pd.DataFrame())
-            if not explain_data.empty:
-                st.dataframe(
-                    explain_data,
-                    width="stretch",
-                    hide_index=True,
-                    column_config={
-                        "account_name": st.column_config.TextColumn(
-                            "Account Name", width="large"
-                        ),
-                        "group_join_reason": st.column_config.TextColumn(
-                            "Join Reason", width="medium"
-                        ),
-                        "weakest_edge_to_primary": st.column_config.NumberColumn(
-                            "Weakest Edge", width="small", format="%.1f"
-                        ),
-                        "shared_tokens_count": st.column_config.NumberColumn(
-                            "Shared Tokens", width="small"
-                        ),
-                        "applied_penalties": st.column_config.TextColumn(
-                            "Penalties", width="medium"
-                        ),
-                        "survivorship_reason": st.column_config.TextColumn(
-                            "Survivorship", width="medium"
-                        ),
-                    },
-                )
-            else:
-                st.info("No explain metadata available for this group")
-        else:
-            if st.button("Load details", key=f"btn_explain_{group_id}"):
-                # Load explain metadata on demand
-                explain_cols = []
-                for col in [
-                    "group_join_reason",
-                    "weakest_edge_to_primary",
-                    "shared_tokens_count",
-                    "applied_penalties",
-                    "survivorship_reason",
-                ]:
-                    if col in group_data.columns:
-                        explain_cols.append(col)
-
-                if explain_cols:
-                    explain_data = group_data[[ACCOUNT_NAME] + explain_cols].copy()
-                    explain_state.data[explain_key] = explain_data
-                else:
-                    explain_state.data[explain_key] = pd.DataFrame()
-
-                explain_state.requested[explain_key] = True
-                set_explain_state(st.session_state, explain_state)
-                # No st.rerun() - let the fragment handle the update
-            else:
-                st.caption("Details load on demand.")
+# Explain metadata function removed - all relevant fields now displayed in main table
 
 
 @fragment

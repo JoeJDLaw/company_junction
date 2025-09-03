@@ -56,7 +56,7 @@ ui_perf:
     groups_duckdb_threshold: 10000
   details:
     use_details_parquet: true       # rollback toggle
-    allow_pyarrow_fallback: false   # strict for MVP
+    allow_pyarrow_fallback: true    # enable fallback for group details
     lru_capacity: 16
     auto_load_on_expand: true       # auto-load details when expander opens
     show_load_button: false         # hide button when auto-load enabled

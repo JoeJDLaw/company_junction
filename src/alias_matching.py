@@ -321,7 +321,8 @@ def compute_alias_matches(
 
     # Get worker count from multiple sources with fallback logic
     workers = (
-        settings.get("parallelism", {}).get("workers")  # Config file
+        settings.get("alias", {}).get("workers")  # Alias-specific workers
+        or settings.get("parallelism", {}).get("workers")  # Config file
         or settings.get("workers")  # Direct setting
         or settings.get("effective_workers")  # Computed/CLI value
         or 1  # Fallback to sequential

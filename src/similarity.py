@@ -82,6 +82,11 @@ def pair_scores(
 
     # Create DataFrame and filter by medium threshold
     pairs_df = pd.DataFrame(scores)
+    # Non-invasive sanity: if we accidentally built from headers, 'score' won't exist.
+    if not pairs_df.empty and "score" not in pairs_df.columns:
+        raise TypeError(
+            "similarity: expected records with a 'score' field; built DataFrame lacks 'score' column."
+        )
     if not pairs_df.empty:
         pairs_df = pairs_df[pairs_df["score"] >= medium_threshold].copy()
         # Ensure deterministic ordering
@@ -594,19 +599,7 @@ def _compute_similarity_scores_parallel(
             logger.warning(
                 "joblib not available for memory mapping - using regular arrays"
             )
-    """
-    Compute similarity scores for candidate pairs using parallel execution.
-
-    Args:
-        df_norm: DataFrame with normalized name columns
-        candidate_pairs: List of (idx_a, idx_b) tuples
-        penalties: Penalty configuration
-        enable_progress: Enable progress logging
-        parallel_executor: Optional parallel executor for parallel processing
-
-    Returns:
-        List of score dictionaries
-    """
+    
     # Process pairs in parallel if executor available
     if parallel_executor:
         # Use execute_chunked for optimal parallel processing with balanced chunks
