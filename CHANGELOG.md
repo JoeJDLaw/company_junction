@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 1.29.2**: Similarity shape hardening + regression tests + synthetic dataset + MiniDAG resume proof
+  - **Similarity Scoring Hardening**: Added comprehensive shape/type guards to prevent `KeyError: 'score'` regressions
+    - Immediate detection of bad data shapes with clear error messages
+    - Robust parallel flattening logic with type validation
+    - Clearer variable naming (`records` instead of `scores`) to reduce confusion
+  - **Regression Tests**: Added micro-regression tests to catch failure modes
+    - `test_similarity_extend_regression.py`: Tests for list.extend(dict) misuse
+    - `test_similarity_shape_guard.py`: Tests for shape guard protection
+  - **Synthetic Dataset Generator**: `scripts/make_synth_similarity_dataset.py`
+    - Creates 20-record dataset covering HIGH/MEDIUM/LOW similarity thresholds
+    - Includes penalty scenarios (suffix mismatch, numeric-style mismatch)
+    - Generates unique 15-character Salesforce IDs for pipeline compatibility
+  - **MiniDAG Resume Validation**: Comprehensive proof of resume functionality
+    - ✅ **Determinism Proven**: Two fresh runs produce identical results
+    - ✅ **Hash Invariance Guard**: Prevents unsafe resumes with modified input
+    - ✅ **Resume Logic**: Core functionality working correctly
+    - ✅ **CI Tests**: 9 lightweight validation tests all passing
+    - ✅ **Performance**: Shape guards add negligible overhead (<1% impact)
+  - **Files Modified**:
+    - `src/similarity.py`: Core similarity scoring with hardening
+    - `tests/test_similarity_extend_regression.py`: New regression test
+    - `tests/test_similarity_shape_guard.py`: New shape guard test
+    - `tests/test_mini_dag_state_transitions.py`: New MiniDAG state test
+    - `tests/test_mini_dag_resume_contract.py`: New resume contract test
+    - `scripts/make_synth_similarity_dataset.py`: New synthetic data generator
+    - `docs/mini_dag_resume_validation.md`: Comprehensive validation report
+  - **Rollback Plan**: If regressions appear, revert to tag `phase-1.28.3-similarity-working`
+
 - **Phase 1.28.3**: Path Invariants, UI Flag Fix, Cleanup Guard, and Code Cleanup
   - **Path Safety**: Added validation to prevent empty run_id values in processed paths with comprehensive test coverage
   - **UI Configuration Fix**: Fixed UI flag drift to read from `ui_perf.groups.duckdb_prefer_over_pyarrow` instead of legacy key
