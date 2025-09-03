@@ -81,7 +81,10 @@ def pair_scores(
     )
 
     # Create DataFrame and filter by medium threshold
-    pairs_df = pd.DataFrame(scores)
+    records = scores  # clearer than 'scores' at this point
+    pairs_df = pd.DataFrame.from_records(records)
+    
+
     # Non-invasive sanity: if we accidentally built from headers, 'score' won't exist.
     if not pairs_df.empty and "score" not in pairs_df.columns:
         raise TypeError(
@@ -203,7 +206,8 @@ def _generate_candidate_pairs(
         enable_tqdm=enable_progress,
     )
 
-    for block_key in block_progress.wrap(unique_blocks):
+    # Temporarily bypass ProgressLogger to debug the issue
+    for block_key in unique_blocks:
         # Check for stop flag
         if parallel_executor and parallel_executor.stop_flag.is_set():
             logger.info("Stop flag set, interrupting candidate pair generation")
@@ -640,7 +644,16 @@ def _compute_similarity_scores_parallel(
         # Flatten the results - execute_chunked returns a list of lists
         flattened_scores = []
         for chunk_scores in scores:
-            flattened_scores.extend(chunk_scores)
+            if isinstance(chunk_scores, dict):
+                flattened_scores.append(chunk_scores)
+            elif isinstance(chunk_scores, list):
+                # `extend` is safe here because elements are dicts
+                flattened_scores.extend(chunk_scores)
+            else:
+                raise TypeError(
+                    f"similarity: unexpected chunk type {type(chunk_scores)}; "
+                    "expected list[dict] or dict."
+                )
         scores = flattened_scores
 
     else:
@@ -653,8 +666,9 @@ def _compute_similarity_scores_parallel(
             enable_tqdm=enable_progress,
         )
 
-        scores = [
-            _compute_pair_score_optimized(
+        scores = []
+        for idx_a, idx_b in candidate_pairs:
+            score = _compute_pair_score_optimized(
                 name_core_array[index_map[idx_a]],
                 name_core_array[index_map[idx_b]],
                 suffix_class_array[index_map[idx_a]],
@@ -664,8 +678,21 @@ def _compute_similarity_scores_parallel(
                 penalties,
                 threshold=0,  # No cutoff for scoring, filter later
             )
-            for idx_a, idx_b in pair_progress.wrap(candidate_pairs)
-        ]
+            scores.append(score)
 
     logger.info(f"Computed scores for {len(candidate_pairs)} pairs")
+    
+    # Shape/type guard to catch the 17×9=153 bug immediately
+    if not isinstance(scores, list):
+        raise TypeError(f"similarity: expected list of dicts, got {type(scores)}")
+    
+    if scores and not all(isinstance(x, dict) for x in scores):
+        # Helpful debug: show first bad element
+        bad = next((type(x) for x in scores if not isinstance(x, dict)), None)
+        raise TypeError(
+            f"similarity: expected list[dict], but found element of type {bad}. "
+            "This often occurs if code uses `scores += score` or `scores.extend(score)` "
+            "instead of `scores.append(score)` when `score` is a dict."
+        )
+    
     return scores
