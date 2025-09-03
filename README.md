@@ -657,7 +657,7 @@ MIT License - see LICENSE file for details.
 
 ## Tarball of codebase
 
-```
+# Create a manifest of files to include (fast, deterministic)
 MANIFEST="$(mktemp -t cj_review_manifest.XXXXXX)"
 
 find . \
@@ -674,7 +674,8 @@ find . \
        -name prompts -o \
        -name samples -o \
        -name company_junction.egg-info -o \
-       -name data \
+       -name data -o \
+       -name tarballs \
      \) -prune \) -o \
   \( -type f \( \
        -path './src/*' -o \
@@ -703,10 +704,10 @@ echo "Review list saved to: $MANIFEST"
 wc -l "$MANIFEST"
 
 ARCHIVE="tarballs/company_junction_review_$(date +%Y%m%d_%H%M%S).tar.gz"
+mkdir -p tarballs
 tar -czf "$ARCHIVE" -T "$MANIFEST"
 
 echo "Wrote: $ARCHIVE"
-```
 
 
 ---

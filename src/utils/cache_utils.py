@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import shutil
+import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -75,6 +76,10 @@ def get_cache_directories(run_id: str) -> Tuple[str, str]:
 
 def create_cache_directories(run_id: str) -> Tuple[str, str]:
     """Create cache directories for a run and return their paths."""
+    if not run_id:
+        logger.error("Missing run_id; refusing to write to non-scoped processed path")
+        sys.exit(2)
+    
     interim_dir, processed_dir = get_cache_directories(run_id)
 
     os.makedirs(interim_dir, exist_ok=True)

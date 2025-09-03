@@ -108,17 +108,51 @@ def save_run_index(run_index: Dict[str, Any]) -> None:
 
 
 def get_latest_run_id() -> Optional[str]:
-    """Get the run ID pointed to by the latest symlink."""
+    """Get the current latest run id (prefer latest.json, fallback to symlink)."""
+    # Prefer latest.json (Phase 1.27.3 empty-state support)
+    try:
+        from src.utils.path_utils import read_latest_run_id  # type: ignore
+        rid = read_latest_run_id()
+        if rid:
+            return rid
+    except Exception:
+        pass
+    # Fallback to symlink
     latest_path = get_processed_dir("latest")
     if not latest_path.exists() or not latest_path.is_symlink():
         return None
-
     try:
         target = latest_path.resolve()
-        # Expect path like data/processed/<run_id>
         return target.name
     except OSError:
         return None
+
+
+def _list_run_dirs(root: Path) -> set[str]:
+    """List top-level run directories under a root, excluding known non-run dirs."""
+    if not root.exists():
+        return set()
+    
+    # Import constants from pipeline_constants
+    try:
+        from src.utils.pipeline_constants import CLEANUP_EXCLUDE_DIRS
+        exclude = CLEANUP_EXCLUDE_DIRS
+    except ImportError:
+        # Fallback if constants not available
+        exclude = {"default", "index", "legacy", "test_save_run", ".DS_Store"}
+    
+    return {
+        p.name
+        for p in root.iterdir()
+        if p.is_dir() and p.name not in exclude
+    }
+
+
+def scan_filesystem_runs() -> set[str]:
+    """Union of run directory names found in data/interim and data/processed."""
+    interim_root = Path("data/interim")
+    processed_root = Path("data/processed")
+    return _list_run_dirs(interim_root) | _list_run_dirs(processed_root)
 
 
 def detect_run_type(run_data: Dict[str, Any]) -> str:
@@ -159,6 +193,7 @@ def discover_candidates(
     prod_sweep: bool = False,
     include_prod: bool = False,
     pinned_run_ids: Set[str] = None,
+    reconcile: bool = False,
 ) -> CleanupPlan:
     """
     Discover cleanup candidates using deterministic logic.
@@ -236,6 +271,22 @@ def discover_candidates(
     # Sort for deterministic output
     plan.sort_candidates()
 
+    # Optional reconciliation pass: include orphans / stale index entries
+    if reconcile:
+        fs_runs = scan_filesystem_runs()
+        index_runs = set(run_index.keys())
+        # Orphans = on disk but not in index
+        orphan_runs = sorted(fs_runs - index_runs)
+        # Stale index = in index but no dirs on disk
+        stale_index = sorted(index_runs - fs_runs)
+
+        for rid in orphan_runs:
+            # dummy run_data for display; delete_run_directories handles dirs
+            plan.add_candidate(rid, {"input_paths": [], "timestamp": ""}, "orphan_directory")
+        for rid in stale_index:
+            plan.add_candidate(rid, run_index.get(rid, {}), "stale_index")
+        plan.sort_candidates()
+
     return plan
 
 
@@ -310,6 +361,13 @@ def execute_cleanup(
             del run_index[run_id]
             pruned_index_count += 1
             logger.info(f"Removed stale index entry: {run_id}")
+        elif reason == "orphan_directory":
+            # Only delete directories (not in index)
+            if delete_run_directories(run_id):
+                deleted_runs.append(run_id)
+                logger.info(f"Deleted orphan directory: {run_id}")
+            else:
+                logger.warning(f"Failed to delete orphan directory: {run_id}")
         else:
             # Delete directories and remove from index
             if delete_run_directories(run_id):
@@ -372,6 +430,31 @@ Examples:
     parser.add_argument(
         "--json", action="store_true", help="Print machine-readable JSON output"
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Explicit dry-run (alias: omit --really-delete)",
+    )
+    parser.add_argument(
+        "--reconcile",
+        action="store_true",
+        help="Also discover orphan run directories and stale index entries",
+    )
+    parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="Allow cleanup to leave zero runs (empty state)",
+    )
+    parser.add_argument(
+        "--delete-latest-symlink",
+        action="store_true",
+        help="Remove latest symlink if its target is deleted",
+    )
+    parser.add_argument(
+        "--keep-at-least",
+        type=int,
+        help="Override config minimum runs to keep (default from config.cleanup.keep_at_least)",
+    )
 
     args = parser.parse_args()
 
@@ -392,9 +475,7 @@ Examples:
 
     # Load run index
     run_index = load_run_index()
-    if not run_index:
-        logger.info("No runs found in index")
-        return 0
+    # Do not early-return: --reconcile may still find orphans
 
     # Discover candidates
     plan = discover_candidates(
@@ -404,6 +485,7 @@ Examples:
         prod_sweep=args.prod_sweep,
         include_prod=args.include_prod,
         pinned_run_ids=pinned_run_ids,
+        reconcile=args.reconcile,
     )
 
     if not plan.candidates:
@@ -420,6 +502,17 @@ Examples:
     if not deletable_candidates:
         logger.info("No deletable candidates found (all are protected)")
         return 0
+
+    # Enforce keep-at-least unless allow-empty or explicit override
+    keep_min = args.keep_at_least if args.keep_at_least is not None else 1
+    if not args.allow_empty and keep_min > 0:
+        remaining = len(run_index) - len(plan.candidates)
+        if remaining < keep_min:
+            logger.warning(
+                f"Aborting: would leave {remaining} runs (< keep-at-least={keep_min}). "
+                "Use --allow-empty or --keep-at-least 0 to override."
+            )
+            return 2
 
     # Check for prod candidates requiring special handling
     prod_candidates = [
@@ -503,11 +596,22 @@ Examples:
             return 1
 
     # Execute cleanup
-    if args.really_delete:
+    if args.really_delete and not args.dry_run:
         deleted_runs, pruned_index_count = execute_cleanup(plan, run_index)
 
         # Save updated index
         save_run_index(run_index)
+
+        # Handle empty state if all runs were deleted
+        if len(run_index) == 0:
+            if args.allow_empty:
+                logger.info("All runs deleted - entering empty state")
+                from src.utils.path_utils import write_latest_pointer
+                write_latest_pointer(None)  # Set latest to None
+                logger.info("Empty state established - latest.json updated, symlink removed")
+            else:
+                logger.warning("All runs would be deleted but --allow-empty not set")
+                logger.warning("Consider using --allow-empty to support empty state")
 
         # Print summary
         summary = {
@@ -518,6 +622,7 @@ Examples:
             "pruned_index": pruned_index_count,
             "protected_latest": bool(plan.latest_run_id),
             "pinned_runs": list(plan.pinned_runs),
+            "empty_state": len(run_index) == 0,
         }
 
         logger.info(f"Cleanup completed: {json.dumps(summary, indent=2)}")

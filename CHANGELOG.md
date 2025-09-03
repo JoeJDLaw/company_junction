@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 1.27.4**: Cleanup Reconciler & Dry-Run UX
+  - **Reconciliation Mode**: Added `--reconcile` to detect orphan directories (on disk, not in index) and stale index entries (in index, not on disk)
+  - **Explicit Dry-Run**: Added `--dry-run` flag while keeping default no-delete behavior unless `--really-delete` is present
+  - **Latest Run Resolution**: `get_latest_run_id()` now prefers `latest.json` (empty-state aware), falls back to `latest` symlink
+  - **Filesystem Scanning**: Implemented `_list_run_dirs()` and `scan_filesystem_runs()` for comprehensive artifact discovery
+  - **Enhanced Logging**: Clear reason codes for cleanup candidates (orphan_directory, stale_index, type_filter, prod_sweep)
+  - **Deterministic Output**: Consistent sorting and logging for all cleanup operations
+  - **Comprehensive Testing**: Added `tests/test_cleanup_reconcile.py` with 15+ test cases covering reconciliation scenarios
+  - **Backward Compatibility**: Index-first behavior remains default; reconciliation is opt-in via `--reconcile` flag
+
+- **Phase 1.27.3**: Cleanup & Empty State Handling
+  - **Empty State Support**: Added first-class support for completely empty pipeline state with `run_id: null` in latest.json
+  - **Enhanced Cleanup Tool**: Added `--allow-empty`, `--delete-latest-symlink`, and `--keep-at-least N` CLI flags
+  - **Latest Pointer Management**: Implemented `read_latest_run_id()` and `write_latest_pointer()` helpers for robust latest run tracking
+  - **Empty State Configuration**: Added `cleanup.keep_at_least: 0` and `cleanup.allow_empty_state: false` feature flags
+  - **UI Empty State UX**: Enhanced Streamlit app to show helpful empty state message instead of crashing when no runs exist
+  - **Mini-DAG Empty State**: Updated resume logic to gracefully handle `None` latest as NO_PREVIOUS_RUN
+  - **Comprehensive Testing**: Added `tests/test_cleanup_empty_state.py` with 15+ test cases covering all empty state scenarios
+  - **Symlink Handling**: Automatic removal of latest symlink when entering empty state, recreation when runs are added
+  - **Metadata Persistence**: latest.json stores empty state metadata with timestamp and empty_state flag
+
 - **Phase 1.27.2**: Mini-DAG Resume System Critical Audit & Fix
   - **Pipeline Constants Standardization**: Created `src/utils/pipeline_constants.py` for consistent file naming across all stages
   - **Enhanced Resume Validation**: Added comprehensive validation with `validate_resume_capability()` method

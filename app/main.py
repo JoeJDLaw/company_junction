@@ -199,10 +199,22 @@ def main():
         "min_edge_strength": min_edge_strength,
     }
 
-    # Handle no runs case
+    # Handle no runs case (empty state)
     if not runs:
-        st.error("No runs found. Please run the pipeline first.")
-        # Still render maintenance in sidebar
+        st.info("🏗️ **No runs found**")
+        st.markdown("""
+        The pipeline hasn't been run yet, or all runs have been cleaned up.
+        
+        **To get started:**
+        1. Run the deduplication pipeline to create your first review
+        2. Or restore runs from backup if they were accidentally deleted
+        
+        **Available actions:**
+        - Use the maintenance panel to manage pipeline runs
+        - Check the cleanup tool for run management options
+        """)
+        
+        # Still render maintenance in sidebar for pipeline management
         render_maintenance("no_runs")
         return
 

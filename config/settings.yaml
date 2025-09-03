@@ -99,14 +99,16 @@ parallelism:
 # Logging Configuration
 logging:
   level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "pipeline.log"
 
 # Cleanup Configuration
 cleanup:
   protect_latest: true
   pinned_runs: []
   max_age_days: null  # no default age limit
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: "pipeline.log"
+  keep_at_least: 1  # minimum runs to keep (0 allows empty state)
+  allow_empty_state: false  # feature flag for empty state support
 
 # CSV Processing Configuration
 csv:
@@ -140,6 +142,7 @@ ui:
 # Alias Matching Configuration
 alias:
   optimize: true  # Enable optimized alias matching (Phase 1.21.1)
+  workers: 12  # Number of parallel workers for alias matching
   progress_interval_s: 1.0  # Progress log interval in seconds
   page_size_options: [50, 100, 200, 500]
   max_page_fetch_seconds: 30  # Timeout threshold

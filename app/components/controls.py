@@ -39,8 +39,8 @@ def render_controls(
     backend_state = get_backend_state(st.session_state)
 
     # Force DuckDB backend when flag is enabled
-    use_duckdb = settings.get("ui", {}).get("use_duckdb_for_groups", False)
-    if use_duckdb:
+    prefer_duck = settings.get("ui_perf", {}).get("groups", {}).get("duckdb_prefer_over_pyarrow", False)
+    if prefer_duck:
         backend_state.groups[selected_run_id] = "duckdb"
         set_backend_state(st.session_state, backend_state)
 

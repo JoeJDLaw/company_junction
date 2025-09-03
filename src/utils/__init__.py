@@ -13,7 +13,7 @@ from .dtypes import (
 
 from .logging_utils import setup_logging
 from .path_utils import get_project_root, ensure_directory_exists, get_data_paths
-from .validation_utils import validate_dataframe
+# from .validation_utils import validate_dataframe  # Moved to deprecated/
 from .io_utils import (
     get_file_info,
     list_data_files,
@@ -38,7 +38,7 @@ __all__ = [
     "ensure_directory_exists",
     "get_data_paths",
     # Validation utilities
-    "validate_dataframe",
+    # "validate_dataframe",  # Moved to deprecated/
     # I/O utilities
     "get_file_info",
     "list_data_files",

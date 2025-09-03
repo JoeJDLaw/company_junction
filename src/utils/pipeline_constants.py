@@ -96,3 +96,15 @@ ResumeDecision = Literal[
     "MISSING_FILES",
     "STATE_INCONSISTENT"
 ]
+
+# Cleanup and reconciliation constants
+CLEANUP_EXCLUDE_DIRS = {"default", "index", "legacy", "test_save_run", ".DS_Store"}
+
+# Cleanup reason codes
+CleanupReason = Literal[
+    "type_filter",
+    "age_filter", 
+    "prod_sweep",
+    "orphan_directory",
+    "stale_index"
+]
