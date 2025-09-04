@@ -31,7 +31,7 @@ from .artifact_management import get_artifact_paths
 from .run_management import list_runs, get_run_metadata, validate_run_artifacts, get_default_run_id, format_run_display_name, load_stage_state
 from .filtering import apply_filters_pyarrow, apply_filters_duckdb, get_order_by, build_sort_expression
 from .cache_keys import build_cache_key, build_details_cache_key
-# from .group_stats import compute_group_stats_duckdb
+from .group_stats import compute_group_stats_duckdb
 # from .group_pagination import get_groups_page, get_groups_page_pyarrow
 # from .group_pagination import get_groups_page_duckdb, get_groups_page_from_stats_duckdb
 
@@ -50,7 +50,7 @@ __all__ = [
     "build_sort_expression",
     "build_cache_key",
     "build_details_cache_key",
-    # "compute_group_stats_duckdb",
+    "compute_group_stats_duckdb",
     # "get_groups_page",
     # "get_groups_page_pyarrow",
     # "get_groups_page_duckdb",
@@ -70,7 +70,7 @@ def _placeholder_function():
 # list_runs, get_run_metadata, validate_run_artifacts, get_default_run_id, format_run_display_name, load_stage_state are now imported from run_management
 # apply_filters_pyarrow, apply_filters_duckdb, get_order_by, build_sort_expression are now imported from filtering
 # build_cache_key, build_details_cache_key are now imported from cache_keys
-compute_group_stats_duckdb = _placeholder_function
+# compute_group_stats_duckdb is now imported from group_stats
 get_groups_page = _placeholder_function
 get_groups_page_pyarrow = _placeholder_function
 get_groups_page_duckdb = _placeholder_function
