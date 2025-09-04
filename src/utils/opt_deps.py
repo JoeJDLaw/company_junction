@@ -8,27 +8,31 @@ like duckdb, pyarrow, and streamlit.
 from typing import Dict, Optional, Any
 import importlib
 
-# TODO: Implement try_import and try_import_many functions
 def try_import(module: str) -> Optional[Any]:
     """Try to import a module, return None if unavailable."""
-    # TODO: Implement actual import logic
-    pass
+    try:
+        return importlib.import_module(module)
+    except ImportError:
+        return None
 
 def try_import_many(modules: Dict[str, str]) -> Dict[str, Optional[Any]]:
     """Try to import multiple modules, return dict of results."""
-    # TODO: Implement actual import logic
-    pass
+    result = {}
+    for alias, module_name in modules.items():
+        result[alias] = try_import(module_name)
+    return result
 
-# TODO: Centralized capability checks
-# DUCKDB = try_import("duckdb")
-# PYARROW = try_import_many({
-#     "pc": "pyarrow.compute",
-#     "ds": "pyarrow.dataset", 
-#     "pq": "pyarrow.parquet"
-# })
-# STREAMLIT = try_import("streamlit")
+# Centralized capability checks
+DUCKDB = try_import("duckdb")
+PYARROW = try_import_many({
+    "pc": "pyarrow.compute",
+    "ds": "pyarrow.dataset", 
+    "pq": "pyarrow.parquet"
+})
+STREAMLIT = try_import("streamlit")
 
-# TODO: Export handles & flags
-# DUCKDB_AVAILABLE = DUCKDB is not None
-# PC, DS, PQ = PYARROW["pc"], PYARROW["ds"], PYARROW["pq"]
-# PYARROW_AVAILABLE = all(PYARROW.values())
+# Export handles & flags
+DUCKDB_AVAILABLE = DUCKDB is not None
+PC, DS, PQ = PYARROW.get("pc"), PYARROW.get("ds"), PYARROW.get("pq")
+PYARROW_AVAILABLE = all(PYARROW.values())
+STREAMLIT_AVAILABLE = STREAMLIT is not None

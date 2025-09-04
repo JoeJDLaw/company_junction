@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 class CacheKeyVersion(Enum):
     """Cache key version enumeration."""
     V1 = "CJCK1"  # Initial version
-    # V2 = "CJCK2"  # Future: document changes that require version bump
+    V2 = "CJCK2"  # Future: document changes that require version bump
 
 @dataclass(frozen=True)
 class CacheKey:
@@ -26,20 +26,76 @@ class CacheKey:
     components: tuple[Any, ...]
     
     def compute(self) -> str:
-        """Generate stable hash from components."""
-        # TODO: Implement actual hash computation
-        pass
+        """
+        Compute cache key from components.
+        
+        Returns:
+            Versioned cache key string with CJCK prefix
+        """
+        import json
+        
+        # Serialize components to stable string representation
+        def serialize_component(comp):
+            if isinstance(comp, dict):
+                return json.dumps(comp, sort_keys=True)
+            elif isinstance(comp, tuple):
+                return json.dumps(list(comp), sort_keys=True)
+            else:
+                return str(comp)
+        
+        # Create stable string representation
+        components_str = "|".join(serialize_component(comp) for comp in self.components)
+        
+        # Hash with SHA-256 and prefix with version
+        import hashlib
+        hash_value = hashlib.sha256(components_str.encode()).hexdigest()
+        
+        return f"{self.version.value}:{hash_value}"
     
     @classmethod
     def validate(cls, key: str) -> Optional[str]:
-        """Returns warning if key version mismatch."""
-        # TODO: Implement actual validation
-        pass
+        """
+        Validate cache key version.
+        
+        Args:
+            key: Cache key string to validate
+            
+        Returns:
+            Warning message if validation fails, None if valid
+        """
+        if not key:
+            return "Cache key is empty"
+        
+        # Check if key starts with known version token
+        for version in CacheKeyVersion:
+            if key.startswith(f"{version.value}:"):
+                return None  # Valid version
+        
+        # Unknown or missing version token
+        return f"Unknown cache key version or missing version token: {key[:20]}..."
 
 def fingerprint(path: str) -> str:
-    """Stable mtime+size fingerprint."""
-    # TODO: Implement actual fingerprint logic
-    pass
+    """
+    Generate fingerprint for a file path.
+    
+    Args:
+        path: File path to fingerprint
+        
+    Returns:
+        Fingerprint string: "mtime_size" or "missing"/"unknown"
+    """
+    if not path or path is None:
+        return "missing"
+    
+    # Check if file exists first (matching legacy behavior)
+    if not os.path.exists(path):
+        return "missing"
+    
+    try:
+        stat = os.stat(path)
+        return f"{int(stat.st_mtime)}_{stat.st_size}"
+    except OSError:
+        return "unknown"
 
 def build_cache_key(
     run_id: str,
@@ -73,11 +129,8 @@ def build_cache_key(
         else:
             parquet_path = artifact_paths["review_ready_parquet"]
 
-        if parquet_path and os.path.exists(parquet_path):
-            stat = os.stat(parquet_path)
-            parquet_fingerprint = f"{int(stat.st_mtime)}_{stat.st_size}"
-        else:
-            parquet_fingerprint = "missing"
+        # Use fingerprint function internally while keeping output identical
+        parquet_fingerprint = fingerprint(parquet_path)
     except Exception:
         parquet_fingerprint = "unknown"
 
@@ -122,8 +175,7 @@ def build_details_cache_key(run_id: str, group_id: str, backend: str = "duckdb")
     try:
         artifact_paths = get_artifact_paths(run_id)
         parquet_path = artifact_paths["review_ready_parquet"]
-        stat = os.stat(parquet_path)
-        parquet_fingerprint = f"{int(stat.st_mtime)}_{stat.st_size}"
+        parquet_fingerprint = fingerprint(parquet_path)
     except Exception:
         parquet_fingerprint = "unknown"
 

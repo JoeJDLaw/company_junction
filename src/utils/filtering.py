@@ -4,12 +4,12 @@ Filtering and sorting utilities for ui_helpers refactor.
 This module provides unified models for sort/filter operations.
 """
 
-import logging
 from dataclasses import dataclass
 from typing import Literal, Dict, Any, List, Tuple
 from src.utils.schema_utils import (
-    GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, GROUP_ID
+    GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, GROUP_ID, DISPOSITION, WEAKEST_EDGE_TO_PRIMARY
 )
+from src.utils.opt_deps import PC
 from src.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -117,22 +117,24 @@ def apply_filters_pyarrow(table: Any, filters: Dict[str, Any]) -> Any:
 
     # Apply disposition filter
     if "dispositions" in filters and filters["dispositions"]:
-        # TODO: Import pc when opt_deps is implemented
-        # disposition_mask = pc.is_in(pc.field("disposition"), pc.scalar(filters["dispositions"]))
-        # table = table.filter(disposition_mask)
-        pass
+        if PC is not None:
+            disposition_mask = PC.is_in(PC.field(DISPOSITION), PC.scalar(filters["dispositions"]))
+            table = table.filter(disposition_mask)
+        else:
+            logger.debug("PyArrow compute not available, skipping disposition filter")
 
     # Apply edge strength filter
     if "min_edge_strength" in filters and filters["min_edge_strength"] is not None:
-        # TODO: Import pc when opt_deps is implemented
-        # edge_mask = pc.greater_equal(pc.field("weakest_edge_to_primary"), pc.scalar(filters["min_edge_strength"]))
-        # table = table.filter(edge_mask)
-        pass
+        if PC is not None:
+            edge_mask = PC.greater_equal(PC.field(WEAKEST_EDGE_TO_PRIMARY), PC.scalar(filters["min_edge_strength"]))
+            table = table.filter(edge_mask)
+        else:
+            logger.debug("PyArrow compute not available, skipping edge strength filter")
 
     # Apply group size filter
     if "min_group_size" in filters and filters["min_group_size"] is not None:
         # This would require group stats, so we'll skip for now
-        pass
+        logger.debug("Group size filtering not yet implemented")
 
     return table
 
@@ -156,18 +158,99 @@ def apply_filters_duckdb(table: Any, filters: Dict[str, Any]) -> Any:
     return table
 
 
-# TODO: Implement unified sort resolution using the above functions
 def resolve_sort(sort_key: str) -> SortSpec:
-    """Convert sort key to unified SortSpec."""
-    # TODO: Implement actual logic using get_order_by and build_sort_expression
-    pass
+    """
+    Convert sort key to unified SortSpec.
+    
+    Args:
+        sort_key: Sort key from UI dropdown
+        
+    Returns:
+        Unified SortSpec with field, direction, and tie-breaker
+    """
+    # Extract sort field and direction
+    if "Group Size" in sort_key:
+        field = GROUP_SIZE
+    elif "Max Score" in sort_key:
+        field = MAX_SCORE
+    elif "Account Name" in sort_key:
+        field = PRIMARY_NAME
+    else:
+        # Unknown sort_key, fall back to config default
+        try:
+            from src.utils.io_utils import load_settings
+            from src.utils.path_utils import get_config_path
+            
+            settings = load_settings(str(get_config_path()))
+            default_sort = (
+                settings.get("ui", {})
+                .get("sort", {})
+                .get("default", f"{GROUP_SIZE} DESC")
+            )
+            logger.error(
+                f"Unknown sort_key='{sort_key}', falling back to config default: {default_sort}"
+            )
+            # Parse the default to extract field and direction
+            if "group_size" in default_sort.lower():
+                field = GROUP_SIZE
+            elif "max_score" in default_sort.lower():
+                field = MAX_SCORE
+            elif "primary_name" in default_sort.lower():
+                field = PRIMARY_NAME
+            else:
+                field = GROUP_SIZE
+            
+            # Parse direction from default
+            direction = "desc" if "desc" in default_sort.lower() else "asc"
+        except Exception as e:
+            logger.error(f"Failed to load config default sort, using hardcoded fallback: {e}")
+            field = GROUP_SIZE
+            direction = "desc"  # Default to DESC for GROUP_SIZE
+
+    # Determine sort direction (only if not already set by fallback)
+    if 'direction' not in locals():
+        direction = "desc" if "(Desc)" in sort_key else "asc"
+    
+    # Return SortSpec with group_id tie-breaker for stability
+    return SortSpec(
+        field=field,
+        direction=direction,
+        tie_breaker=(GROUP_ID, "asc")
+    )
+
 
 def to_duckdb_order_by(spec: SortSpec) -> str:
-    """Convert SortSpec to DuckDB ORDER BY clause."""
-    # TODO: Implement actual logic
-    pass
+    """
+    Convert SortSpec to DuckDB ORDER BY clause.
+    
+    Args:
+        spec: SortSpec to convert
+        
+    Returns:
+        DuckDB ORDER BY clause string
+    """
+    # Convert direction to SQL syntax
+    sql_direction = "DESC" if spec.direction == "desc" else "ASC"
+    tie_direction = "DESC" if spec.tie_breaker[1] == "desc" else "ASC"
+    
+    return f"{spec.field} {sql_direction}, {spec.tie_breaker[0]} {tie_direction}"
+
 
 def to_pyarrow_sort_by(spec: SortSpec) -> list[tuple[str, str]]:
-    """Convert SortSpec to PyArrow sort specification."""
-    # TODO: Implement actual logic
-    pass
+    """
+    Convert SortSpec to PyArrow sort specification.
+    
+    Args:
+        spec: SortSpec to convert
+        
+    Returns:
+        PyArrow sort specification list
+    """
+    # Convert direction to PyArrow syntax
+    pyarrow_direction = "descending" if spec.direction == "desc" else "ascending"
+    tie_direction = "descending" if spec.tie_breaker[1] == "desc" else "ascending"
+    
+    return [
+        (spec.field, pyarrow_direction),
+        (spec.tie_breaker[0], tie_direction)
+    ]
