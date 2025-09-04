@@ -61,24 +61,12 @@ def test_no_ui_helpers_import():
 
 
 def test_ui_helpers_deprecation_warning():
-    """Test that importing ui_helpers shows a deprecation warning."""
-    import warnings
+    """Test that ui_helpers module is completely gone (no longer importable)."""
+    import pytest
     
-    # Capture warnings
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        
-        # Import the module (this should trigger the warning)
+    # The module should no longer exist
+    with pytest.raises(ModuleNotFoundError, match="No module named 'src.utils.ui_helpers'"):
         import src.utils.ui_helpers
-        
-        # Check that we got a deprecation warning
-        deprecation_warnings = [warning for warning in w if issubclass(warning.category, DeprecationWarning)]
-        assert len(deprecation_warnings) > 0, "Expected deprecation warning when importing ui_helpers"
-        
-        # Check that the warning message contains the migration guide
-        warning_messages = [str(warning.message) for warning in deprecation_warnings]
-        assert any("src.utils.ui_helpers is deprecated" in msg for msg in warning_messages), \
-            "Expected deprecation warning to mention the module is deprecated"
 
 
 def test_ui_helpers_functions_still_work():
@@ -97,3 +85,9 @@ def test_ui_helpers_functions_still_work():
     
     assert get_groups_page is new_get_groups_page
     assert get_group_details is new_get_group_details
+
+
+def test_ui_helpers_file_is_gone():
+    """Test that ui_helpers.py file has been deleted."""
+    import os
+    assert not os.path.exists("src/utils/ui_helpers.py"), "ui_helpers.py should be deleted"

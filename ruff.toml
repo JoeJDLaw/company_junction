@@ -7,4 +7,3 @@ ignore = ["E203"]
 
 [lint.per-file-ignores]
 "tests/*" = ["F401"]
-"src/utils/ui_helpers.py" = ["F401"]  # façade only - allows unused imports
