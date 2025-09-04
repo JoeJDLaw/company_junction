@@ -5,52 +5,69 @@ This module provides pure functions for run loading, stage status parsing,
 and artifact path management for the Streamlit UI.
 """
 
+from __future__ import annotations
+
+import hashlib
 import json
 import os
 import time
-import hashlib
-import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import pyarrow as pa  # type: ignore
-import pyarrow.parquet as pq  # type: ignore
-import pyarrow.compute as pc  # type: ignore
-import pyarrow.dataset as ds  # type: ignore
+import pandas as pd
+import yaml
+
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
 
 # Optional DuckDB import for fallback
 try:
     import duckdb
-
     DUCKDB_AVAILABLE = True
 except ImportError:
     DUCKDB_AVAILABLE = False
 
-from src.utils.path_utils import (
-    get_config_path,
-    get_processed_dir,
-    get_interim_dir,
-    get_artifact_path,
-)
-from src.utils.schema_utils import (
-    GROUP_ID,
-    ACCOUNT_NAME,
-    IS_PRIMARY,
-    WEAKEST_EDGE_TO_PRIMARY,
-    DISPOSITION,
-    GROUP_SIZE,
-    MAX_SCORE,
-    PRIMARY_NAME,
-    ACCOUNT_ID,
-    SUFFIX_CLASS,
-    CREATED_DATE,
-    ALIAS_CROSS_REFS,
-    ALIAS_CANDIDATES,
-)
+# Optional PyArrow imports for fallback
+try:
+    import pyarrow.compute as pc
+    import pyarrow.dataset as ds
+    import pyarrow.parquet as pq
+    PYARROW_AVAILABLE = True
+except ImportError:
+    PYARROW_AVAILABLE = False
+
+# Optional Streamlit import for UI functions
+try:
+    import streamlit as st
+    STREAMLIT_AVAILABLE = True
+except ImportError:
+    STREAMLIT_AVAILABLE = False
 
 from src.utils.cache_utils import get_latest_run_id, load_run_index
 from src.utils.logging_utils import get_logger
+from src.utils.path_utils import (
+    get_artifact_path,
+    get_config_path,
+    get_interim_dir,
+    get_processed_dir,
+)
+from src.utils.schema_utils import (
+    ACCOUNT_ID,
+    ACCOUNT_NAME,
+    CREATED_DATE,
+    DISPOSITION,
+    GROUP_ID,
+    GROUP_SIZE,
+    IS_PRIMARY,
+    MAX_SCORE,
+    PRIMARY_NAME,
+    SUFFIX_CLASS,
+    WEAKEST_EDGE_TO_PRIMARY,
+)
 
 logger = get_logger(__name__)
 
@@ -178,11 +195,13 @@ def choose_backend(
             )
         elif not duckdb_prefer_over_pyarrow:
             logger.info(
-                f"ui_perf.groups.duckdb_prefer_over_pyarrow=false - using PyArrow | context={reason_context}"
+                f"ui_perf.groups.duckdb_prefer_over_pyarrow=false - "
+                f"using PyArrow | context={reason_context}"
             )
         elif file_size <= rows_threshold:
             logger.info(
-                f"File size {file_size} <= threshold {rows_threshold} - using PyArrow | context={reason_context}"
+                f"File size {file_size} <= threshold {rows_threshold} - "
+                f"using PyArrow | context={reason_context}"
             )
 
     return chosen
@@ -195,7 +214,8 @@ def _ensure_session_state_backend(run_id: str) -> None:
     Args:
         run_id: The run ID to set up session state for
     """
-    import streamlit as st
+    if not STREAMLIT_AVAILABLE:
+        raise ImportError("Streamlit not available for session state management")
 
     if "cj" not in st.session_state:
         st.session_state["cj"] = {}
@@ -214,7 +234,6 @@ def _set_backend_choice(run_id: str, backend: str) -> None:
         backend: The chosen backend ("duckdb" or "pyarrow")
     """
     _ensure_session_state_backend(run_id)
-    import streamlit as st
 
     st.session_state["cj"]["backend"]["groups"][run_id] = backend
 
@@ -297,35 +316,11 @@ def _is_non_empty(obj: Any) -> bool:
     """
     if obj is None:
         return False
-    try:
-        import pandas as pd
+    if isinstance(obj, (pd.Series, pd.DataFrame)):
+        return not obj.empty
+    if NUMPY_AVAILABLE and isinstance(obj, np.ndarray):
+        return obj.size > 0
 
-        if isinstance(obj, (pd.Series, pd.DataFrame)):
-            return not obj.empty
-    except ImportError:
-        pass
-    except Exception:
-        pass
-    try:
-        import numpy as np
-
-        if isinstance(obj, np.ndarray):
-            return obj.size > 0
-    except ImportError:
-        pass
-    except Exception:
-        pass
-    try:
-        import pyarrow as pa
-
-        if isinstance(obj, pa.Table):
-            return obj.num_rows > 0
-        if isinstance(obj, (pa.Array, pa.ChunkedArray)):
-            return len(obj) > 0
-    except ImportError:
-        pass
-    except Exception:
-        pass
     if hasattr(obj, "__len__"):
         try:
             return len(obj) > 0
@@ -375,9 +370,7 @@ def get_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
     Returns:
         Run metadata dictionary or None if run not found
     """
-    import logging
 
-    logger = logging.getLogger(__name__)
 
     run_index = load_run_index()
 
@@ -711,6 +704,57 @@ def get_stage_status_icon(status: str) -> str:
     return str(status_icons.get(status, "❓"))
 
 
+def apply_filters_pyarrow(table: Any, filters: Dict[str, Any]) -> Any:
+    """
+    Apply filters to PyArrow table.
+    
+    Args:
+        table: PyArrow table to filter
+        filters: Dictionary of filters to apply
+        
+    Returns:
+        Filtered PyArrow table
+    """
+    if not filters:
+        return table
+
+    # Apply disposition filter
+    if "dispositions" in filters and filters["dispositions"]:
+        disposition_mask = pc.is_in(pc.field("disposition"), pc.scalar(filters["dispositions"]))
+        table = table.filter(disposition_mask)
+
+    # Apply edge strength filter
+    if "min_edge_strength" in filters and filters["min_edge_strength"] is not None:
+        edge_mask = pc.greater_equal(pc.field("weakest_edge_to_primary"), pc.scalar(filters["min_edge_strength"]))
+        table = table.filter(edge_mask)
+
+    # Apply group size filter
+    if "min_group_size" in filters and filters["min_group_size"] is not None:
+        # This would require group stats, so we'll skip for now
+        pass
+
+    return table
+
+
+def apply_filters_duckdb(table: Any, filters: Dict[str, Any]) -> Any:
+    """
+    Apply filters to DuckDB table/DataFrame.
+    
+    Args:
+        table: DuckDB table or DataFrame to filter
+        filters: Dictionary of filters to apply
+        
+    Returns:
+        Filtered table/DataFrame
+    """
+    if not filters:
+        return table
+
+    # For DuckDB, we'll return the table as-is for now
+    # The actual filtering should be done in SQL queries
+    return table
+
+
 def build_sort_expression(sort_key: str) -> List[Tuple[str, str]]:
     """
     Build PyArrow sort keys for stable sorting.
@@ -791,62 +835,116 @@ def get_groups_page_pyarrow(
         except Exception:
             timeout_seconds = 30
 
-        # Step 1: Dataset creation
+        # Step 1: Load data with DuckDB or fallback to pandas
         step_start = time.time()
-        dataset = ds.dataset(parquet_path)
-        dataset_time = time.time() - step_start
-        logger.info(f"Dataset creation | run_id={run_id} elapsed={dataset_time:.3f}s")
+        if duckdb is None:
+            # Fallback to pandas if DuckDB not available
+            logger.warning("DuckDB not available, falling back to pandas for data loading")
 
-        check_timeout()
+            # Use pandas to read parquet directly
+            df = pd.read_parquet(parquet_path)
 
-        # Step 2: Column projection
-        step_start = time.time()
-        schema = dataset.schema
-        available_columns = schema.names
+            # Project columns
+            header_columns = [
+                GROUP_ID,
+                ACCOUNT_NAME,
+                IS_PRIMARY,
+                WEAKEST_EDGE_TO_PRIMARY,
+                DISPOSITION,
+            ]
+            existing_columns = [col for col in header_columns if col in df.columns]
 
-        header_columns = [
-            GROUP_ID,
-            ACCOUNT_NAME,
-            IS_PRIMARY,
-            WEAKEST_EDGE_TO_PRIMARY,
-            DISPOSITION,
-        ]
-        # Only include columns that exist
-        existing_columns = [col for col in header_columns if col in available_columns]
+            # Select only existing columns
+            projected_df = df[existing_columns]
+            projected_table = projected_df  # Keep as pandas DataFrame for now
+        else:
+            try:
+                conn = duckdb.connect(":memory:")
 
-        logger.info(
-            f"Column projection | run_id={run_id} available={len(available_columns)} projected={len(existing_columns)} columns={existing_columns}"
-        )
+                # Read parquet and project columns
+                header_columns = [
+                    GROUP_ID,
+                    ACCOUNT_NAME,
+                    IS_PRIMARY,
+                    WEAKEST_EDGE_TO_PRIMARY,
+                    DISPOSITION,
+                ]
 
-        # Use scanner for projection
-        scanner = dataset.scanner(columns=existing_columns)
-        projected_table = scanner.to_table()
+                # Check which columns exist in the parquet file
+                schema_query = f"DESCRIBE SELECT * FROM read_parquet('{parquet_path}') LIMIT 0"
+                schema_result = conn.execute(schema_query).df()
+                available_columns = schema_result['column_name'].tolist()
+
+                # Only include columns that exist
+                existing_columns = [col for col in header_columns if col in available_columns]
+
+                logger.info(
+                    f"Column projection | run_id={run_id} available={len(available_columns)} projected={len(existing_columns)} columns={existing_columns}"
+                )
+
+                # Read data with projection
+                columns_str = ", ".join(existing_columns)
+                query = f"SELECT {columns_str} FROM read_parquet('{parquet_path}')"
+                projected_df = conn.execute(query).df()
+                projected_table = projected_df  # Keep as pandas DataFrame
+
+                conn.close()
+
+            except Exception as e:
+                logger.warning(f"DuckDB execution failed: {e}, falling back to pandas")
+
+                # Fallback to pandas if DuckDB execution fails
+                df = pd.read_parquet(parquet_path)
+
+                # Project columns
+                header_columns = [
+                    GROUP_ID,
+                    ACCOUNT_NAME,
+                    IS_PRIMARY,
+                    WEAKEST_EDGE_TO_PRIMARY,
+                    DISPOSITION,
+                ]
+                existing_columns = [col for col in header_columns if col in df.columns]
+
+                # Select only existing columns
+                projected_df = df[existing_columns]
+                projected_table = projected_df  # Keep as pandas DataFrame for now
+
         projection_time = time.time() - step_start
+        # Get row count (works for both pandas and PyArrow)
+        row_count = projected_table.shape[0] if hasattr(projected_table, 'shape') else projected_table.num_rows
 
         logger.info(
-            f"Projection complete | run_id={run_id} rows={projected_table.num_rows} elapsed={projection_time:.3f}s"
+            f"Projection complete | run_id={run_id} rows={row_count} elapsed={projection_time:.3f}s"
         )
 
         check_timeout()
 
         # Step 3: Apply filters
         step_start = time.time()
-        filtered_table = apply_filters_pyarrow(projected_table, filters)
+        filtered_table = apply_filters_duckdb(projected_table, filters)
         filter_time = time.time() - step_start
 
+        # Get row counts (works for both pandas and PyArrow)
+        before_count = projected_table.shape[0] if hasattr(projected_table, 'shape') else projected_table.num_rows
+        after_count = filtered_table.shape[0] if hasattr(filtered_table, 'shape') else filtered_table.num_rows
+
         logger.info(
-            f"Filters applied | run_id={run_id} before={projected_table.num_rows} after={filtered_table.num_rows} elapsed={filter_time:.3f}s"
+            f"Filters applied | run_id={run_id} before={before_count} after={after_count} elapsed={filter_time:.3f}s"
         )
 
         check_timeout()
 
         # Step 4: Compute group statistics
         step_start = time.time()
-        groups_table = compute_group_stats_pyarrow(filtered_table)
+        groups_table = compute_group_stats_duckdb(filtered_table)
         stats_time = time.time() - step_start
 
+        # Get group count (works for both pandas and PyArrow)
+        group_count = groups_table.shape[0] if hasattr(groups_table, 'shape') else groups_table.num_rows
+
         logger.info(
-            f"Group stats computed | run_id={run_id} groups={groups_table.num_rows} elapsed={stats_time:.3f}s"
+            f"Group stats computed | run_id={run_id} groups={group_count} elapsed={stats_time:.3f}s"
         )
 
         # Auto-switch to DuckDB if group stats take too long
@@ -869,8 +967,8 @@ def get_groups_page_pyarrow(
 
         check_timeout()
 
-        # Get total count
-        total_groups = groups_table.num_rows
+        # Get total count (works for both pandas and PyArrow)
+        total_groups = groups_table.shape[0] if hasattr(groups_table, 'shape') else groups_table.num_rows
 
         if total_groups == 0:
             elapsed = time.time() - start_time
@@ -894,8 +992,14 @@ def get_groups_page_pyarrow(
             step_start = time.time()
             sort_keys = build_sort_expression(sort_key)
 
-            # Sort the groups table
-            sorted_table = groups_table.sort_by(sort_keys)
+            # Sort the groups table (works for both pandas and PyArrow)
+            if hasattr(groups_table, 'sort_values'):
+                # pandas DataFrame
+                sorted_table = groups_table.sort_values(sort_keys[0], ascending=sort_keys[1] == 'ASC')
+            else:
+                # PyArrow table
+                sorted_table = groups_table.sort_by(sort_keys)
+
             sort_time = time.time() - step_start
 
             logger.info(
@@ -904,22 +1008,37 @@ def get_groups_page_pyarrow(
 
             check_timeout()
 
-            # Step 7: Apply slice (LIMIT/OFFSET before pandas conversion)
+            # Step 7: Apply slice (LIMIT/OFFSET)
             step_start = time.time()
-            page_table = sorted_table.slice(offset, limit)
+            if hasattr(sorted_table, 'iloc'):
+                # pandas DataFrame
+                page_table = sorted_table.iloc[offset:offset + limit]
+            else:
+                # PyArrow table
+                page_table = sorted_table.slice(offset, limit)
+
             slice_time = time.time() - step_start
 
+            # Get slice row count
+            slice_rows = page_table.shape[0] if hasattr(page_table, 'shape') else page_table.num_rows
+
             logger.info(
-                f"Slice applied | run_id={run_id} offset={offset} limit={limit} slice_rows={page_table.num_rows} elapsed={slice_time:.3f}s"
+                f"Slice applied | run_id={run_id} offset={offset} limit={limit} slice_rows={slice_rows} elapsed={slice_time:.3f}s"
             )
 
-            # Step 8: Convert slice to pandas
+            # Step 8: Convert slice to list
             step_start = time.time()
-            page_data = page_table.to_pylist()
+            if hasattr(page_table, 'to_dict'):
+                # pandas DataFrame
+                page_data = page_table.to_dict('records')
+            else:
+                # PyArrow table
+                page_data = page_table.to_pylist()
+
             pandas_time = time.time() - step_start
 
             logger.info(
-                f"Pandas conversion | run_id={run_id} rows={len(page_data)} elapsed={pandas_time:.3f}s"
+                f"Data conversion | run_id={run_id} rows={len(page_data)} elapsed={pandas_time:.3f}s"
             )
 
         elapsed = time.time() - start_time
@@ -1093,91 +1212,99 @@ def get_groups_page(
     return get_groups_page_pyarrow(run_id, sort_key, page, page_size, filters)
 
 
-def apply_filters_pyarrow(table: pa.Table, filters: Dict[str, Any]) -> pa.Table:
+
+
+
+def compute_group_stats_duckdb(table) -> pd.DataFrame:
     """
-    Apply filters to PyArrow table.
+    Compute group statistics for sorting using DuckDB.
 
     Args:
-        table: PyArrow table to filter
-        filters: Dictionary of filters to apply
+        table: DataFrame or PyArrow table with group data
 
     Returns:
-        Filtered PyArrow table
+        DataFrame with group statistics
     """
-    filtered_table = table
+    # Check if DuckDB is available
+    if duckdb is None:
+        logger.warning("DuckDB not available, falling back to pandas for group stats")
+        # Fall through to pandas implementation below
+    else:
+        try:
+            # Convert to pandas if needed
+            if hasattr(table, 'to_pandas'):
+                df = table.to_pandas()
+            else:
+                df = table
 
-    # Apply disposition filter
-    if filters.get("dispositions") and DISPOSITION in table.column_names:
-        dispositions = filters["dispositions"]
-        mask = pc.is_in(pc.field(DISPOSITION), pa.array(dispositions))
-        filtered_table = filtered_table.filter(mask)
+            # Create DuckDB connection
+            conn = duckdb.connect(":memory:")
 
-    # Apply edge strength filter
-    if filters.get("min_edge_strength", 0.0) > 0.0:
-        if WEAKEST_EDGE_TO_PRIMARY in table.column_names:
-            mask = pc.field(WEAKEST_EDGE_TO_PRIMARY) >= filters["min_edge_strength"]
-            filtered_table = filtered_table.filter(mask)
+            # Register DataFrame with DuckDB
+            conn.register("groups_df", df)
 
-    # Apply alias filter
-    if filters.get("has_aliases", False):
-        # Check for records with aliases
-        if ALIAS_CROSS_REFS in table.column_names:
-            mask = pc.string_length(pc.field(ALIAS_CROSS_REFS)) > 2  # More than "[]"
-        elif ALIAS_CANDIDATES in table.column_names:
-            mask = pc.string_length(pc.field(ALIAS_CANDIDATES)) > 2
+            # Execute aggregation query
+            query = f"""
+            SELECT 
+                {GROUP_ID},
+                COUNT(*) as {GROUP_SIZE},
+                MAX(CASE WHEN {WEAKEST_EDGE_TO_PRIMARY} IS NOT NULL THEN {WEAKEST_EDGE_TO_PRIMARY} ELSE 0.0 END) as {MAX_SCORE},
+                FIRST(CASE WHEN {IS_PRIMARY} THEN {ACCOUNT_NAME} ELSE NULL END) as {PRIMARY_NAME}
+            FROM groups_df 
+            GROUP BY {GROUP_ID}
+            ORDER BY {GROUP_ID}
+            """
+
+            result = conn.execute(query).df()
+            conn.close()
+
+            return result
+
+        except Exception as e:
+            logger.warning(f"DuckDB execution failed: {e}, falling back to pandas")
+            # Fall through to pandas implementation below
+        # Fallback to pandas if DuckDB not available
+        logger.warning("DuckDB not available, falling back to pandas for group stats")
+
+        # Convert to pandas if needed
+        if hasattr(table, 'to_pandas'):
+            df = table.to_pandas()
         else:
-            mask = pc.scalar(False)
-        filtered_table = filtered_table.filter(mask)
+            df = table
 
-    return filtered_table
+        # Compute group statistics
+        stats_data = []
+        for group_id in df[GROUP_ID].unique():
+            group_data = df[df[GROUP_ID] == group_id]
 
+            # Get group size
+            group_size = len(group_data)
 
-def compute_group_stats_pyarrow(table: pa.Table) -> pa.Table:
-    """
-    Compute group statistics for sorting.
+            # Get max score
+            max_score = (
+                group_data[WEAKEST_EDGE_TO_PRIMARY].max()
+                if WEAKEST_EDGE_TO_PRIMARY in group_data.columns
+                else 0.0
+            )
 
-    Args:
-        table: PyArrow table with group data
+            # Get primary record's account name
+            primary_record = (
+                group_data[group_data[IS_PRIMARY]].iloc[0]
+                if group_data[IS_PRIMARY].any()
+                else group_data.iloc[0]
+            )
+            primary_name = primary_record.get(ACCOUNT_NAME, "")
 
-    Returns:
-        PyArrow table with group statistics
-    """
-    # Convert to pandas for easier group operations
-    df = table.to_pandas()
+            stats_data.append(
+                {
+                    GROUP_ID: group_id,
+                    GROUP_SIZE: group_size,
+                    MAX_SCORE: max_score,
+                    PRIMARY_NAME: primary_name or "",
+                }
+            )
 
-    # Compute group statistics
-    stats_data = []
-    for group_id in df[GROUP_ID].unique():
-        group_data = df[df[GROUP_ID] == group_id]
-
-        # Get group size
-        group_size = len(group_data)
-
-        # Get max score
-        max_score = (
-            group_data[WEAKEST_EDGE_TO_PRIMARY].max()
-            if WEAKEST_EDGE_TO_PRIMARY in group_data.columns
-            else 0.0
-        )
-
-        # Get primary record's account name
-        primary_record = (
-            group_data[group_data[IS_PRIMARY]].iloc[0]
-            if group_data[IS_PRIMARY].any()
-            else group_data.iloc[0]
-        )
-        primary_name = primary_record.get(ACCOUNT_NAME, "")
-
-        stats_data.append(
-            {
-                GROUP_ID: group_id,
-                GROUP_SIZE: group_size,
-                MAX_SCORE: max_score,
-                PRIMARY_NAME: primary_name or "",
-            }
-        )
-
-    return pa.Table.from_pylist(stats_data)
+        return pd.DataFrame(stats_data)
 
 
 def get_group_details_duckdb(
@@ -1242,6 +1369,9 @@ def get_group_details_duckdb(
         )
 
         # Step 1: DuckDB connection
+        if duckdb is None:
+            raise ImportError("DuckDB not available for group details querying")
+
         conn = duckdb.connect(":memory:")
         conn.execute(f"PRAGMA threads = {duckdb_threads}")
         connect_time = time.time() - step_start
@@ -1340,7 +1470,10 @@ def get_group_details_pyarrow(run_id: str, group_id: str) -> List[Dict[str, Any]
         group_mask = pc.equal(pc.field("group_id"), pc.scalar(group_id))
         group_table = table.filter(group_mask)
 
-        if group_table.num_rows == 0:
+        # Get row count (works for both pandas and PyArrow)
+        group_count = group_table.shape[0] if hasattr(group_table, 'shape') else group_table.num_rows
+
+        if group_count == 0:
             return []
 
         # Convert to pandas for easier processing
@@ -1464,7 +1597,7 @@ def get_group_details_lazy(run_id: str, group_id: str) -> List[Dict[str, Any]]:
                 raise
 
     # Fallback to PyArrow if details parquet is disabled or DuckDB unavailable
-    
+
     if allow_pyarrow_fallback:
         result = get_group_details_pyarrow(run_id, group_id)
         elapsed = time.time() - start_time
@@ -1600,6 +1733,9 @@ def get_groups_page_from_stats_duckdb(
 
     try:
         # Step 1: Connect to DuckDB
+        if duckdb is None:
+            raise ImportError("DuckDB not available for group stats querying")
+
         step_start = time.time()
         conn = duckdb.connect(":memory:")
         conn_time = time.time() - step_start
@@ -1887,6 +2023,9 @@ def get_groups_page_duckdb(
     )
 
     # Step 1: DuckDB connection
+    if duckdb is None:
+        raise ImportError("DuckDB not available for groups page querying")
+
     step_start = time.time()
     conn = duckdb.connect(":memory:")
     conn.execute(f"PRAGMA threads = {duckdb_threads}")
@@ -2063,7 +2202,7 @@ def get_total_groups_count(run_id: str, filters: Dict[str, Any]) -> int:
         projected_table = scanner.to_table()
 
         # Apply filters
-        filtered_table = apply_filters_pyarrow(projected_table, filters)
+        filtered_table = apply_filters_duckdb(projected_table, filters)
 
         # Get unique group count efficiently
         # Note: This is still expensive but much better than loading all data

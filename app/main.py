@@ -319,6 +319,11 @@ def main():
         ]["group_id"].unique()
         filtered_df = filtered_df[filtered_df["group_id"].isin(has_alias_groups)]
 
+    # Render controls first to get similarity_threshold
+    filters, sort_by, page, page_size, similarity_threshold = render_controls(
+        selected_run_id, settings, filters
+    )
+
     # Phase 1.35.2: Apply similarity threshold filtering
     if similarity_threshold < 100:
         # Filter by weakest edge strength (similarity threshold)
@@ -326,11 +331,6 @@ def main():
             filtered_df["weakest_edge_to_primary"] >= similarity_threshold
         ]
         st.info(f"📊 Filtered to groups with edge strength ≥ {similarity_threshold}%")
-
-    # Render controls
-    filters, sort_by, page, page_size, similarity_threshold = render_controls(
-        selected_run_id, settings, filters
-    )
 
     # Display groups
     st.subheader("Duplicate Groups")

@@ -356,11 +356,15 @@ def create_groups_with_edge_gating(
             root = find(x)
             return sum(1 for p in parent.values() if find(p) == root)
 
-            # Initialize all accounts as their own groups
-    logger.debug(f"Initializing standard Union-Find for {len(accounts_df)} accounts")
-    for account_id in accounts_df[account_id_col]:
-        parent[account_id] = account_id
-        rank[account_id] = 0
+        # Initialize all accounts as their own groups
+        logger.debug(f"Initializing standard Union-Find for {len(accounts_df)} accounts")
+        for account_id in accounts_df[account_id_col]:
+            parent[account_id] = account_id
+            rank[account_id] = 0
+
+    # Group membership tracking (move this ABOVE any use)
+    group_members: Dict[str, List[str]] = defaultdict(list)
+    explain_metadata: Dict[str, Dict[str, Any]] = {}
 
     # Phase 1.35.2: Fast-path union of exact equals pairs first
     exact_equals_unions = 0
@@ -395,9 +399,7 @@ def create_groups_with_edge_gating(
         ].copy()
         logger.info(f"grouping | filtered_exact_equals | remaining_pairs={len(candidate_pairs_df)} | backend=union_find")
 
-    # Group membership tracking
-    group_members: Dict[str, List[str]] = defaultdict(list)
-    explain_metadata: Dict[str, Dict[str, Any]] = {}
+
 
     # Process candidate pairs in score order (highest first)
     perf_settings = config.get("grouping", {}).get("edge_gating", {}).get("performance", {})

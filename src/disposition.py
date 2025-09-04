@@ -428,10 +428,10 @@ def apply_dispositions(
     use_vectorized = settings.get("disposition", {}).get("performance", {}).get("vectorized", True)
     
     if use_vectorized:
-        logger.info("disposition | backend=vectorized | records={len(df_groups)} | method=np.select")
+        logger.info("disposition | backend=vectorized | records=%d | method=np.select", len(df_groups))
         return _apply_dispositions_vectorized(df_groups, settings)
     else:
-        logger.info("disposition | backend=legacy | records={len(df_groups)} | method=iterrows")
+        logger.info("disposition | backend=legacy | records=%d | method=iterrows", len(df_groups))
         return _apply_dispositions_legacy(df_groups, settings)
 
 

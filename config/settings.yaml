@@ -241,6 +241,8 @@ ui:
 # Phase 1.35.4: Group Stats Configuration
 group_stats:
   backend: "duckdb"  # "duckdb" | "pandas" (default: duckdb)
+  persist_artifacts: true          # default: always write artifacts
+  run_parity_validation: false     # local default; CI will set true
   memoization:
     enable: true
     cache_ttl_hours: 24

@@ -155,7 +155,7 @@ class ParquetSizeReporter:
         columns = []
         
         try:
-            for col_idx in range(metadata.schema.num_columns):
+            for col_idx in range(len(metadata.schema.names)):
                 col = metadata.schema.column(col_idx)
                 
                 # Get column statistics if available
@@ -163,7 +163,7 @@ class ParquetSizeReporter:
                     "name": col.name,
                     "type": str(col.physical_type),
                     "logical_type": str(col.logical_type) if col.logical_type else "none",
-                    "repetition": str(col.repetition_type)
+                    "repetition_level": col.max_repetition_level
                 }
                 
                 # Try to get size information
@@ -305,3 +305,70 @@ class ParquetSizeReporter:
 def create_parquet_size_reporter(target_size_mb: float = 180.0) -> ParquetSizeReporter:
     """Factory function to create parquet size reporter."""
     return ParquetSizeReporter(target_size_mb)
+
+
+def load_or_build_report(run_id: str, target_size_mb: float = 180.0) -> Dict[str, Any]:
+    """
+    Load existing size report or build a new one for a given run.
+    
+    Args:
+        run_id: Pipeline run ID
+        target_size_mb: Target size in MB for validation
+        
+    Returns:
+        Size report dictionary
+    """
+    from pathlib import Path
+    import json
+    
+    # Try to load existing report
+    report_path = Path(f"data/processed/{run_id}/parquet_size_report.json")
+    
+    if report_path.exists():
+        try:
+            with open(report_path, 'r') as f:
+                report = json.load(f)
+            logger.info(f"parquet_size_reporter | report_loaded | path={report_path}")
+            return report
+        except Exception as e:
+            logger.warning(f"parquet_size_reporter | report_load_failed | error={e}")
+    
+    # Build new report if loading failed
+    logger.info(f"parquet_size_reporter | building_new_report | run_id={run_id}")
+    
+    # Look for parquet files in the run directory
+    run_dir = Path(f"data/processed/{run_id}")
+    if not run_dir.exists():
+        return {"error": f"Run directory not found: {run_dir}"}
+    
+    # Find parquet files
+    parquet_files = list(run_dir.glob("*.parquet"))
+    if not parquet_files:
+        return {"error": f"No parquet files found in {run_dir}"}
+    
+    # Create reporter and analyze files
+    reporter = create_parquet_size_reporter(target_size_mb)
+    
+    # Analyze each file
+    file_reports = []
+    for parquet_file in parquet_files:
+        try:
+            file_report = reporter.analyze_parquet_file(str(parquet_file))
+            file_reports.append(file_report)
+        except Exception as e:
+            logger.warning(f"parquet_size_reporter | file_analysis_failed | file={parquet_file} | error={e}")
+    
+    # Create summary report
+    summary_report = {
+        "run_id": run_id,
+        "timestamp": pd.Timestamp.now().isoformat(),
+        "files": file_reports,
+        "total_files": len(file_reports),
+        "total_size_mb": sum(f.get("size_mb", 0) for f in file_reports),
+        "target_size_mb": target_size_mb
+    }
+    
+    # Save the report
+    reporter._save_size_report(summary_report, run_id)
+    
+    return summary_report

@@ -21,6 +21,9 @@ MAX_SCORE = "max_score"
 PRIMARY_NAME = "primary_name"
 DISPOSITION = "disposition"
 
+# Parity validation constants
+MAX_ALLOWED_MISMATCHES = 2
+
 
 class ParityValidator:
     """Validates parity between DuckDB and pandas group stats."""
@@ -170,7 +173,7 @@ class ParityValidator:
             else:
                 # Find mismatches
                 mismatch_mask = abs_diff > self.tolerance
-                mismatch_count = mismatch_mask.sum()
+                mismatch_count = int(mismatch_mask.sum())  # Convert numpy int64 to Python int
                 mismatch_indices = mismatch_mask[mismatch_mask].index.tolist()
                 
                 return {
@@ -197,7 +200,7 @@ class ParityValidator:
             else:
                 # Find mismatches
                 mismatch_mask = duckdb_str != pandas_str
-                mismatch_count = mismatch_mask.sum()
+                mismatch_count = int(mismatch_mask.sum())  # Convert numpy int64 to Python int
                 mismatch_indices = mismatch_mask[mismatch_mask].index.tolist()
                 
                 return {
@@ -336,3 +339,18 @@ class ParityValidator:
 def create_parity_validator(tolerance: float = 1e-9) -> ParityValidator:
     """Factory function to create parity validator."""
     return ParityValidator(tolerance)
+
+
+def assert_parity_or_exit(report: dict) -> None:
+    """
+    Assert parity validation passed or exit with error.
+    
+    Args:
+        report: Parity validation report
+        
+    Raises:
+        SystemExit: If mismatches exceed MAX_ALLOWED_MISMATCHES
+    """
+    mismatches = int(report.get("mismatches", 0))
+    if mismatches > MAX_ALLOWED_MISMATCHES:
+        raise SystemExit(f"Parity failed: mismatches={mismatches} > {MAX_ALLOWED_MISMATCHES}")

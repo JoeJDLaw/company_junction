@@ -15,6 +15,7 @@ import sys
 import logging
 import json
 import subprocess
+import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional
 import os
@@ -726,8 +727,6 @@ def run_pipeline(
             df_norm = normalize_dataframe(df, name_column)
 
             # Add name_core_tokens column for edge-gating
-            import json
-
             def create_tokens(x: Any) -> str:
                 if pd.notna(x):
                     x_str = str(x)
@@ -993,10 +992,20 @@ def run_pipeline(
                 duckdb_engine = create_duckdb_group_stats_engine(settings, run_id)
                 
                 try:
-                    # Generate config digest for memoization
-                    config_digest = hashlib.md5(
-                        json.dumps(settings, sort_keys=True, default=str).encode()
-                    ).hexdigest()[:16]
+                    # Generate config digest for memoization (more robust)
+                    try:
+                        # Try to serialize settings, fallback to string representation if it fails
+                        settings_str = json.dumps(settings, sort_keys=True, default=str)
+                    except (TypeError, ValueError, RecursionError):
+                        # Fallback: use string representation of key settings
+                        key_settings = {
+                            "group_stats": settings.get("group_stats", {}),
+                            "engine": settings.get("engine", {}),
+                            "io": settings.get("io", {})
+                        }
+                        settings_str = str(key_settings)
+                    
+                    config_digest = hashlib.md5(settings_str.encode()).hexdigest()[:16]
                     
                     # Compute group stats using DuckDB
                     df_group_stats, duckdb_metadata = duckdb_engine.compute_group_stats(
@@ -1004,11 +1013,24 @@ def run_pipeline(
                     )
                     
                     # Log DuckDB performance
+                    # Safe throughput calculation
+                    tp = duckdb_metadata.get(
+                        "throughput",
+                        (duckdb_metadata.get("records", 0) / duckdb_metadata["elapsed_sec"])
+                        if duckdb_metadata.get("elapsed_sec") else 0
+                    )
+
                     logger.info(
-                        f"group_stats | duckdb_complete | elapsed={duckdb_metadata['elapsed_sec']:.3f}s | "
-                        f"groups={duckdb_metadata['groups']} | records={duckdb_metadata['records']} | "
-                        f"throughput={duckdb_metadata['throughput']:.0f}records/sec | "
-                        f"memoize={duckdb_metadata['memoize']} | cache_hit={duckdb_metadata['cache_hit']}"
+                        "group_stats | duckdb_complete | elapsed_sec=%.3f | groups=%s | records=%s | "
+                        "throughput=%s recs/sec | memoize=%s | cache_hit=%s"
+                        % (
+                            duckdb_metadata.get("elapsed_sec", 0),
+                            duckdb_metadata.get("groups"),
+                            duckdb_metadata.get("records"),
+                            f"{tp:.0f}",
+                            duckdb_metadata.get("memoize"),
+                            duckdb_metadata.get("cache_hit"),
+                        )
                     )
                     
                     # Write optimized parquet using DuckDB
@@ -1024,6 +1046,24 @@ def run_pipeline(
                         f"dictionary_encoding={parquet_metadata['dictionary_encoding']}"
                     )
                     
+                    # Write canonical group_stats.parquet if persistence is enabled
+                    persist_artifacts = settings.get("group_stats", {}).get("persist_artifacts", True)
+                    # Check for environment variable override
+                    if os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS"):
+                        persist_artifacts = os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS").lower() == "true"
+                    
+                    if persist_artifacts:
+                        canonical_path = str(get_artifact_path(run_id, "group_stats.parquet"))
+                        df_group_stats.to_parquet(canonical_path, index=False)
+                        logger.info(f"group_stats | canonical_file_written | path={canonical_path}")
+                        
+                        # Also write the DuckDB-specific file for parity validation
+                        duckdb_specific_path = str(get_artifact_path(run_id, "group_stats_duckdb.parquet"))
+                        df_group_stats.to_parquet(duckdb_specific_path, index=False)
+                        logger.info(f"group_stats | duckdb_specific_file_written | path={duckdb_specific_path}")
+                    
+                    # Validate memoization performance
+                    
                     # Validate memoization performance
                     if duckdb_metadata['memoize'] and not duckdb_metadata['cache_hit']:
                         min_cache_hit_percentage = settings.get("group_stats", {}).get("memoization", {}).get("min_cache_hit_percentage", 30)
@@ -1032,7 +1072,12 @@ def run_pipeline(
                             logger.info(f"group_stats | memoization_cache_miss | key={duckdb_metadata['cache_key']}")
                     
                     # Run parity validation if pandas backend is available for comparison
-                    if settings.get("group_stats", {}).get("run_parity_validation", False):
+                    run_parity = settings.get("group_stats", {}).get("run_parity_validation", False)
+                    # Check for environment variable override
+                    if os.environ.get("CJ_GROUP_STATS_RUN_PARITY"):
+                        run_parity = os.environ.get("CJ_GROUP_STATS_RUN_PARITY").lower() == "true"
+                    
+                    if run_parity:
                         logger.info("group_stats | running_parity_validation")
                         
                         # Compute pandas version for comparison
@@ -1053,6 +1098,75 @@ def run_pipeline(
                         pandas_path = str(get_artifact_path(run_id, "group_stats_pandas.parquet"))
                         df_group_stats_pandas.to_parquet(pandas_path, index=False)
                         logger.info(f"group_stats | pandas_version_saved | path={pandas_path}")
+                        
+                        # Generate parquet size report
+                        try:
+                            from src.utils.parquet_size_reporter import create_parquet_size_reporter
+                            size_reporter = create_parquet_size_reporter()
+                            
+                            # Analyze both parquet files
+                            duckdb_size_report = size_reporter.analyze_parquet_file(group_stats_path)
+                            pandas_size_report = size_reporter.analyze_parquet_file(pandas_path)
+                            
+                            # Generate comparison report
+                            size_comparison = size_reporter.compare_parquet_files(
+                                group_stats_path, pandas_path, 
+                                run_id
+                            )
+                            
+                            logger.info(f"group_stats | size_report_generated | path={size_comparison}")
+                        except Exception as e:
+                            logger.warning(f"group_stats | size_report_failed | error={e}")
+                        
+                        # Generate benchmark report if this is a 94K run
+                        try:
+                            if len(df_primary) > 50000:  # Likely 94K dataset
+                                benchmark_report = {
+                                    "dataset_size": len(df_primary),
+                                    "backend": "duckdb",
+                                    "duckdb_timing": duckdb_metadata['elapsed_sec'],
+                                    "pandas_timing": None,  # Would need separate pandas run
+                                    "target_seconds": 50,
+                                    "target_met": duckdb_metadata['elapsed_sec'] < 50,
+                                    "memoization": {
+                                        "enabled": duckdb_metadata['memoize'],
+                                        "cache_hit": duckdb_metadata['cache_hit'],
+                                        "cache_key": duckdb_metadata['cache_key']
+                                    },
+                                    "environment": {
+                                        "duckdb_threads": settings.get("engine", {}).get("duckdb", {}).get("threads", "auto"),
+                                        "duckdb_memory": settings.get("engine", {}).get("duckdb", {}).get("memory_limit"),
+                                        "compression": "zstd",
+                                        "dictionary_encoding": True
+                                    },
+                                    "generated_at": datetime.now().isoformat()
+                                }
+                                
+                                benchmark_path = f"docs/reports/phase_1_35_4_benchmark.md"
+                                os.makedirs(os.path.dirname(benchmark_path), exist_ok=True)
+                                
+                                with open(benchmark_path, 'w') as f:
+                                    f.write(f"# Phase 1.35.4 Benchmark Report\n\n")
+                                    f.write(f"**Generated**: {benchmark_report['generated_at']}\n")
+                                    f.write(f"**Dataset Size**: {benchmark_report['dataset_size']:,} records\n")
+                                    f.write(f"**Backend**: {benchmark_report['backend']}\n\n")
+                                    f.write(f"## Performance Results\n\n")
+                                    f.write(f"- **DuckDB Runtime**: {benchmark_report['duckdb_timing']:.3f}s\n")
+                                    f.write(f"- **Target**: <{benchmark_report['target_seconds']}s\n")
+                                    f.write(f"- **Target Met**: {'✅ YES' if benchmark_report['target_met'] else '❌ NO'}\n\n")
+                                    f.write(f"## Memoization\n\n")
+                                    f.write(f"- **Enabled**: {benchmark_report['memoization']['enabled']}\n")
+                                    f.write(f"- **Cache Hit**: {benchmark_report['memoization']['cache_hit']}\n")
+                                    f.write(f"- **Cache Key**: {benchmark_report['memoization']['cache_key']}\n\n")
+                                    f.write(f"## Environment\n\n")
+                                    f.write(f"- **DuckDB Threads**: {benchmark_report['environment']['duckdb_threads']}\n")
+                                    f.write(f"- **DuckDB Memory**: {benchmark_report['environment']['duckdb_memory']}\n")
+                                    f.write(f"- **Compression**: {benchmark_report['environment']['compression']}\n")
+                                    f.write(f"- **Dictionary Encoding**: {benchmark_report['environment']['dictionary_encoding']}\n")
+                                
+                                logger.info(f"group_stats | benchmark_report_generated | path={benchmark_path}")
+                        except Exception as e:
+                            logger.warning(f"group_stats | benchmark_report_failed | error={e}")
                     
                 finally:
                     duckdb_engine.close()
@@ -1062,7 +1176,18 @@ def run_pipeline(
                 logger.info("group_stats | backend=pandas | memoization=disabled")
                 df_group_stats = _compute_group_stats_pandas(df_primary)
                 
-                # Save using pandas
+                # Save pandas-specific file if persistence is enabled
+                persist_artifacts = settings.get("group_stats", {}).get("persist_artifacts", True)
+                # Check for environment variable override
+                if os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS"):
+                    persist_artifacts = os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS").lower() == "true"
+                
+                if persist_artifacts:
+                    pandas_path = str(get_artifact_path(run_id, "group_stats_pandas.parquet"))
+                    df_group_stats.to_parquet(pandas_path, index=False)
+                    logger.info(f"group_stats | pandas_specific_file_written | path={pandas_path}")
+                
+                # Save canonical file
                 group_stats_path = str(get_artifact_path(run_id, "group_stats.parquet"))
                 df_group_stats.to_parquet(group_stats_path, index=False)
                 

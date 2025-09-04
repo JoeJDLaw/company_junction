@@ -1,0 +1,166 @@
+name: Parity Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'config/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'config/**'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  parity-validation:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        dataset: [1k]  # Start with 1k, can expand to [1k, 5k, 10k] later
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Create data directories
+      run: |
+        mkdir -p data/raw
+        mkdir -p data/processed
+        mkdir -p data/benchmarks
+        mkdir -p docs/reports
+        
+    - name: Generate test dataset (1k)
+      run: |
+        # Create a small test dataset for CI
+        python -c "
+        import pandas as pd
+        import numpy as np
+        
+        # Generate 1000 test records
+        np.random.seed(42)
+        n_records = 1000
+        
+        data = {
+            'account_id': [f'ACC_{i:06d}' for i in range(n_records)],
+            'account_name': [f'Company {i} Inc.' for i in range(n_records)],
+            'domain': [f'company{i}.com' for i in range(n_records)],
+            'industry': np.random.choice(['Technology', 'Finance', 'Healthcare', 'Retail'], n_records),
+            'revenue': np.random.randint(1000000, 100000000, n_records),
+            'employees': np.random.randint(10, 10000, n_records)
+        }
+        
+        df = pd.DataFrame(data)
+        df.to_csv('data/raw/company_junction_range_1k.csv', index=False)
+        print(f'Generated test dataset: {len(df)} records')
+        "
+        
+    - name: Run parity validation
+      run: |
+        python scripts/benchmark_comparison.py --dataset 1k --mode parity --persist-group-stats-artifacts true
+        
+    - name: Check parity results
+      run: |
+        # Verify that parity validation completed successfully
+        if [ -f "data/processed/1k_parity_validation/parity_report_group_stats.json" ]; then
+          echo "✅ Parity report generated successfully"
+          
+          # Check mismatch count (allow ≤2 mismatches as expected)
+          MISMATCHES=$(python -c "
+          import json
+          with open('data/processed/1k_parity_validation/parity_report_group_stats.json') as f:
+              data = json.load(f)
+          print(data.get('mismatches', 0))
+          ")
+          
+          echo "Mismatches found: $MISMATCHES"
+          
+          if [ "$MISMATCHES" -le 2 ]; then
+            echo "✅ Parity validation passed (≤2 mismatches allowed)"
+          else
+            echo "❌ Parity validation failed (>2 mismatches)"
+            exit 1
+          fi
+        else
+          echo "❌ Parity report not found"
+          exit 1
+        fi
+        
+    - name: Check size report
+      run: |
+        # Verify that size report was generated
+        if [ -f "data/processed/1k_parity_validation/parquet_size_report.json" ]; then
+          echo "✅ Size report generated successfully"
+          
+          # Check that files meet size targets
+          python -c "
+          import json
+          with open('data/processed/1k_parity_validation/parquet_size_report.json') as f:
+              data = json.load(f)
+          
+          for file_info in data.get('files', []):
+              size_mb = file_info.get('size_mb', 0)
+              path = file_info.get('path', '')
+              if size_mb > 180:
+                  print(f'❌ File {path} exceeds 180 MB limit: {size_mb} MB')
+                  exit(1)
+              else:
+                  print(f'✅ File {path}: {size_mb} MB (≤180 MB)')
+          "
+        else
+          echo "❌ Size report not found"
+          exit 1
+        fi
+        
+    - name: Check backend-specific files
+      run: |
+        # Verify that backend-specific files were generated
+        DUCKDB_FILE="data/processed/1k_parity_validation_duckdb/group_stats_duckdb.parquet"
+        PANDAS_FILE="data/processed/1k_parity_validation_pandas/group_stats_pandas.parquet"
+        
+        if [ -f "$DUCKDB_FILE" ]; then
+          echo "✅ DuckDB file generated: $DUCKDB_FILE"
+        else
+          echo "❌ DuckDB file not found: $DUCKDB_FILE"
+          exit 1
+        fi
+        
+        if [ -f "$PANDAS_FILE" ]; then
+          echo "✅ Pandas file generated: $PANDAS_FILE"
+        else
+          echo "❌ Pandas file not found: $PANDAS_FILE"
+          exit 1
+        fi
+        
+    - name: Run comprehensive tests
+      run: |
+        pytest -k "test_group_stats_parity_duckdb_vs_pandas or test_review_parquet_size or test_schema_casing or test_group_stats_memoization" -v
+        
+    - name: Run pipeline run-modes matrix
+      run: |
+        python scripts/run_modes_benchmark.py --dataset 1k
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      if: always()  # Upload even if validation fails
+      with:
+        name: parity-validation-results-${{ matrix.dataset }}
+        path: |
+          data/processed/1k_parity_validation*/
+          data/benchmarks/parity_1k.json
+          docs/reports/
+        retention-days: 7

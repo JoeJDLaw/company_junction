@@ -18,17 +18,13 @@ from typing import Dict, Any, Optional, Tuple, List
 import pandas as pd
 import duckdb
 
-logger = logging.getLogger(__name__)
+# Import constants from centralized schema
+from src.utils.schema_utils import (
+    GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, DISPOSITION,
+    ACCOUNT_NAME, IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY
+)
 
-# Constants for group stats
-GROUP_ID = "group_id"
-GROUP_SIZE = "group_size"
-MAX_SCORE = "max_score"
-PRIMARY_NAME = "primary_name"
-DISPOSITION = "disposition"
-ACCOUNT_NAME = "account_name"
-IS_PRIMARY = "is_primary"
-WEAKEST_EDGE_TO_PRIMARY = "weakest_edge_to_primary"
+logger = logging.getLogger(__name__)
 
 
 class DuckDBGroupStatsEngine:
@@ -66,9 +62,15 @@ class DuckDBGroupStatsEngine:
         
         # Get memoization configuration
         memo_config = settings.get("group_stats", {}).get("memoization", {})
-        self.memoization_enabled = memo_config.get("enable", True)
-        self.cache_ttl_hours = memo_config.get("cache_ttl_hours", 24)
-        self.min_cache_hit_percentage = memo_config.get("min_cache_hit_percentage", 30)
+        # Handle both boolean and dictionary configurations
+        if isinstance(memo_config, bool):
+            self.memoization_enabled = memo_config
+            self.cache_ttl_hours = 24
+            self.min_cache_hit_percentage = 30
+        else:
+            self.memoization_enabled = memo_config.get("enable", True)
+            self.cache_ttl_hours = memo_config.get("cache_ttl_hours", 24)
+            self.min_cache_hit_percentage = memo_config.get("min_cache_hit_percentage", 30)
         
         # Initialize DuckDB connection
         self.conn = self._create_duckdb_connection()
@@ -135,18 +137,24 @@ class DuckDBGroupStatsEngine:
         file_age_hours = (time.time() - cache_path.stat().st_mtime) / 3600
         return file_age_hours < self.cache_ttl_hours
     
-    def compute_group_stats(self, df: pd.DataFrame, config_digest: str = "") -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    def compute_group_stats(self, df: pd.DataFrame, config_digest: str = "", request_id: str = None) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         """
         Compute group statistics using DuckDB.
         
         Args:
             df: DataFrame with group data
             config_digest: Configuration hash for caching
+            request_id: Optional request ID for logging
             
         Returns:
             Tuple of (group_stats_df, metadata_dict)
         """
         start_time = time.time()
+        rows = len(df)
+        groups = df[GROUP_ID].nunique()
+        
+        # Log START with required fields
+        logger.info(f"group_stats | START | backend=duckdb | rows={rows} | groups={groups} | memoize={self.memoization_enabled} | cache_key=generating | cache_hit=false | config_digest={config_digest} | request_id={request_id}")
         
         # Generate cache key
         cache_key = self._generate_cache_key(df, config_digest)
@@ -158,37 +166,45 @@ class DuckDBGroupStatsEngine:
         
         if self.memoization_enabled and self._is_cache_valid(cache_path):
             try:
-                logger.info(f"duckdb_group_stats | cache_hit | key={cache_key}")
-                print(f"DEBUG: Cache hit! Using cached data with columns: {list(cached_stats.columns)}")
+                logger.info(f"group_stats | cache_check | key={cache_key}")
                 cached_stats = pd.read_parquet(cache_path)
                 
                 # Validate cache integrity
                 if len(cached_stats) > 0 and all(col in cached_stats.columns for col in [GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME]):
-                    logger.info(f"duckdb_group_stats | using_cached_stats | groups={len(cached_stats)}")
+                    logger.info(f"group_stats | cache_valid | groups={len(cached_stats)}")
                     cache_hit = True
                     
                     # Log cache performance
                     cache_time = time.time() - start_time
-                    logger.info(f"duckdb_group_stats | cache_complete | elapsed={cache_time:.3f}s | groups={len(cached_stats)}")
+                    
+                    # Log SUCCESS for cache hit with all required fields
+                    duckdb_copy_options = {
+                        "COMPRESSION": "ZSTD",
+                        "ROW_GROUP_SIZE": self.row_group_size
+                    }
+                    logger.info(f"group_stats | SUCCESS | backend=duckdb | io_backend=duckdb | elapsed_sec={cache_time:.3f} | rows={rows} | groups={groups} | compression=zstd | dict_encoding=true | file_size_mb=cached | memoize=true | cache_key={cache_key} | cache_hit=true | duckdb_copy_options={duckdb_copy_options} | config_digest={config_digest} | request_id={request_id}")
                     
                     return cached_stats, {
                         "cache_hit": True,
                         "cache_key": cache_key,
                         "elapsed_sec": cache_time,
-                        "memoize": True
+                        "memoize": True,
+                        "groups": len(cached_stats),
+                        "records": rows,
+                        "request_id": request_id
                     }
             except Exception as e:
-                logger.warning(f"duckdb_group_stats | cache_read_failed | error={e}")
+                logger.warning(f"group_stats | cache_read_failed | error={e}")
         
         # Compute group stats using DuckDB
-        logger.info(f"duckdb_group_stats | computing_stats | groups={df[GROUP_ID].nunique()} | records={len(df)}")
+        logger.info(f"group_stats | computing | backend=duckdb | rows={rows} | groups={groups}")
         
         # Register DataFrame with DuckDB (use a copy to avoid modifying original)
         df_copy = df.copy()
         self.conn.register("groups_df", df_copy)
         
         # SQL query for group statistics
-        sql_query = f"""
+        query = f"""
         SELECT 
             {GROUP_ID},
             COUNT(*) as {GROUP_SIZE},
@@ -201,7 +217,7 @@ class DuckDBGroupStatsEngine:
         """
         
         # Execute query
-        result = self.conn.execute(sql_query)
+        result = self.conn.execute(query)
         group_stats_df = result.df()
         
         # Ensure correct dtypes (use pandas default dtypes for exact matching)
@@ -214,28 +230,30 @@ class DuckDBGroupStatsEngine:
         })
         
         # Rename column to match expected schema
-        group_stats_df = group_stats_df.rename(columns={"disposition_col": "disposition"})
+        group_stats_df = group_stats_df.rename(columns={"disposition_col": DISPOSITION})
         
         # Cache results if memoization enabled
         if self.memoization_enabled:
             try:
                 group_stats_df.to_parquet(cache_path, index=False)
-                logger.info(f"duckdb_group_stats | cached_results | key={cache_key} | path={cache_path}")
+                logger.info(f"group_stats | cached_results | key={cache_key} | path={cache_path}")
                 memoize = True
             except Exception as e:
-                logger.warning(f"duckdb_group_stats | cache_write_failed | error={e}")
+                logger.warning(f"group_stats | cache_write_failed | error={e}")
                 memoize = False
         
         # Calculate performance metrics
         elapsed_time = time.time() - start_time
-        throughput = len(df) / elapsed_time if elapsed_time > 0 else 0
         
-        # Log performance
-        logger.info(
-            f"duckdb_group_stats | compute_complete | elapsed={elapsed_time:.3f}s | "
-            f"groups={len(group_stats_df)} | records={len(df)} | "
-            f"throughput={throughput:.0f}records/sec | memoize={memoize}"
-        )
+        # Log SUCCESS for computation with all required fields
+        duckdb_copy_options = {
+            "COMPRESSION": "ZSTD",
+            "ROW_GROUP_SIZE": self.row_group_size,
+            "DICTIONARY_COMPRESSION": 1 if self.dictionary_compression else 0,
+            "STATISTICS": 1 if self.statistics else 0
+        }
+        
+        logger.info(f"group_stats | SUCCESS | backend=duckdb | io_backend=duckdb | elapsed_sec={elapsed_time:.3f} | rows={rows} | groups={groups} | compression=zstd | dict_encoding={self.dictionary_compression} | file_size_mb=computed | memoize={self.memoization_enabled} | cache_key={cache_key} | cache_hit=false | duckdb_copy_options={duckdb_copy_options} | config_digest={config_digest} | request_id={request_id}")
         
         metadata = {
             "cache_hit": cache_hit,
@@ -243,8 +261,8 @@ class DuckDBGroupStatsEngine:
             "elapsed_sec": elapsed_time,
             "memoize": memoize,
             "groups": len(group_stats_df),
-            "records": len(df),
-            "throughput": throughput
+            "records": rows,
+            "request_id": request_id
         }
         
         return group_stats_df, metadata
