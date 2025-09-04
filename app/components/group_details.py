@@ -146,7 +146,7 @@ def render_group_details(
 
                         st.write(f"**Error:** {error_msg}")
                         st.write(
-                            "**Expected columns:** `group_id`, `account_id`, `account_name`, `suffix_class`, `created_date`, `Disposition`"
+                            "**Expected columns:** `group_id`, `account_id`, `account_name`, `suffix_class`, `created_date`, `disposition`"
                         )
                 else:
                     # Generic error
@@ -241,7 +241,7 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
             ACCOUNT_ID: st.column_config.TextColumn("Account ID", width="medium"),
             "relationship": st.column_config.TextColumn("Relationship", width="medium"),
             DISPOSITION: st.column_config.SelectboxColumn(
-                "Disposition",
+                DISPOSITION,
                 width="small",
                 options=["Keep", "Update", "Delete", "Verify"],
             ),

@@ -356,11 +356,44 @@ def create_groups_with_edge_gating(
             root = find(x)
             return sum(1 for p in parent.values() if find(p) == root)
 
-        # Initialize all accounts as their own groups
-        logger.debug(f"Initializing standard Union-Find for {len(accounts_df)} accounts")
-        for account_id in accounts_df[account_id_col]:
-            parent[account_id] = account_id
-            rank[account_id] = 0
+            # Initialize all accounts as their own groups
+    logger.debug(f"Initializing standard Union-Find for {len(accounts_df)} accounts")
+    for account_id in accounts_df[account_id_col]:
+        parent[account_id] = account_id
+        rank[account_id] = 0
+
+    # Phase 1.35.2: Fast-path union of exact equals pairs first
+    exact_equals_unions = 0
+    if "group_join_reason" in candidate_pairs_df.columns:
+        exact_pairs = candidate_pairs_df[
+            candidate_pairs_df["group_join_reason"] == "exact_equal_raw"
+        ].copy()
+        
+        if not exact_pairs.empty:
+            logger.info(f"grouping | processing_exact_equals | pairs={len(exact_pairs)} | backend=union_find")
+            
+            # Process exact equals pairs (score = 100.0)
+            for _, row in exact_pairs.iterrows():
+                id1, id2 = row[id_col1], row[id_col2]
+                
+                # Union the exact equals
+                union(id1, id2)
+                exact_equals_unions += 1
+                
+                # Track group membership
+                root = find(id1)
+                if root not in group_members:
+                    group_members[root] = []
+                group_members[root].extend([id1, id2])
+            
+            logger.info(f"grouping | exact_equals_complete | unions={exact_equals_unions} | backend=union_find")
+    
+    # Remove exact equals pairs from similarity processing
+    if "group_join_reason" in candidate_pairs_df.columns:
+        candidate_pairs_df = candidate_pairs_df[
+            candidate_pairs_df["group_join_reason"] != "exact_equal_raw"
+        ].copy()
+        logger.info(f"grouping | filtered_exact_equals | remaining_pairs={len(candidate_pairs_df)} | backend=union_find")
 
     # Group membership tracking
     group_members: Dict[str, List[str]] = defaultdict(list)
@@ -457,14 +490,18 @@ def create_groups_with_edge_gating(
     duration = (end_time - start_time).total_seconds()
     ops_per_sec = pairs_processed / duration if duration > 0 else 0
 
+    # Phase 1.35.2: Include exact equals unions in logging
+    total_unions = unions_performed + exact_equals_unions
+    
     logger.info(
-        f"Grouping performance: {pairs_processed} pairs processed, {unions_performed} unions performed, "
-        f"{canopy_rejections} canopy rejections"
+        f"grouping | backend=union_find | pairs_processed={pairs_processed} | "
+        f"unions_similarity={unions_performed} | unions_exact={exact_equals_unions} | "
+        f"unions_total={total_unions} | canopies={canopy_rejections} | "
+        f"throughput={ops_per_sec:.1f}ops/sec | duration={duration:.1f}s"
     )
-    logger.info(f"Grouping throughput: {ops_per_sec:.1f} ops/sec over {duration:.1f}s")
     
     # Log edge-gating breakdown for tuning
-    logger.info(f"Edge-gating breakdown: {dict(gating_reasons)}")
+    logger.info(f"grouping | edge_gating_breakdown | reasons={dict(gating_reasons)}")
 
     # Stop profiling and save report if enabled
     if profiler is not None:

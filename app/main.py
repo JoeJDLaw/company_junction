@@ -292,7 +292,7 @@ def main():
 
     if selected_dispositions:
         filtered_df = filtered_df[
-            filtered_df["Disposition"].isin(selected_dispositions)
+            filtered_df["disposition"].isin(selected_dispositions)
         ]
 
     if min_group_size > 1:
@@ -319,8 +319,16 @@ def main():
         ]["group_id"].unique()
         filtered_df = filtered_df[filtered_df["group_id"].isin(has_alias_groups)]
 
+    # Phase 1.35.2: Apply similarity threshold filtering
+    if similarity_threshold < 100:
+        # Filter by weakest edge strength (similarity threshold)
+        filtered_df = filtered_df[
+            filtered_df["weakest_edge_to_primary"] >= similarity_threshold
+        ]
+        st.info(f"📊 Filtered to groups with edge strength ≥ {similarity_threshold}%")
+
     # Render controls
-    filters, sort_by, page, page_size = render_controls(
+    filters, sort_by, page, page_size, similarity_threshold = render_controls(
         selected_run_id, settings, filters
     )
 
@@ -384,7 +392,7 @@ def main():
         )
 
     # Render export
-    render_export(filtered_df)
+    render_export(filtered_df, similarity_threshold)
 
 
 if __name__ == "__main__":

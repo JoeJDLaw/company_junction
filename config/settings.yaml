@@ -8,8 +8,22 @@ data:
   # Supported file formats
   supported_formats: [".csv", ".xlsx", ".xls"]
   
-  # Output file naming pattern
+  # Output file pattern
   output_pattern: "cleaned_{object_type}_{timestamp}.csv"
+
+# Pipeline Configuration
+pipeline:
+  exact_equals_first_pass:
+    enable: true
+    input_name_col: "Account Name"
+    min_group_size: 2
+    key_trim: true
+    representative_policy: "min_account_id"
+
+# Filtering Configuration
+filtering:
+  write_filtered_out: true
+  filtered_out_columns: ["account_id", "account_name", "reason"]
 
 similarity:
   high: 92
@@ -71,12 +85,31 @@ survivorship:
 io:
   interim_format: parquet
   use_arrow_strings: false  # DISABLED: PyArrow backend removed, using DuckDB + pandas strings
+  # Phase 1.35.4: Parquet I/O configuration
+  parquet:
+    io_backend: "duckdb"  # "duckdb" | "pyarrow" (default: duckdb for new writes)
+    compression: "zstd"
+    row_group_size: 128000
+    dictionary_compression: true
+    statistics: true
+    target_size_mb: 180  # Target size for review parquet
 
 disposition:
   performance:
-    vectorized: true  # NEW: enable np.select path
-    compile_token_regex_once: true  # NEW
+    vectorized: true  # Phase 1.35.3: enable np.select path
+    compile_token_regex_once: true  # Phase 1.35.3: compile regex once
     suspicious_singleton_regex: "(?i)\\b(unknown|unsure|not sure|no idea|test|sample|example|dummy|temp|temporary|temp agency|none|n/?a|tbd|delete|remove|do not use)\\b"
+  # Phase 1.35.3: Moved hardcoded blacklist to configuration
+  blacklist:
+    tokens: [
+      "temp", "temporary", "unknown", "na", "n/a", "tbd", "test", "sample",
+      "paystub", "employees", "delete", "unsure"
+    ]
+    phrases: [
+      "pnc is not sure", "pnc is unsure", "no paystub", "no paystubs",
+      "1099", "1099 pnc", "none", "do not use", "not sure",
+      "unknown company", "no company", "no employer"
+    ]
   manual_overrides:
     enabled: true
     key_column: "account_id"  # adjust to actual id column if not index
@@ -100,6 +133,14 @@ ui:
   sort:
     default: "group_size DESC"      # Default sort when unknown sort key provided
   use_duckdb_for_groups: false     # Legacy flag for DuckDB preference
+  similarity_slider:
+    enable: true
+    control: "stepper"              # plus/minus control, not free slider
+    default_bucket: "100"           # "100" | "95" | "92" | "90"
+    buckets: [100, 95, 92, 90]
+    min: 90                         # lower bound for stepper
+    max: 100                        # upper bound for stepper
+    step: 1                         # increment for +/- buttons
 
 # Salesforce Integration
 salesforce:
@@ -119,6 +160,16 @@ engine:
     enabled: true  # DuckDB is the single engine for non-pandas work
     threads: auto  # auto-detect optimal thread count
     preserve_order: true  # deterministic ordering where needed
+    # Phase 1.35.4: Enhanced DuckDB configuration
+    memory_limit: null  # Use DUCKDB_MEMORY_LIMIT env var or DuckDB default
+    pragmas:
+      enable_object_cache: true
+      preserve_insertion_order: true
+    parquet:
+      compression: "zstd"
+      row_group_size: 128000
+      dictionary_compression: true
+      statistics: true
 
 # Parallelism Configuration
 parallelism:
@@ -145,6 +196,10 @@ logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "pipeline.log"
+  contract:
+    enable: true
+    required_fields: ["stage", "backend", "config_digest", "request_id"]
+    prefix_format: "{stage} | backend={backend}"
 
 # Cleanup Configuration
 cleanup:
@@ -182,6 +237,17 @@ ui:
   duckdb_threads: 4  # Number of DuckDB threads
   max_pyarrow_group_stats_seconds: 5  # Auto-switch threshold for group stats
   use_duckdb_for_groups: true  # Force DuckDB routing for groups list
+
+# Phase 1.35.4: Group Stats Configuration
+group_stats:
+  backend: "duckdb"  # "duckdb" | "pandas" (default: duckdb)
+  memoization:
+    enable: true
+    cache_ttl_hours: 24
+    min_cache_hit_percentage: 30  # Cache hit must show ≥30% reduction
+  performance:
+    target_seconds_94k: 50  # Target: <50s @94K
+    benchmark_runs: 3  # Number of runs for median calculation
 
 # Alias Matching Configuration
 alias:

@@ -220,17 +220,17 @@ class TestDisposition(unittest.TestCase):
         df_dispositions = apply_dispositions(df_groups, self.settings)
 
         # Check that dispositions were assigned
-        self.assertIn("Disposition", df_dispositions.columns)
+        self.assertIn("disposition", df_dispositions.columns)
 
         # Check specific dispositions
         # Blacklisted names should be Delete
         self.assertEqual(
-            df_dispositions.iloc[2]["Disposition"], "Delete"
+            df_dispositions.iloc[2]["disposition"], "Delete"
         )  # 'PNC is not sure'
         self.assertEqual(
-            df_dispositions.iloc[3]["Disposition"], "Delete"
+            df_dispositions.iloc[3]["disposition"], "Delete"
         )  # '1099, no paystubs'
-        self.assertEqual(df_dispositions.iloc[7]["Disposition"], "Delete")  # 'N/A'
+        self.assertEqual(df_dispositions.iloc[7]["disposition"], "Delete")  # 'N/A'
 
     def test_multiple_names_verification(self) -> None:
         """Test that records with multiple names are marked as Verify."""
@@ -247,8 +247,8 @@ class TestDisposition(unittest.TestCase):
         df_dispositions = apply_dispositions(df_groups, self.settings)
 
         # Check that multiple names are marked as Verify
-        self.assertEqual(df_dispositions.iloc[0]["Disposition"], "Verify")
-        self.assertEqual(df_dispositions.iloc[1]["Disposition"], "Verify")
+        self.assertEqual(df_dispositions.iloc[0]["disposition"], "Verify")
+        self.assertEqual(df_dispositions.iloc[1]["disposition"], "Verify")
         self.assertEqual(
             df_dispositions.iloc[0]["disposition_reason"],
             "multi_name_string_requires_split",
@@ -295,13 +295,13 @@ class TestDisposition(unittest.TestCase):
             result = apply_dispositions(test_data, self.settings)
 
             # Check that manual override was applied
-            self.assertEqual(result.iloc[0]["Disposition"], "Delete")
+            self.assertEqual(result.iloc[0]["disposition"], "Delete")
             self.assertEqual(
                 result.iloc[0]["disposition_reason"], "manual_override:Delete"
             )
 
             # Check that other records were processed normally
-            self.assertEqual(result.iloc[1]["Disposition"], "Update")
+            self.assertEqual(result.iloc[1]["disposition"], "Update")
 
         finally:
             # Clean up
@@ -398,10 +398,10 @@ class TestDisposition(unittest.TestCase):
 
         # Normal names should be Keep (singletons)
         self.assertEqual(
-            df_dispositions.iloc[0]["Disposition"], "Keep"
+            df_dispositions.iloc[0]["disposition"], "Keep"
         )  # '20-20 Plumbing & Heating Inc'
         self.assertEqual(
-            df_dispositions.iloc[4]["Disposition"], "Keep"
+            df_dispositions.iloc[4]["disposition"], "Keep"
         )  # 'Acme Corporation'
 
     def test_suffix_mismatch_verification(self) -> None:
@@ -416,8 +416,8 @@ class TestDisposition(unittest.TestCase):
         df_dispositions = apply_dispositions(df_groups, self.settings)
 
         # Both records in the suffix mismatch group should be Verify
-        self.assertEqual(df_dispositions.iloc[0]["Disposition"], "Verify")
-        self.assertEqual(df_dispositions.iloc[1]["Disposition"], "Verify")
+        self.assertEqual(df_dispositions.iloc[0]["disposition"], "Verify")
+        self.assertEqual(df_dispositions.iloc[1]["disposition"], "Verify")
 
     def test_strong_match_same_suffix(self) -> None:
         """Test that strong matches with same suffix get proper dispositions."""
@@ -435,8 +435,8 @@ class TestDisposition(unittest.TestCase):
         df_dispositions = apply_dispositions(df_groups, self.settings)
 
         # Primary should be Keep, non-primary should be Update
-        self.assertEqual(df_dispositions.iloc[0]["Disposition"], "Keep")
-        self.assertEqual(df_dispositions.iloc[1]["Disposition"], "Update")
+        self.assertEqual(df_dispositions.iloc[0]["disposition"], "Keep")
+        self.assertEqual(df_dispositions.iloc[1]["disposition"], "Update")
 
 
 if __name__ == "__main__":

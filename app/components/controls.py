@@ -21,7 +21,7 @@ from src.utils.ui_helpers import build_cache_key
 
 def render_controls(
     selected_run_id: str, settings: Dict[str, Any], filters: Dict[str, Any]
-) -> tuple[Dict[str, Any], str, int, int]:
+) -> tuple[Dict[str, Any], str, int, int, int]:
     """
     Render pagination and filter controls.
 
@@ -77,6 +77,44 @@ def render_controls(
     if not validate_sort_key(sort_by):
         sort_by = "Group Size (Desc)"
 
+    # Phase 1.35.2: Similarity Threshold Stepper
+    if settings.get("ui", {}).get("similarity_slider", {}).get("enable", True):
+        st.sidebar.write("**Similarity Threshold**")
+        
+        # Get current similarity threshold from session state
+        similarity_key = f"similarity_threshold_{selected_run_id}"
+        default_threshold = settings.get("ui", {}).get("similarity_slider", {}).get("default_bucket", "100")
+        current_threshold = st.session_state.get(similarity_key, int(default_threshold))
+        
+        # Create stepper control (plus/minus buttons)
+        col1, col2, col3 = st.sidebar.columns([1, 2, 1])
+        
+        with col1:
+            if st.button("-", key=f"decrease_{selected_run_id}"):
+                min_threshold = settings.get("ui", {}).get("similarity_slider", {}).get("min", 90)
+                if current_threshold > min_threshold:
+                    current_threshold -= 1
+                    st.session_state[similarity_key] = current_threshold
+                    st.rerun()
+        
+        with col2:
+            st.write(f"**{current_threshold}%**")
+            st.caption("Edge Strength")
+        
+        with col3:
+            if st.button("+", key=f"increase_{selected_run_id}"):
+                max_threshold = settings.get("ui", {}).get("similarity_slider", {}).get("max", 100)
+                if current_threshold < max_threshold:
+                    current_threshold += 1
+                    st.session_state[similarity_key] = current_threshold
+                    st.rerun()
+        
+        # Store current threshold in session state
+        st.session_state[similarity_key] = current_threshold
+        
+        # Add threshold to filters for export parity
+        filters["similarity_threshold"] = current_threshold
+
     # Pagination controls
     page_size_options = settings.get("ui", {}).get(
         "page_size_options", [50, 100, 200, 500]
@@ -103,4 +141,7 @@ def render_controls(
         filters_state.signature = current_filters_key
         set_filters_state(st.session_state, filters_state)
 
-    return filters, sort_by, page_state.number, page_size
+    # Get similarity threshold for return
+    similarity_threshold = filters.get("similarity_threshold", int(default_threshold))
+    
+    return filters, sort_by, page_state.number, page_size, similarity_threshold

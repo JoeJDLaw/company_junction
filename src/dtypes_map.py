@@ -64,7 +64,7 @@ ALLOWED_OBJECT_COLUMNS = {
     # Original Salesforce columns that may be present
     "account_name",
     "relationship",
-    "Disposition",
+    "disposition",
     "name_raw",
     "name_base",
     "alias_sources",

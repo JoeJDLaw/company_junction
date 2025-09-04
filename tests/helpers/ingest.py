@@ -64,7 +64,7 @@ def canonicalize_columns(df: pd.DataFrame) -> pd.DataFrame:
         "Format Search Name": "format_search_name",
         "Employer Name": "employer_name",
         # Disposition fields
-        "Disposition": DISPOSITION,
+        "disposition": DISPOSITION,
         "disposition_reason": "disposition_reason",
         "survivorship_reason": "survivorship_reason",
         "applied_penalties": "applied_penalties",

@@ -8,6 +8,153 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 1.35.4**: DuckDB Group Stats + Parquet Optimization + PyArrow Policy
+  - **DuckDB Group Stats Engine**: Replaced pandas aggregation with DuckDB for performance
+    - **Target**: <50s @94K (from current ~270s) - significant progress toward goal
+    - **Method**: SQL-based aggregation with vectorized operations
+    - **Backend**: DuckDB with configurable threads and memory limits
+    - **Features**: Memoization, performance benchmarking, feature flag rollback
+  - **Parquet I/O Optimization**: Enhanced compression and encoding for size reduction
+    - **Compression**: zstd with configurable row group sizes
+    - **Dictionary Encoding**: Automatic dictionary compression for string columns
+    - **Target Size**: ≤180 MB for review parquet files
+    - **I/O Backend**: DuckDB preferred over PyArrow for new writes
+  - **PyArrow Usage Policy**: Enforced import restrictions for stats/aggregation code
+    - **Allowed**: I/O utilities (`src/utils/io_utils.py`) and test files only
+    - **Forbidden**: Stats computation, aggregation, and pipeline stages
+    - **Enforcement**: CI script (`scripts/enforce_pyarrow_policy.py`) with grep-based checks
+    - **Migration**: Stats code moved from PyArrow to DuckDB
+  - **Memoization System**: Cache group stats for repeated runs with TTL
+    - **Cache Key**: Content-based hashing of DataFrame and configuration
+    - **TTL**: Configurable cache expiration (default: 24 hours)
+    - **Performance**: Cache hits must show ≥30% reduction or log memoize=false
+    - **Validation**: Cache integrity checks and fallback handling
+  - **Feature Flag Rollback**: Safe deployment with easy rollback capability
+    - **Flags**: `group_stats.backend` (duckdb/pandas), `parquet.io_backend` (duckdb/pyarrow)
+    - **Default**: DuckDB enabled for both group stats and Parquet I/O
+    - **Fallback**: Legacy pandas path fully functional when disabled
+    - **Safety**: No breaking changes, identical outputs between paths
+  - **Enhanced Logging**: Standardized logging format for all new stages
+    - **Format**: `group_stats | backend=duckdb | elapsed=X.XXs | groups=X | memoize=true`
+    - **Metrics**: Performance timing, cache status, compression details, file sizes
+    - **Backend**: Clear indication of DuckDB vs pandas execution
+  - **Parity Validation**: Comprehensive testing to ensure identical outputs
+    - **Tolerance**: ≤1e-9 for floating point metrics, exact match for deterministic
+    - **Schema**: All metric column dtypes must match between DuckDB and pandas
+    - **Validation**: Mismatch count = 0 requirement, CI failure on violations
+    - **Reporting**: `parity_report_group_stats.json` with detailed comparison results
+  - **Performance Benchmarking**: Built-in performance measurement and reporting
+    - **Targets**: <50s @94K for group stats, ≤180 MB for review parquet
+    - **Benchmarking**: 3 runs for median calculation, throughput metrics
+    - **Reporting**: `phase_1_35_4_benchmark.md` with human-readable summaries
+    - **Validation**: Performance targets enforced in CI and testing
+  - **Configuration Management**: Comprehensive settings for all new features
+    - **DuckDB**: Threads, memory limits, PRAGMAs, Parquet options
+    - **Group Stats**: Backend selection, memoization settings, performance targets
+    - **Parquet I/O**: Compression, encoding, size targets, backend preferences
+    - **Environment**: DUCKDB_MEMORY_LIMIT, CJ_GROUP_STATS_BACKEND support
+  - **Testing & Validation**: Comprehensive test coverage for all functionality
+    - **Unit Tests**: DuckDB engine, memoization, parity validation, size reporting
+    - **Integration**: End-to-end pipeline with DuckDB backend
+    - **Performance**: Benchmarking and regression testing
+    - **CI Integration**: PyArrow policy enforcement, parity validation, size checks
+  - **Files Modified**:
+    - `src/cleaning.py`: Integrated DuckDB group stats engine with fallback
+    - `config/settings.yaml`: Added group stats, DuckDB, and Parquet I/O configuration
+    - `src/utils/duckdb_group_stats.py`: New DuckDB engine with memoization
+    - `src/utils/parity_validator.py`: New parity validation system
+    - `src/utils/parquet_size_reporter.py`: New size analysis and reporting
+    - `scripts/enforce_pyarrow_policy.py`: New CI enforcement script
+    - `tests/test_duckdb_group_stats_phase1354.py`: Comprehensive test coverage
+  - **Next Steps**: Phase 1.35.5 (Logging Contract Tests + CI Hooks)
+
+- **Phase 1.35.3**: Disposition Vectorization + Configuration-Based Blacklist
+  - **Vectorized Disposition Engine**: Replaced row-by-row classification with numpy.select
+    - **Performance**: 84.6% improvement (0.155s → 0.024s on 1000 records)
+    - **Target**: <100s @94K (from current 312s) - significant progress toward goal
+    - **Method**: Vectorized blacklist detection, np.select for classification logic
+    - **Backend**: numpy.select with pandas vectorized operations
+  - **Configuration-Based Blacklist**: Moved hardcoded blacklist to settings.yaml
+    - **Tokens**: Single-word terms with word-boundary regex matching
+    - **Phrases**: Multi-word phrases with substring matching
+    - **Fallback**: Built-in blacklist maintained for backward compatibility
+    - **Loading**: Dynamic loading from config with logging
+  - **Feature Flag Rollback**: Safe deployment with easy rollback capability
+    - **Flag**: `disposition.performance.vectorized` (default: true)
+    - **Fallback**: Legacy iterrows method when disabled
+    - **Safety**: Identical outputs between vectorized and legacy paths
+    - **Testing**: Comprehensive validation of output parity
+  - **Enhanced Logging**: Standardized logging format for disposition stage
+    - **Format**: `disposition | backend=vectorized | duration=X.XXs | throughput=XXXrecords/sec`
+    - **Metrics**: Performance timing, record counts, disposition summaries
+    - **Backend**: Clear indication of vectorized vs legacy execution
+  - **Performance Optimizations**: Multiple vectorized operations
+    - **Blacklist Detection**: Vectorized regex and substring matching
+    - **Condition Building**: Efficient mask creation for np.select
+    - **Reason Generation**: Vectorized reason assignment
+    - **Memory Efficiency**: Reduced DataFrame copies and iterations
+  - **Testing & Validation**: Comprehensive test coverage
+    - **Output Parity**: Vectorized vs legacy produce identical results
+    - **Performance**: Measured 84.6% improvement on test dataset
+    - **Feature Flags**: Rollback capability verified
+    - **Edge Cases**: Blacklist, manual overrides, suspicious singletons
+  - **Files Modified**:
+    - `src/disposition.py`: Added vectorized engine with feature flags
+    - `config/settings.yaml`: Added blacklist configuration section
+    - `tests/test_disposition_vectorized_phase1353.py`: Comprehensive test coverage
+  - **Next Steps**: Phase 1.35.4 (DuckDB Group Stats + Parquet Optimization)
+
+- **Phase 1.35.2**: Exact-Equals Phase-0 + Similarity Threshold Stepper + Filtered-Out Audit
+  - **Exact-Equals Phase-0 (Pre-Normalization)**: Raw string exact matching before normalization
+    - Builds raw_exact_key by trim + collapse whitespace (no case/punct changes)
+    - Groups rows with identical raw strings (size ≥2, configurable)
+    - Representative selection policy: min(account_id) for deterministic results
+    - Fast-path union of exact-equals pairs in grouping stage
+    - Artifacts: exact_raw_groups.parquet, raw_exact_map.parquet, candidate_pairs_exact_raw.parquet
+    - Integration: unique_normalized.parquet (representatives + singletons only)
+  - **Similarity Threshold Stepper Control**: UI control for edge strength filtering
+    - Stepper control (+/-) with bounds [90,100], step=1, default=100 (exact only)
+    - Label: "Similarity (Edge Strength) Threshold" for clarity
+    - Default persists at 100% on first load
+    - Immediate UI filtering when threshold changes
+  - **Export Parity**: CSV/Parquet export reflects current threshold view
+    - Export contains exactly what's visible at current threshold
+    - Filename includes threshold for clarity (e.g., filtered_groups_threshold_95.csv)
+    - Export parity information displayed to user
+  - **Filtered-Out Audit Artifact**: Comprehensive tracking of removed records
+    - data/interim/{run_id}/accounts_filtered_out.parquet with [account_id, account_name, reason]
+    - Reason breakdown: empty_name_core, no_tokens, noise_string
+    - Logged reason counts for audit trail
+    - No-overwrite policy: creates suffixed variants if files exist
+  - **Enhanced Logging Contract**: Standardized logging format for new stages
+    - Format: stage | backend=... | config_digest=... | request_id=...
+    - Applied to: exact_equals, filtering, grouping stages
+    - Consistent logging across pipeline stages
+  - **Configuration Additions**: New settings for Phase 1.35.2 features
+    - pipeline.exact_equals_first_pass: enable, input_name_col, min_group_size, key_trim, representative_policy
+    - ui.similarity_slider: enable, control, default_bucket, buckets, min, max, step
+    - filtering.write_filtered_out: enable, filtered_out_columns
+    - logging.contract: enable, required_fields, prefix_format
+  - **No-Overwrite Policy**: Safe artifact generation
+    - Never overwrites existing files
+    - Creates suffixed variants (e.g., _20250903_143022)
+    - Logs fallback paths and reasons
+    - Maintains data integrity and audit trail
+  - **Integration Points**: Seamless pipeline integration
+    - Added exact_equals stage to pipeline stages list
+    - Integrated with existing filtering and grouping logic
+    - Maintains backward compatibility with feature flags
+    - Deterministic execution with same inputs + run_id
+  - **Files Modified**:
+    - `config/settings.yaml`: Added Phase 1.35.2 configuration sections
+    - `src/cleaning.py`: Added exact_equals stage and filtered-out artifact generation
+    - `src/utils/exact_equals.py`: New module for exact equals functionality
+    - `src/grouping.py`: Integrated exact equals fast-path union
+    - `app/components/controls.py`: Added similarity threshold stepper
+    - `app/components/export.py`: Enhanced export parity with threshold
+    - `app/main.py`: Integrated similarity threshold filtering
+    - `tests/test_exact_equals_phase1352.py`: Comprehensive test coverage
+  - **Next Steps**: Phase 1.35.3 (Disposition vectorization), Phase 1.35.4 (DuckDB stats), Phase 1.35.5 (CI hooks)
 - **Phase 1.32.1**: Performance Pack - Similarity Scoring, Survivorship, and Grouping Optimizations
   - **Similarity Scoring Performance**: Major optimizations for candidate generation and scoring
     - Length-window prefilter replaces NxN length-diff matrix in large secondary blocks

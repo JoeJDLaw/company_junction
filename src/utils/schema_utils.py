@@ -35,7 +35,7 @@ IS_PRIMARY = "is_primary"
 SCORE = "score"
 
 # Disposition and classification columns
-DISPOSITION = "Disposition"
+DISPOSITION = "disposition"
 DISPOSITION_REASON = "disposition_reason"
 
 # Alias and cross-reference columns
@@ -58,6 +58,38 @@ GROUP_SIZE = "group_size"
 MAX_SCORE = "max_score"
 PRIMARY_NAME = "primary_name"
 
+
+# Display labels for UI/export (Title Case for user-facing content)
+DISPLAY_LABELS = {
+    "account_id": "Account ID",
+    "account_name": "Account Name",
+    "group_id": "Group ID",
+    "group_size": "Group Size",
+    "max_score": "Max Score",
+    "primary_name": "Primary Name",
+    "disposition": "Disposition",
+    "disposition_reason": "Disposition Reason",
+    "created_date": "Created Date",
+    "suffix_class": "Suffix Class",
+    "relationship": "Relationship",
+    "weakest_edge_to_primary": "Weakest Edge to Primary",
+    "is_primary": "Is Primary",
+    "score": "Score",
+    "name_core": "Name Core",
+    "name_core_tokens": "Name Core Tokens",
+    "has_parentheses": "Has Parentheses",
+    "has_semicolon": "Has Semicolon",
+    "has_multiple_names": "Has Multiple Names",
+    "alias_cross_refs": "Alias Cross References",
+    "alias_candidates": "Alias Candidates",
+    "applied_penalties": "Applied Penalties",
+    "survivorship_reason": "Survivorship Reason",
+    "group_join_reason": "Group Join Reason",
+    "shared_tokens_count": "Shared Tokens Count",
+    "relationship_rank": "Relationship Rank",
+    "alias_matches_count": "Alias Matches Count",
+    "processing_time_ms": "Processing Time (ms)",
+}
 
 def get_canonical_columns() -> Dict[str, str]:
     """
@@ -471,6 +503,55 @@ def invert_mapping(mapping: Dict[str, str]) -> Dict[str, str]:
         Inverted mapping from actual column names to canonical column names
     """
     return {v: k for k, v in mapping.items()}
+
+
+def to_display(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert DataFrame columns to display labels for UI/export.
+    
+    Args:
+        df: DataFrame with canonical column names
+        
+    Returns:
+        DataFrame with display labels (Title Case)
+    """
+    return df.rename(columns=DISPLAY_LABELS)
+
+
+def normalize_legacy_headers(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize legacy Title Case headers to canonical lowercase.
+    
+    Args:
+        df: DataFrame that may have legacy headers
+        
+    Returns:
+        DataFrame with normalized headers
+    """
+    legacy_mappings = {
+        "Disposition": "disposition",
+        "Account ID": "account_id",
+        "Account Name": "account_name",
+        "Group ID": "group_id",
+        "Group Size": "group_size",
+        "Max Score": "max_score",
+        "Primary Name": "primary_name",
+        "Created Date": "created_date",
+        "Suffix Class": "suffix_class",
+        "Relationship": "relationship",
+    }
+    
+    # Check if any legacy headers exist
+    legacy_found = [col for col in legacy_mappings.keys() if col in df.columns]
+    
+    if legacy_found:
+        # Log one-time notice about legacy header normalization
+        logger.info(f"normalize_legacy_headers | legacy_headers_found={legacy_found} | normalizing_to_canonical")
+        
+        # Apply normalization
+        df = df.rename(columns=legacy_mappings)
+    
+    return df
 
 
 def apply_canonical_rename(
