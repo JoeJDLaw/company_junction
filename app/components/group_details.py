@@ -15,7 +15,7 @@ from src.utils.state_utils import (
     set_aliases_state,
 )
 from src.utils.fragment_utils import fragment
-from src.utils.ui_helpers import get_group_details_lazy, _is_non_empty
+from src.utils.group_details import get_group_details
 from src.utils.schema_utils import (
     ACCOUNT_ID,
     ACCOUNT_NAME,
@@ -65,7 +65,7 @@ def render_group_details(
         if details_state.requested.get(details_key, False) and not details_loaded:
             try:
                 # Load the full group details
-                group_details = get_group_details_lazy(selected_run_id, group_id)
+                group_details = get_group_details(selected_run_id, group_id, "Account Name (Asc)", 1, 100, {})
                 details_state.data[details_key] = group_details
                 details_state.loaded[details_key] = True
                 set_details_state(st.session_state, details_state)
@@ -108,7 +108,7 @@ def render_group_details(
 
                         # Check if group_details.parquet exists
                         try:
-                            from src.utils.ui_helpers import get_artifact_paths
+                            from src.utils.artifact_management import get_artifact_paths
 
                             artifact_paths = get_artifact_paths(selected_run_id)
                             details_path = artifact_paths.get("group_details_parquet")
@@ -282,7 +282,7 @@ def _render_alias_cross_links(
     has_aliases = False
     if "alias_cross_refs" in group_data.columns:
         has_aliases = any(
-            _is_non_empty(record.get("alias_cross_refs"))
+            record.get("alias_cross_refs")
             for _, record in group_data.iterrows()
         )
 
@@ -307,7 +307,7 @@ def _render_alias_cross_links(
                     cross_refs_list = []
                     for _, record in group_data.iterrows():
                         cross_refs = record.get("alias_cross_refs")
-                        if _is_non_empty(cross_refs):
+                        if cross_refs:
                             try:
                                 import json
 

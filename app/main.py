@@ -68,7 +68,8 @@ def load_review_data(run_id: str) -> Optional[pd.DataFrame]:
     try:
         with st.spinner(f"Loading review data from run {run_id}..."):
             # Get artifact paths for the run
-            from src.utils.ui_helpers import get_artifact_paths, validate_run_artifacts
+            from src.utils.artifact_management import get_artifact_paths
+            from src.utils.run_management import validate_run_artifacts
 
             # Validate run artifacts
             validation = validate_run_artifacts(run_id)
@@ -160,7 +161,7 @@ def main():
     st.sidebar.header("Run Selection")
 
     # Get available runs
-    from src.utils.ui_helpers import list_runs, format_run_display_name
+    from src.utils.run_management import list_runs, format_run_display_name
 
     runs = list_runs()
 

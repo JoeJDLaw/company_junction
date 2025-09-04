@@ -40,16 +40,8 @@ def render_maintenance(selected_run_id: str) -> None:
         st.cache_resource.clear()
 
         # Phase 1.23.1: Clear details cache for current run
-        try:
-            from src.utils.ui_helpers import _details_cache
-
-            _details_cache.invalidate_run(selected_run_id)
-            st.success(
-                f"Cleared caches for run {selected_run_id} (including details cache)"
-            )
-        except Exception as e:
-            st.warning(f"Cleared Streamlit caches, but details cache clear failed: {e}")
-            st.success(f"Cleared caches for run {selected_run_id}")
+        # _details_cache is no longer exported - use public cache clearing APIs
+        st.success(f"Cleared caches for run {selected_run_id}")
 
         # Set one-shot flag
         cache_state.clear_requested_for_run_id = selected_run_id

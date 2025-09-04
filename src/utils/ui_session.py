@@ -41,6 +41,11 @@ class SessionState:
         key = f"groups.backend:{run_id}"
         self.set(key, backend)
 
+    def get_backend_choice(self, run_id: str) -> str:
+        """Get backend choice for a specific run."""
+        key = f"groups.backend:{run_id}"
+        return self.get(key, "pyarrow")  # Default to pyarrow if not set
+
 # Global instance - configurable for tests
 session = SessionState()
 

@@ -9,12 +9,12 @@ from typing import Any, Dict, List, Tuple
 
 from src.utils.state_utils import get_page_state, set_page_state, get_backend_state
 from src.utils.fragment_utils import fragment
-from src.utils.ui_helpers import (
+from src.utils.group_pagination import (
     get_groups_page,
     get_total_groups_count,
-    build_cache_key,
-    PageFetchTimeout,
 )
+from src.utils.cache_keys import build_cache_key
+from src.utils.group_pagination import PageFetchTimeout
 
 
 def render_group_list(
@@ -133,7 +133,7 @@ def render_group_list(
 
     # Phase 1.22.1: Show performance indicator when using fast path
     try:
-        from src.utils.ui_helpers import get_artifact_paths
+        from src.utils.artifact_management import get_artifact_paths
         import os
 
         artifact_paths = get_artifact_paths(selected_run_id)

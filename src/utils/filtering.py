@@ -103,7 +103,9 @@ def build_sort_expression(sort_key: str) -> List[Tuple[str, str]]:
 
 def apply_filters_pyarrow(table: Any, filters: Dict[str, Any]) -> Any:
     """
-    Apply filters to PyArrow table.
+    Apply filters to PyArrow table using Arrow-native operations.
+    
+    This provides a pure PyArrow implementation without DuckDB dependency.
     
     Args:
         table: PyArrow table to filter
@@ -112,31 +114,31 @@ def apply_filters_pyarrow(table: Any, filters: Dict[str, Any]) -> Any:
     Returns:
         Filtered PyArrow table
     """
-    if not filters:
+    if not filters or PC is None:
         return table
-
-    # Apply disposition filter
-    if "dispositions" in filters and filters["dispositions"]:
-        if PC is not None:
-            disposition_mask = PC.is_in(PC.field(DISPOSITION), PC.scalar(filters["dispositions"]))
-            table = table.filter(disposition_mask)
-        else:
-            logger.debug("PyArrow compute not available, skipping disposition filter")
-
-    # Apply edge strength filter
-    if "min_edge_strength" in filters and filters["min_edge_strength"] is not None:
-        if PC is not None:
-            edge_mask = PC.greater_equal(PC.field(WEAKEST_EDGE_TO_PRIMARY), PC.scalar(filters["min_edge_strength"]))
-            table = table.filter(edge_mask)
-        else:
-            logger.debug("PyArrow compute not available, skipping edge strength filter")
-
-    # Apply group size filter
-    if "min_group_size" in filters and filters["min_group_size"] is not None:
-        # This would require group stats, so we'll skip for now
-        logger.debug("Group size filtering not yet implemented")
-
-    return table
+    
+    exprs = []
+    
+    # dispositions: IN (...)
+    dispositions = filters.get("dispositions")
+    if dispositions:
+        import pyarrow as pa
+        exprs.append(PC.is_in(PC.field(DISPOSITION), value_set=pa.array(dispositions)))
+    
+    # min_edge_strength: >= threshold
+    min_es = filters.get("min_edge_strength", 0.0)
+    if min_es not in (None, 0.0):
+        exprs.append(PC.greater_equal(PC.field(WEAKEST_EDGE_TO_PRIMARY), PC.scalar(float(min_es))))
+    
+    if not exprs:
+        return table
+    
+    # Combine expressions with AND
+    predicate = exprs[0]
+    for e in exprs[1:]:
+        predicate = PC.and_(predicate, e)
+    
+    return table.filter(predicate)
 
 
 def apply_filters_duckdb(table: Any, filters: Dict[str, Any]) -> Any:

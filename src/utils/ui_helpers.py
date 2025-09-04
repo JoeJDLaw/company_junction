@@ -12,12 +12,28 @@ import os
 import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
-# Default: PendingDeprecationWarning to nudge devs
+# DEPRECATION WARNING: This module will be removed in the next release
 if not os.getenv("CJ_UI_HELPERS_NO_WARN"):
     warnings.warn(
-        "ui_helpers is pending deprecation; use new modules directly",
-        PendingDeprecationWarning
+        "src.utils.ui_helpers is deprecated. Import from:\n"
+        "  - src.utils.group_pagination (get_groups_page, get_total_groups_count)\n"
+        "  - src.utils.group_details (get_group_details)\n"
+        "  - src.utils.filtering (get_order_by, build_sort_expression, apply_filters_*)\n"
+        "  - src.utils.artifact_management (get_artifact_paths)\n"
+        "  - src.utils.ui_session (session, get_backend_choice, set_backend_choice)\n"
+        "  - src.utils.cache_keys (build_cache_key, build_details_cache_key)\n"
+        "This module will be removed in the next release.",
+        DeprecationWarning,
+        stacklevel=2,
     )
+
+# Track deprecated imports for monitoring
+try:
+    from .metrics import record_backend_choice
+    record_backend_choice("deprecated_import", "ui_helpers")
+except ImportError:
+    # Metrics not available, continue silently
+    pass
 
 # Strong deprecation behind flag
 if os.getenv("CJ_UI_HELPERS_DEPRECATE"):
@@ -34,6 +50,7 @@ from .cache_keys import build_cache_key, build_details_cache_key
 from .group_stats import compute_group_stats_duckdb
 from .group_pagination import get_groups_page, get_groups_page_pyarrow
 from .group_pagination import get_groups_page_duckdb, get_groups_page_from_stats_duckdb
+from .group_details import get_group_details
 
 # Update __all__ as functions are moved
 __all__ = [
@@ -55,6 +72,7 @@ __all__ = [
     "get_groups_page_pyarrow",
     "get_groups_page_duckdb",
     "get_groups_page_from_stats_duckdb",
+    "get_group_details",
 ]
 
 # TODO: Remove this placeholder when functions are moved

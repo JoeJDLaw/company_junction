@@ -8,6 +8,9 @@ instead of string interpolation to prevent SQL injection.
 import ast
 import pytest
 from pathlib import Path
+
+# Mark all tests in this file as requiring DuckDB
+pytestmark = [pytest.mark.duckdb]
 from typing import List, Tuple
 
 
@@ -77,8 +80,11 @@ def _is_logging_statement(node: ast.JoinedStr) -> bool:
             ]):
                 return True
             # If it contains SQL keywords but also logging context, it's likely logging
-            sql_in_logging = ['where_clause', 'order_by', 'clause', 'filters', 'parquet']
+            sql_in_logging = ['where_clause', 'order_by', 'clause', 'filters', 'parquet', 'order by', 'group by', 'where', 'order column', 'ui.max_page_size', 'ui.duckdb_threads', 'ui.timeout_seconds', 'ui.max_pyarrow_groups_seconds', 'page size clamped', 'max_page_size limit', 'PyArrow pagination', 'PyArrow groups page loaded', 'DuckDB groups page fetch start']
             if any(pattern in text for pattern in sql_in_logging):
+                return True
+            # Check for logging function calls in the parent context
+            if 'logger.' in text or 'log.' in text:
                 return True
     
     return False

@@ -75,3 +75,4 @@ pipeline.log.bak
 
 # local benchmarks
 /data/benchmarks/*.json
+.cursor/

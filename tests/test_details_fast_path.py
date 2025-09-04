@@ -232,7 +232,7 @@ class TestGroupsRouting:
         self, mock_exists, mock_get_paths
     ) -> None:
         """Test that groups page uses DuckDB when group_stats.parquet exists."""
-        from src.utils.ui_helpers import get_groups_page
+        from src.utils.group_pagination import get_groups_page
 
         # Mock artifact paths with group_stats.parquet
         mock_get_paths.return_value = {
@@ -261,7 +261,7 @@ class TestGroupsRouting:
         self, mock_exists, mock_get_paths
     ) -> None:
         """Test that groups page falls back to PyArrow when DuckDB unavailable."""
-        from src.utils.ui_helpers import get_groups_page
+        from src.utils.group_pagination import get_groups_page
 
         # Mock artifact paths with group_stats.parquet
         mock_get_paths.return_value = {

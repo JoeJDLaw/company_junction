@@ -16,7 +16,7 @@ from src.utils.state_utils import (
     set_backend_state,
 )
 from src.utils.sort_utils import validate_sort_key
-from src.utils.ui_helpers import build_cache_key
+from src.utils.cache_keys import build_cache_key
 
 
 def render_controls(

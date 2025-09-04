@@ -30,9 +30,11 @@ PYARROW = try_import_many({
     "pq": "pyarrow.parquet"
 })
 STREAMLIT = try_import("streamlit")
+PROMETHEUS = try_import("prometheus_client")
 
 # Export handles & flags
 DUCKDB_AVAILABLE = DUCKDB is not None
 PC, DS, PQ = PYARROW.get("pc"), PYARROW.get("ds"), PYARROW.get("pq")
 PYARROW_AVAILABLE = all(PYARROW.values())
 STREAMLIT_AVAILABLE = STREAMLIT is not None
+PROMETHEUS_AVAILABLE = PROMETHEUS is not None
