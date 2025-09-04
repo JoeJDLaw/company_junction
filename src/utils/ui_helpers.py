@@ -29,7 +29,7 @@ if os.getenv("CJ_UI_HELPERS_DEPRECATE"):
 # Re-export functions from new modules as they are implemented
 from .artifact_management import get_artifact_paths
 from .run_management import list_runs, get_run_metadata, validate_run_artifacts, get_default_run_id, format_run_display_name, load_stage_state
-# from .filtering import apply_filters_pyarrow, apply_filters_duckdb
+from .filtering import apply_filters_pyarrow, apply_filters_duckdb, get_order_by, build_sort_expression
 # from .cache_keys import build_cache_key, build_details_cache_key
 # from .group_stats import compute_group_stats_duckdb
 # from .group_pagination import get_groups_page, get_groups_page_pyarrow
@@ -44,8 +44,10 @@ __all__ = [
     "get_default_run_id",
     "format_run_display_name",
     "load_stage_state",
-    # "apply_filters_pyarrow",
-    # "apply_filters_duckdb",
+    "apply_filters_pyarrow",
+    "apply_filters_duckdb",
+    "get_order_by",
+    "build_sort_expression",
     # "build_cache_key",
     # "build_details_cache_key",
     # "compute_group_stats_duckdb",
@@ -66,8 +68,7 @@ def _placeholder_function():
 # Replace these with actual re-exports
 # get_artifact_paths is now imported from artifact_management
 # list_runs, get_run_metadata, validate_run_artifacts, get_default_run_id, format_run_display_name, load_stage_state are now imported from run_management
-apply_filters_pyarrow = _placeholder_function
-apply_filters_duckdb = _placeholder_function
+# apply_filters_pyarrow, apply_filters_duckdb, get_order_by, build_sort_expression are now imported from filtering
 build_cache_key = _placeholder_function
 build_details_cache_key = _placeholder_function
 compute_group_stats_duckdb = _placeholder_function
