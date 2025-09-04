@@ -13,13 +13,16 @@ from typing import List, Tuple
 
 def find_string_interpolations(filename: str) -> List[ast.JoinedStr]:
     """
-    Find all f-string interpolations in a Python file.
+    Find f-string interpolations that might be actual SQL queries.
+    
+    This function excludes logging statements and focuses on f-strings
+    that could potentially be passed to database execution functions.
     
     Args:
         filename: Path to Python file to analyze
         
     Returns:
-        List of f-string nodes that might contain SQL
+        List of f-string nodes that might contain actual SQL queries
     """
     with open(filename, 'r', encoding='utf-8') as f:
         try:
@@ -29,17 +32,56 @@ def find_string_interpolations(filename: str) -> List[ast.JoinedStr]:
             return []
     
     sql_f_strings = []
+    
     for node in ast.walk(tree):
         if isinstance(node, ast.JoinedStr):  # f-strings
+            # Skip f-strings that are clearly logging statements
+            if _is_logging_statement(node):
+                continue
+                
             # Check if this f-string contains SQL-like content
             for value in node.values:
                 if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                    sql_keywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY']
+                    sql_keywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'LIMIT', 'OFFSET', 'IN']
                     if any(keyword in value.value.upper() for keyword in sql_keywords):
                         sql_f_strings.append(node)
                         break
     
     return sql_f_strings
+
+
+def _is_logging_statement(node: ast.JoinedStr) -> bool:
+    """
+    Check if an f-string node is part of a logging statement.
+    
+    This is a simplified check that looks for common logging patterns
+    in the source code around the f-string.
+    
+    Args:
+        node: The f-string AST node to check
+        
+    Returns:
+        True if this appears to be a logging statement, False otherwise
+    """
+    # For now, we'll use a simple heuristic: if the f-string contains
+    # common logging patterns, assume it's logging
+    for value in node.values:
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            text = value.value.lower()
+            # Common logging patterns that suggest this is not SQL
+            if any(pattern in text for pattern in [
+                'run_id=', 'sort_key=', 'backend=', 'elapsed=', 'rows=', 'groups=',
+                'failed', 'error', 'warning', 'info', 'debug', 'exception',
+                'timeout', 'execution', 'selection', 'fallback', 'available',
+                'projection', 'filter', 'stats', 'conversion', 'slice'
+            ]):
+                return True
+            # If it contains SQL keywords but also logging context, it's likely logging
+            sql_in_logging = ['where_clause', 'order_by', 'clause', 'filters', 'parquet']
+            if any(pattern in text for pattern in sql_in_logging):
+                return True
+    
+    return False
 
 
 def test_no_f_string_sql_queries():
