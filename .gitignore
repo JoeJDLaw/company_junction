@@ -69,3 +69,6 @@ prompts/
 data/_backups/
 tarballs/
 pipeline.log.bak
+
+# artifacts
+*.parquet
