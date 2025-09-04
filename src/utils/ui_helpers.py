@@ -26,8 +26,8 @@ if os.getenv("CJ_UI_HELPERS_DEPRECATE"):
         DeprecationWarning
     )
 
-# TODO: Re-export functions from new modules as they are implemented
-# from .artifact_management import get_artifact_paths
+# Re-export functions from new modules as they are implemented
+from .artifact_management import get_artifact_paths
 # from .run_management import list_runs, get_run_metadata
 # from .filtering import apply_filters_pyarrow, apply_filters_duckdb
 # from .cache_keys import build_cache_key, build_details_cache_key
@@ -35,9 +35,9 @@ if os.getenv("CJ_UI_HELPERS_DEPRECATE"):
 # from .group_pagination import get_groups_page, get_groups_page_pyarrow
 # from .group_pagination import get_groups_page_duckdb, get_groups_page_from_stats_duckdb
 
-# TODO: Update __all__ as functions are moved
+# Update __all__ as functions are moved
 __all__ = [
-    # "get_artifact_paths",
+    "get_artifact_paths",
     # "list_runs",
     # "get_run_metadata",
     # "apply_filters_pyarrow",
@@ -59,8 +59,8 @@ def _placeholder_function():
         "Check the refactor plan for current status."
     )
 
-# TODO: Replace these with actual re-exports
-get_artifact_paths = _placeholder_function
+# Replace these with actual re-exports
+# get_artifact_paths is now imported from artifact_management
 list_runs = _placeholder_function
 get_run_metadata = _placeholder_function
 apply_filters_pyarrow = _placeholder_function
