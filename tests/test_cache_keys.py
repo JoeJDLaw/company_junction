@@ -266,5 +266,28 @@ class TestBuildDetailsCacheKey:
         assert all(c in "0123456789abcdef" for c in result)
 
 
+def test_in_clause_helper():
+    """Test the _in_clause helper function for building parameterized IN clauses."""
+    from src.utils.group_pagination import _in_clause
+    
+    # Test with multiple values
+    dispositions = ["A", "B", "C"]
+    in_sql, params = _in_clause(dispositions)
+    assert in_sql == "IN (?,?,?)"
+    assert params == ["A", "B", "C"]
+    
+    # Test with single value
+    single = ["X"]
+    in_sql, params = _in_clause(single)
+    assert in_sql == "IN (?)"
+    assert params == ["X"]
+    
+    # Test with empty list
+    empty = []
+    in_sql, params = _in_clause(empty)
+    assert in_sql == "IN (NULL)"
+    assert params == []
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

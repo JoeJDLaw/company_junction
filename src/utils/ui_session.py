@@ -17,16 +17,32 @@ class SessionState:
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get value from session state."""
-        # TODO: Implement actual get logic
-        pass
+        if self._use_streamlit:
+            try:
+                import streamlit as st
+                return st.session_state.get(key, default)
+            except ImportError:
+                pass
+        return self._fallback.get(key, default)
 
     def set(self, key: str, value: Any) -> None:
         """Set value in session state."""
-        # TODO: Implement actual set logic
-        pass
+        if self._use_streamlit:
+            try:
+                import streamlit as st
+                st.session_state[key] = value
+                return
+            except ImportError:
+                pass
+        self._fallback[key] = value
 
-# TODO: Global instance - configurable for tests
-# session = SessionState()
+    def set_backend_choice(self, run_id: str, backend: str) -> None:
+        """Set backend choice for a specific run."""
+        key = f"groups.backend:{run_id}"
+        self.set(key, backend)
+
+# Global instance - configurable for tests
+session = SessionState()
 
 # Constants
 BACKEND_KEY = "cj.backend.groups"

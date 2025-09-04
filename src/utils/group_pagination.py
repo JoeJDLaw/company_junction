@@ -22,6 +22,14 @@ from .logging_utils import get_logger
 logger = get_logger(__name__)
 
 
+def _in_clause(values: list) -> tuple[str, list]:
+    """Return 'IN (?,?,...)' and corresponding params, for DuckDB."""
+    if not values:
+        return "IN (NULL)", []  # empty never matches
+    placeholders = ",".join(["?"] * len(values))
+    return "IN (" + placeholders + ")", list(values)
+
+
 class PageFetchTimeout(Exception):
     """Exception raised when page fetch exceeds timeout."""
     pass
@@ -69,16 +77,14 @@ def get_groups_page(
     # Log the ORDER BY clause that will be used
     order_by = get_order_by(sort_key)
     logger.info(
-        f"get_groups_page | run_id={run_id} sort_key='{sort_key}' order_by='{order_by}'"
+        f"get_groups_page | run_id={run_id} sort_key='{sort_key}' clause='{order_by}'"
     )
 
     # Load settings
     try:
-        from .io_utils import load_settings
-        from .path_utils import get_config_path
-        
-        settings = load_settings(str(get_config_path()))
-        # Settings loading is now logged by the load_settings function itself
+        from .settings import get_settings
+        settings = get_settings()
+        # Settings loading is now logged by the get_settings function itself
     except Exception as e:
         logger.error(f"Failed to load settings: {e}")
         # Fallback to default settings
@@ -242,10 +248,8 @@ def get_groups_page_pyarrow(
 
         # Load settings for timeout
         try:
-            from .io_utils import load_settings
-            from .path_utils import get_config_path
-            
-            settings = load_settings(str(get_config_path()))
+            from .settings import get_settings
+            settings = get_settings()
             timeout_seconds = settings.get("ui", {}).get("timeout_seconds", 30)
         except Exception:
             timeout_seconds = 30
@@ -300,7 +304,7 @@ def get_groups_page_pyarrow(
 
                 # Read data with projection
                 columns_str = ", ".join(existing_columns)
-                query = f"SELECT {columns_str} FROM read_parquet(?)"
+                query = "SELECT " + columns_str + " FROM read_parquet(?)"
                 projected_df = conn.execute(query, [parquet_path]).df()
                 projected_table = projected_df  # Keep as pandas DataFrame
 
@@ -366,10 +370,8 @@ def get_groups_page_pyarrow(
 
         # Auto-switch to DuckDB if group stats take too long
         try:
-            from .io_utils import load_settings
-            from .path_utils import get_config_path
-            
-            settings = load_settings(str(get_config_path()))
+            from .settings import get_settings
+            settings = get_settings()
             max_pyarrow_seconds = settings.get("ui", {}).get(
                 "max_pyarrow_group_stats_seconds", 5
             )
@@ -412,8 +414,10 @@ def get_groups_page_pyarrow(
 
             # Sort the groups table (works for both pandas and PyArrow)
             if hasattr(groups_table, 'sort_values'):
-                # pandas DataFrame
-                sorted_table = groups_table.sort_values(sort_keys[0], ascending=sort_keys[1] == 'ASC')
+                # pandas DataFrame - map our (field, 'ascending'/'descending') tuples
+                field, direction = sort_keys[0]
+                ascending = (direction == 'ascending')
+                sorted_table = groups_table.sort_values(field, ascending=ascending)
             else:
                 # PyArrow table
                 sorted_table = groups_table.sort_by(sort_keys)
@@ -499,10 +503,8 @@ def get_groups_page_duckdb(
     """
     # Load settings
     try:
-        from .io_utils import load_settings
-        from .path_utils import get_config_path
-        
-        settings = load_settings(str(get_config_path()))
+        from .settings import get_settings
+        settings = get_settings()
     except Exception:
         settings = {}
     duckdb_threads = settings.get("ui", {}).get("duckdb_threads", 4)
@@ -550,19 +552,20 @@ def get_groups_page_duckdb(
     # Step 2: Build SQL query
     step_start = time.time()
 
-    # Build WHERE clause for filters
-    where_conditions = []
+    # Build WHERE clause for filters using parameters
+    where_sql = []
+    params = []
+
     if filters.get("dispositions"):
-        dispositions = filters["dispositions"]
-        disp_list = "', '".join(dispositions)
-        where_conditions.append(f"{DISPOSITION} IN ('{disp_list}')")
+        in_sql, in_params = _in_clause(filters["dispositions"])
+        where_sql.append(f"{DISPOSITION} {in_sql}")
+        params.extend(in_params)
 
-    if filters.get("min_edge_strength", 0.0) > 0.0:
-        where_conditions.append(
-            f"{WEAKEST_EDGE_TO_PRIMARY} >= {filters['min_edge_strength']}"
-        )
+    if (min_es := filters.get("min_edge_strength", 0.0)) not in (None, 0.0):
+        where_sql.append(f"{WEAKEST_EDGE_TO_PRIMARY} >= ?")
+        params.append(float(min_es))
 
-    where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+    where_clause = " AND ".join(where_sql) if where_sql else "1=1"
 
     # Build ORDER BY clause using centralized mapping
     order_by_clause = get_order_by(sort_key)
@@ -575,60 +578,35 @@ def get_groups_page_duckdb(
         ).replace(MAX_SCORE, f"s.{MAX_SCORE}")
 
     logger.info(
-        f"groups_page_duckdb | run_id={run_id} sort_key='{sort_key}' order_by='{order_by_clause}' backend=duckdb global_sort=true"
+        f"groups_page_duckdb | run_id={run_id} sort_key='{sort_key}' clause='{order_by_clause}' backend=duckdb global_sort=true"
     )
 
     # Calculate pagination
     offset = (page - 1) * page_size
 
-    # Build SQL using schema constants (safe - no user input)
+    # Build SQL using string concatenation and parameters (safe - no user input)
     # Build the query with proper global sorting before pagination
     # This ensures ORDER BY is applied to the entire dataset before LIMIT/OFFSET
     # Result: Consistent sorting across all pages, not just within each page
-    sql = f"""
-    SELECT
-      s.{GROUP_ID},
-      s.{GROUP_SIZE},
-      s.{MAX_SCORE},
-      COALESCE(p.{PRIMARY_NAME}, '') AS {PRIMARY_NAME}
-    FROM (
-      WITH base AS (
-        SELECT
-          {GROUP_ID},
-          {ACCOUNT_NAME},
-          {IS_PRIMARY},
-          {WEAKEST_EDGE_TO_PRIMARY},
-          {DISPOSITION}
-        FROM read_parquet('{parquet_path}')
-        WHERE {where_clause}
-      ),
-      stats AS (
-        SELECT 
-          {GROUP_ID}, 
-          COUNT(*) AS {GROUP_SIZE}, 
-          MAX({WEAKEST_EDGE_TO_PRIMARY}) AS {MAX_SCORE}
-        FROM base
-        GROUP BY {GROUP_ID}
-      ),
-      primary_names AS (
-        SELECT
-          {GROUP_ID},
-          any_value({ACCOUNT_NAME}) FILTER (WHERE {IS_PRIMARY}) AS {PRIMARY_NAME}
-        FROM base
-        GROUP BY {GROUP_ID}
-      )
-      SELECT
-        s.{GROUP_ID},
-        s.{GROUP_SIZE},
-        s.{MAX_SCORE},
-        COALESCE(p.{PRIMARY_NAME}, '') AS {PRIMARY_NAME}
-      FROM stats s
-      LEFT JOIN primary_names p USING ({GROUP_ID})
-      ORDER BY {order_by_clause}, s.{GROUP_ID} ASC
-    ) sorted_data
-    LIMIT {page_size}
-    OFFSET {offset};
-    """
+    page_sql = (
+        "WITH base AS ("
+        "  SELECT " + ",".join([GROUP_ID, ACCOUNT_NAME, IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY, DISPOSITION]) +
+        "  FROM read_parquet(?) WHERE " + where_clause +
+        "), stats AS ("
+        "  SELECT " + GROUP_ID + ", COUNT(*) AS " + GROUP_SIZE + ", MAX(" + WEAKEST_EDGE_TO_PRIMARY + ") AS " + MAX_SCORE +
+        "  FROM base GROUP BY " + GROUP_ID +
+        "), primary_names AS ("
+        "  SELECT " + GROUP_ID + ", any_value(" + ACCOUNT_NAME + ") FILTER (WHERE " + IS_PRIMARY + ") AS " + PRIMARY_NAME +
+        "  FROM base GROUP BY " + GROUP_ID +
+        ") "
+        "SELECT s." + GROUP_ID + ", s." + GROUP_SIZE + ", s." + MAX_SCORE + ", COALESCE(p." + PRIMARY_NAME + ", '') AS " + PRIMARY_NAME +
+        " FROM stats s LEFT JOIN primary_names p USING (" + GROUP_ID + ") "
+        " ORDER BY " + order_by_clause + ", s." + GROUP_ID + " ASC "
+        " LIMIT ? OFFSET ?"
+    )
+    
+    # Build parameters: parquet_path, filter_params, page_size, offset
+    page_params = [parquet_path, *params, page_size, offset]
 
     query_build_time = time.time() - step_start
 
@@ -640,7 +618,7 @@ def get_groups_page_duckdb(
 
     # Step 3: Execute query
     step_start = time.time()
-    result = conn.execute(sql)
+    result = conn.execute(page_sql, page_params)
     query_exec_time = time.time() - step_start
 
     logger.info(
@@ -661,17 +639,15 @@ def get_groups_page_duckdb(
     # Step 5: Convert to list of dicts
     page_data = df.to_dict("records")
 
-    # Get total count using schema constants (safe - no user input)
-    count_sql = f"""
-    WITH base AS (
-      SELECT {GROUP_ID}
-      FROM read_parquet('{parquet_path}')
-      WHERE {where_clause}
+    # Get total count using parameters
+    count_sql = (
+        "WITH base AS ("
+        "  SELECT " + GROUP_ID +
+        "  FROM read_parquet(?) WHERE " + where_clause +
+        ") SELECT COUNT(DISTINCT " + GROUP_ID + ") as total_groups FROM base"
     )
-    SELECT COUNT(DISTINCT {GROUP_ID}) as total_groups
-    FROM base;
-    """
-    total_result = conn.execute(count_sql)
+    count_params = [parquet_path, *params]
+    total_result = conn.execute(count_sql, count_params)
     total_groups = total_result.fetchone()[0]
 
     # Close connection
@@ -724,58 +700,53 @@ def get_groups_page_from_stats_duckdb(
             f"DuckDB connection | run_id={run_id} threads=4 elapsed={conn_time:.3f}s"
         )
 
-        # Step 2: Build query
+        # Step 2: Build query using parameters
         step_start = time.time()
-        where_clauses = []
+        where_sql = []
+        params = []
 
         if filters.get("dispositions"):
-            dispositions = filters["dispositions"]
-            dispositions_str = ", ".join([f"'{d}'" for d in dispositions])
-            where_clauses.append(f"{DISPOSITION} IN ({dispositions_str})")
+            in_sql, in_params = _in_clause(filters["dispositions"])
+            where_sql.append(f"{DISPOSITION} {in_sql}")
+            params.extend(in_params)
 
-        if filters.get("min_edge_strength", 0.0) > 0.0:
-            where_clauses.append(f"{MAX_SCORE} >= {filters['min_edge_strength']}")
+        if (min_es := filters.get("min_edge_strength", 0.0)) not in (None, 0.0):
+            where_sql.append(f"{MAX_SCORE} >= ?")
+            params.append(float(min_es))
 
-        where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
+        where_clause = " AND ".join(where_sql) if where_sql else "1=1"
 
         # Build ORDER BY clause using centralized mapping
         order_by = get_order_by(sort_key)
 
         logger.info(
-            f"groups_page_from_stats_duckdb | run_id={run_id} sort_key='{sort_key}' order_by='{order_by}' backend=duckdb global_sort=true"
+            f"groups_page_from_stats_duckdb | run_id={run_id} sort_key='{sort_key}' clause='{order_by}' backend=duckdb global_sort=true"
         )
 
-        # Build the query using schema constants (safe - no user input)
+        # Build the query using string concatenation and parameters (safe - no user input)
         # This ensures ORDER BY is applied to the entire dataset before LIMIT/OFFSET
         # Result: Consistent sorting across all pages, not just within each page
-        sql = f"""
-        SELECT 
-            {GROUP_ID},
-            {GROUP_SIZE},
-            {MAX_SCORE},
-            {PRIMARY_NAME},
-            {DISPOSITION}
-        FROM (
-            SELECT 
-                {GROUP_ID},
-                {GROUP_SIZE},
-                {MAX_SCORE},
-                {PRIMARY_NAME},
-                {DISPOSITION}
-            FROM read_parquet('{group_stats_path}')
-            WHERE {where_clause}
-            ORDER BY {order_by}
-        ) sorted_data
-        LIMIT {page_size} OFFSET {(page - 1) * page_size}
-        """
+        sql = (
+            "SELECT " + ",".join([GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, DISPOSITION]) +
+            " FROM ("
+            "  SELECT " + ",".join([GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, DISPOSITION]) +
+            "  FROM read_parquet(?) "
+            "  WHERE " + where_clause +
+            "  ORDER BY " + order_by + ", " + GROUP_ID + " ASC"
+            " ) sorted_data "
+            " LIMIT ? OFFSET ?"
+        )
+        
+        # Build parameters: group_stats_path, page_size, offset
+        sql_params = [group_stats_path, page_size, (page - 1) * page_size]
 
         logger.info(
-            f"DuckDB query built | run_id={run_id} where_clause='{where_clause}' order_by='{order_by}' elapsed={time.time() - step_start:.3f}s"
+            f"DuckDB query built | run_id={run_id} filters='{where_clause}' clause='{order_by}' elapsed={time.time() - step_start:.3f}s"
         )
 
         # Step 3: Execute query
         step_start = time.time()
-        result = conn.execute(sql)
+        result = conn.execute(sql, sql_params)
         query_time = time.time() - step_start
         logger.info(
             f"DuckDB query executed | run_id={run_id} elapsed={query_time:.3f}s"
@@ -789,14 +760,15 @@ def get_groups_page_from_stats_duckdb(
             f"DuckDB pandas conversion | run_id={run_id} rows={len(df_result)} elapsed={pandas_time:.3f}s"
         )
 
-        # Step 5: Get total count using schema constants (safe - no user input)
+        # Step 5: Get total count using parameters
         step_start = time.time()
-        count_sql = f"""
-        SELECT COUNT(*) as total
-        FROM read_parquet('{group_stats_path}')
-        WHERE {where_clause}
-        """
-        count_result = conn.execute(count_sql)
+        count_sql = (
+            "SELECT COUNT(*) as total "
+            "FROM read_parquet(?) "
+            "WHERE " + where_clause
+        )
+        count_params = [group_stats_path, *params]
+        count_result = conn.execute(count_sql, count_params)
         total_groups = count_result.fetchone()[0]
         count_time = time.time() - step_start
         logger.info(
@@ -843,28 +815,30 @@ def get_total_groups_count(run_id: str, filters: Dict[str, Any]) -> int:
             # Use DuckDB for faster counting
             conn = DUCKDB.connect(":memory:")
             
-            # Build WHERE clause for filters
-            where_conditions = []
-            if filters.get("dispositions"):
-                dispositions = filters["dispositions"]
-                disp_list = "', '".join(dispositions)
-                where_conditions.append(f"{DISPOSITION} IN ('{disp_list}')")
-
-            if filters.get("min_edge_strength", 0.0) > 0.0:
-                where_conditions.append(
-                    f"{WEAKEST_EDGE_TO_PRIMARY} >= {filters['min_edge_strength']}"
-                )
-
-            where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
-
-            # Use schema constants (safe - no user input)
-            count_sql = f"""
-            SELECT COUNT(DISTINCT {GROUP_ID}) as total_groups
-            FROM read_parquet('{parquet_path}')
-            WHERE {where_clause}
-            """
+            # Build WHERE clause for filters using parameters
+            where_sql = []
+            params = []
             
-            result = conn.execute(count_sql)
+            if filters.get("dispositions"):
+                in_sql, in_params = _in_clause(filters["dispositions"])
+                where_sql.append(f"{DISPOSITION} {in_sql}")
+                params.extend(in_params)
+
+            if (min_es := filters.get("min_edge_strength", 0.0)) not in (None, 0.0):
+                where_sql.append(f"{WEAKEST_EDGE_TO_PRIMARY} >= ?")
+                params.append(float(min_es))
+
+            where_clause = " AND ".join(where_sql) if where_sql else "1=1"
+
+            # Use parameters for safe execution
+            count_sql = (
+                "SELECT COUNT(DISTINCT " + GROUP_ID + ") as total_groups "
+                "FROM read_parquet(?) "
+                "WHERE " + where_clause
+            )
+            
+            count_params = [parquet_path, *params]
+            result = conn.execute(count_sql, count_params)
             total_groups = result.fetchone()[0]
             conn.close()
             
