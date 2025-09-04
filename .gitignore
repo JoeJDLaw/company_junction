@@ -72,3 +72,6 @@ pipeline.log.bak
 
 # artifacts
 *.parquet
+
+# local benchmarks
+/data/benchmarks/*.json
