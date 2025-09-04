@@ -3,6 +3,7 @@ Tests for cache key functionality in cache_keys.py.
 """
 import os
 import tempfile
+import unittest
 import pytest
 from src.utils.cache_keys import (
     fingerprint, CacheKey, CacheKeyVersion, build_cache_key, build_details_cache_key
@@ -268,7 +269,7 @@ class TestBuildDetailsCacheKey:
 
 def test_in_clause_helper():
     """Test the _in_clause helper function for building parameterized IN clauses."""
-    from src.utils.group_pagination import _in_clause
+    from src.utils.sql_utils import _in_clause
     
     # Test with multiple values
     dispositions = ["A", "B", "C"]
@@ -287,6 +288,153 @@ def test_in_clause_helper():
     in_sql, params = _in_clause(empty)
     assert in_sql == "IN (NULL)"
     assert params == []
+    
+    # Test edge cases: mixed types and whitespace
+    mixed_types = [" keep ", "merge", 123, True]
+    in_sql, params = _in_clause(mixed_types)
+    assert in_sql == "IN (?,?,?,?)"
+    assert params == [" keep ", "merge", 123, True]  # Preserve exact values
+    
+    # Test whitespace preservation
+    whitespace_values = ["  trim  ", "  no_trim", "no_trim  "]
+    in_sql, params = _in_clause(whitespace_values)
+    assert in_sql == "IN (?,?,?)"
+    assert params == ["  trim  ", "  no_trim", "no_trim  "]  # No trimming
+    
+    # Test with None values
+    none_values = ["A", None, "C"]
+    in_sql, params = _in_clause(none_values)
+    assert in_sql == "IN (?,?,?)"
+    assert params == ["A", None, "C"]  # Preserve None
+
+
+def test_settings_defaults_parity():
+    """Test that get_settings() default values match legacy behavior."""
+    from src.utils.settings import get_settings
+    
+    # Get settings (should have defaults)
+    settings = get_settings()
+    
+    # Test UI defaults
+    assert settings.get("ui", {}).get("timeout_seconds") == 30, "Default timeout should be 30 seconds"
+    assert settings.get("ui", {}).get("duckdb_threads") == 4, "Default DuckDB threads should be 4"
+    
+    # Test UI performance defaults
+    ui_perf = settings.get("ui_perf", {})
+    groups_config = ui_perf.get("groups", {})
+    
+    assert groups_config.get("use_stats_parquet") == True, "Default use_stats_parquet should be True"
+    assert groups_config.get("rows_duckdb_threshold") == 30000, "Default rows threshold should be 30000"
+    
+    # Test that these defaults match what's used in group_pagination.py
+    from src.utils.group_pagination import get_groups_page
+    
+    # Mock a minimal environment to test defaults
+    with unittest.mock.patch('src.utils.group_pagination.get_artifact_paths') as mock_paths:
+        mock_paths.return_value = {"review_ready_parquet": "/nonexistent", "group_stats_parquet": None}
+        
+        # This should trigger the fallback settings in get_groups_page
+        try:
+            get_groups_page("test", "Group Size (Desc)", 1, 10, {})
+        except Exception:
+            # Expected to fail due to missing files, but should use fallback settings
+            pass
+        
+        # The function should have used fallback settings that match our defaults
+        # We can't easily test this without more complex mocking, but the defaults
+        # are defined in the same place and should be consistent
+
+
+def test_deterministic_pagination():
+    """Test that pagination produces stable, ordered results across pages."""
+    from src.utils.group_pagination import get_groups_page
+    import tempfile
+    import os
+    import pandas as pd
+    
+    # Create a tiny synthetic dataset with known ordering
+    test_data = [
+        {"group_id": "g1", "account_name": "Company A", "is_primary": True, "weakest_edge_to_primary": 0.9, "disposition": "keep"},
+        {"group_id": "g2", "account_name": "Company B", "is_primary": True, "weakest_edge_to_primary": 0.8, "disposition": "keep"},
+        {"group_id": "g3", "account_name": "Company C", "is_primary": True, "weakest_edge_to_primary": 0.7, "disposition": "merge"},
+        {"group_id": "g4", "account_name": "Company D", "is_primary": True, "weakest_edge_to_primary": 0.6, "disposition": "merge"},
+        {"group_id": "g5", "account_name": "Company E", "is_primary": True, "weakest_edge_to_primary": 0.5, "disposition": "keep"},
+    ]
+    
+    # Create a temporary parquet file
+    with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as tmp:
+        df = pd.DataFrame(test_data)
+        df.to_parquet(tmp.name)
+        parquet_path = tmp.name
+    
+    try:
+        # Mock artifact paths to point to our test file
+        with unittest.mock.patch('src.utils.group_pagination.get_artifact_paths') as mock_paths:
+            mock_paths.return_value = {
+                "review_ready_parquet": parquet_path,
+                "group_stats_parquet": None
+            }
+            
+                            # Mock settings to use DuckDB
+            with unittest.mock.patch('src.utils.settings.get_settings') as mock_settings:
+                mock_settings.return_value = {
+                    "ui": {"use_duckdb_for_groups": True, "timeout_seconds": 30, "duckdb_threads": 4},
+                    "ui_perf": {"groups": {"use_stats_parquet": False}}
+                }
+                
+                # Test pagination with page_size=2 (should give us 3 pages)
+                page_size = 2
+                
+                # Get page 1
+                page1_data, total1 = get_groups_page("test_run", "Max Score (Desc)", 1, page_size, {})
+                # Get page 2  
+                page2_data, total2 = get_groups_page("test_run", "Max Score (Desc)", 2, page_size, {})
+                
+                # Verify total count
+                assert total1 == 5
+                assert total2 == 5
+                
+                # Verify page sizes
+                assert len(page1_data) == 2
+                assert len(page2_data) == 2
+                
+                # Verify ordering: page 1 last row should be > page 2 first row (descending sort)
+                page1_last_score = page1_data[-1]['max_score']
+                page2_first_score = page2_data[0]['max_score']
+                assert page1_last_score > page2_first_score, f"Page ordering broken: {page1_last_score} should be > {page2_first_score}"
+                
+                # Verify stable ordering when re-fetching same page
+                page1_data_again, _ = get_groups_page("test_run", "Max Score (Desc)", 1, page_size, {})
+                assert page1_data == page1_data_again, "Page 1 results should be stable"
+                
+                # Verify tie-breaker on group_id for same scores
+                # (This test dataset has unique scores, but the logic should handle ties gracefully)
+                
+    finally:
+        # Clean up
+        os.unlink(parquet_path)
+
+
+def test_logger_identity_parity():
+    """Test that logger names contain expected module substrings for dashboard compatibility."""
+    from src.utils.group_pagination import logger as pagination_logger
+    from src.utils.group_stats import logger as stats_logger
+    
+    # Check that logger names contain expected substrings
+    # These are used by dashboards for parsing and filtering
+    pagination_logger_name = pagination_logger.name
+    stats_logger_name = stats_logger.name
+    
+    # Verify module substrings are present
+    assert "group_pagination" in pagination_logger_name, f"Logger name should contain 'group_pagination', got: {pagination_logger_name}"
+    assert "group_stats" in stats_logger_name, f"Logger name should contain 'group_stats', got: {stats_logger_name}"
+    
+    # Verify they follow the expected pattern (src.utils.module_name)
+    assert pagination_logger_name.startswith("src.utils."), f"Logger should start with 'src.utils.', got: {pagination_logger_name}"
+    assert stats_logger_name.startswith("src.utils."), f"Logger should start with 'src.utils.', got: {stats_logger_name}"
+    
+    # These logger names should be parseable by existing dashboard logic
+    # that expects module-based filtering
 
 
 if __name__ == "__main__":

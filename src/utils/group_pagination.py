@@ -22,12 +22,8 @@ from .logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-def _in_clause(values: list) -> tuple[str, list]:
-    """Return 'IN (?,?,...)' and corresponding params, for DuckDB."""
-    if not values:
-        return "IN (NULL)", []  # empty never matches
-    placeholders = ",".join(["?"] * len(values))
-    return "IN (" + placeholders + ")", list(values)
+# Import SQL utilities
+from .sql_utils import _in_clause
 
 
 class PageFetchTimeout(Exception):
@@ -343,7 +339,7 @@ def get_groups_page_pyarrow(
 
         # Step 3: Apply filters
         step_start = time.time()
-        filtered_table = apply_filters_duckdb(projected_table, filters)
+        filtered_table = apply_filters_duckdb(projected_table, filters)  # TODO: rename to apply_filters_dataframe for clarity
         filter_time = time.time() - step_start
 
         # Get row counts (works for both pandas and PyArrow)
