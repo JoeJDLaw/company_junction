@@ -351,8 +351,11 @@ def main():
         max_score = group_info.get("max_score", 0.0)
         disposition = group_info.get("disposition", "Unknown")
 
+        # Handle None primary_name
+        primary_name_display = primary_name if primary_name else "Unknown"
+        
         # Create a more informative expander title with key fields
-        expander_title = f"Group {group_id}: {primary_name} ({group_size} records)"
+        expander_title = f"Group {group_id}: {primary_name_display} ({group_size} records)"
         if max_score > 0:
             expander_title += f" | Score: {max_score:.3f}"
         if disposition and disposition != "Unknown":
@@ -365,7 +368,7 @@ def main():
         with col2:
             st.metric(
                 "Account Name",
-                primary_name[:20] + "..." if len(primary_name) > 20 else primary_name,
+                primary_name_display[:20] + "..." if len(primary_name_display) > 20 else primary_name_display,
             )
         with col3:
             if max_score > 0:
