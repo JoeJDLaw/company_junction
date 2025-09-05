@@ -1,6 +1,7 @@
 """CLI Command Builder utilities for Streamlit UI."""
 
 from typing import Dict, List, Optional
+
 from src.utils.path_utils import get_config_path
 
 
@@ -48,6 +49,7 @@ def validate_cli_args(
 
     Returns:
         Dict mapping field names to error messages. Empty dict if valid.
+
     """
     errors: Dict[str, str] = {}
 
@@ -114,8 +116,7 @@ def build_cli_command(
     extra_args: str = "",
     col_overrides: Optional[List[str]] = None,
 ) -> str:
-    """
-    Build CLI command for running the pipeline.
+    """Build CLI command for running the pipeline.
 
     Args:
         input_file: Input file name
@@ -133,6 +134,7 @@ def build_cli_command(
 
     Returns:
         CLI command string
+
     """
     cmd_parts = ["python", "src/cleaning.py"]
 

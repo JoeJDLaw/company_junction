@@ -1,5 +1,4 @@
-"""
-Schema utilities for the company junction pipeline.
+"""Schema utilities for the company junction pipeline.
 
 This module provides canonical column names and schema mapping functionality.
 Phase 1.25.1: Simple constants for column names
@@ -9,7 +8,9 @@ Phase 1.26.1: Dynamic schema resolution from spreadsheet headers
 import json
 import logging
 import re
-from typing import Dict, Any, Optional, Mapping, List
+from collections.abc import Mapping
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
 from rapidfuzz import fuzz
 
@@ -91,12 +92,13 @@ DISPLAY_LABELS = {
     "processing_time_ms": "Processing Time (ms)",
 }
 
+
 def get_canonical_columns() -> Dict[str, str]:
-    """
-    Get mapping of canonical column names to their constants.
+    """Get mapping of canonical column names to their constants.
 
     Returns:
         Dictionary mapping canonical names to constants
+
     """
     return {
         "GROUP_ID": GROUP_ID,
@@ -127,8 +129,7 @@ def get_canonical_columns() -> Dict[str, str]:
 
 
 def ensure_required_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Ensure required columns exist in the DataFrame.
+    """Ensure required columns exist in the DataFrame.
 
     Phase 1.25.1: Simple validation
     Phase 1.26.1: Will include dynamic schema resolution
@@ -141,6 +142,7 @@ def ensure_required_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     Raises:
         ValueError: If required columns are missing
+
     """
     required_columns = [ACCOUNT_NAME]  # Only account_name is required for now
 
@@ -160,8 +162,7 @@ def resolve_schema(
     cli_overrides: Optional[Dict[str, str]] = None,
     input_filename: Optional[str] = None,
 ) -> Mapping[str, str]:
-    """
-    Resolve schema mapping from DataFrame headers to canonical names.
+    """Resolve schema mapping from DataFrame headers to canonical names.
 
     Phase 1.26.1: Full implementation with CLI → template → synonym → heuristic fallback
 
@@ -176,6 +177,7 @@ def resolve_schema(
 
     Raises:
         ValueError: If required columns cannot be resolved
+
     """
     settings = settings or {}
     cli_overrides = cli_overrides or {}
@@ -230,12 +232,12 @@ def resolve_schema(
     raise ValueError(
         f"Schema resolution failed. Required 'account_name' column not found. "
         f"Available columns: {available_cols}. "
-        f"Use --col account_name=<column_name> to specify manually."
+        f"Use --col account_name=<column_name> to specify manually.",
     )
 
 
 def _apply_cli_overrides(
-    df: pd.DataFrame, cli_overrides: Dict[str, str]
+    df: pd.DataFrame, cli_overrides: Dict[str, str],
 ) -> Dict[str, str]:
     """Apply CLI column overrides."""
     mapping = {}
@@ -246,14 +248,14 @@ def _apply_cli_overrides(
             logger.debug(f"CLI override: {canonical_name} -> {actual_name}")
         else:
             logger.warning(
-                f"CLI override column '{actual_name}' not found in DataFrame"
+                f"CLI override column '{actual_name}' not found in DataFrame",
             )
 
     return mapping
 
 
 def _match_filename_template(
-    df: pd.DataFrame, input_filename: str, settings: Dict[str, Any]
+    df: pd.DataFrame, input_filename: str, settings: Dict[str, Any],
 ) -> Optional[Dict[str, str]]:
     """Match filename against configured templates."""
     schema_config = settings.get("schema", {})
@@ -267,7 +269,7 @@ def _match_filename_template(
         try:
             if re.match(pattern, input_filename):
                 logger.debug(
-                    f"Filename '{input_filename}' matches template pattern '{pattern}'"
+                    f"Filename '{input_filename}' matches template pattern '{pattern}'",
                 )
                 aliases = template.get("aliases", {})
                 return _build_mapping_from_aliases(df, aliases)
@@ -286,7 +288,7 @@ def _match_synonyms(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, str
 
 
 def _build_mapping_from_aliases(
-    df: pd.DataFrame, aliases: Dict[str, List[str]]
+    df: pd.DataFrame, aliases: Dict[str, List[str]],
 ) -> Dict[str, str]:
     """Build column mapping from aliases configuration."""
     mapping = {}
@@ -298,7 +300,7 @@ def _build_mapping_from_aliases(
             if possible_name in available_columns:
                 mapping[canonical_name] = possible_name
                 logger.debug(
-                    f"Exact synonym match: {canonical_name} -> {possible_name}"
+                    f"Exact synonym match: {canonical_name} -> {possible_name}",
                 )
                 break
 
@@ -307,7 +309,7 @@ def _build_mapping_from_aliases(
                 if col.lower() == possible_name.lower():
                     mapping[canonical_name] = col
                     logger.debug(
-                        f"Case-insensitive synonym match: {canonical_name} -> {col}"
+                        f"Case-insensitive synonym match: {canonical_name} -> {col}",
                     )
                     break
 
@@ -325,7 +327,7 @@ def _apply_heuristics(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, s
     # Heuristic 1: String similarity for account_name
     if ACCOUNT_NAME not in mapping:
         best_match = _find_best_similarity_match(
-            available_columns, ["name", "company", "customer"], threshold=80
+            available_columns, ["name", "company", "customer"], threshold=80,
         )
         if best_match:
             mapping[ACCOUNT_NAME] = best_match
@@ -349,10 +351,10 @@ def _apply_heuristics(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, s
 
 
 def _find_best_similarity_match(
-    available_columns: List[str], target_terms: List[str], threshold: int = 80
+    available_columns: List[str], target_terms: List[str], threshold: int = 80,
 ) -> Optional[str]:
     """Find best column match using string similarity."""
-    best_score = 0
+    best_score = 0.0
     best_match = None
 
     for col in available_columns:
@@ -411,7 +413,7 @@ def _find_date_columns(df: pd.DataFrame, available_columns: List[str]) -> List[s
             # Simple date pattern detection
             date_pattern = re.compile(r"\d{1,4}[-/]\d{1,2}[-/]\d{1,4}")
             date_like = sum(1 for val in sample_data if date_pattern.search(val)) / len(
-                sample_data
+                sample_data,
             )
             if date_like > 0.3:
                 date_candidates.append(col)
@@ -426,12 +428,12 @@ def _validate_required_columns(mapping: Dict[str, str]) -> bool:
 
 
 def save_schema_mapping(mapping: Mapping[str, str], run_id: str) -> None:
-    """
-    Save schema mapping to file for observability and reproducibility.
+    """Save schema mapping to file for observability and reproducibility.
 
     Args:
         mapping: Schema mapping from canonical names to actual column names
         run_id: Run ID for file organization
+
     """
     try:
         from src.utils.path_utils import get_processed_dir
@@ -461,14 +463,14 @@ def save_schema_mapping(mapping: Mapping[str, str], run_id: str) -> None:
 
 
 def load_schema_mapping(run_id: str) -> Optional[Dict[str, str]]:
-    """
-    Load schema mapping from file.
+    """Load schema mapping from file.
 
     Args:
         run_id: Run ID to load mapping for
 
     Returns:
         Schema mapping dictionary or None if not found
+
     """
     try:
         from src.utils.path_utils import get_processed_dir
@@ -480,12 +482,12 @@ def load_schema_mapping(run_id: str) -> Optional[Dict[str, str]]:
             logger.debug(f"Schema mapping file not found: {schema_file}")
             return None
 
-        with open(schema_file, "r") as f:
+        with open(schema_file) as f:
             schema_data = json.load(f)
 
         mapping = schema_data.get("mapping", {})
         logger.info(f"Loaded schema mapping from {schema_file}")
-        return mapping
+        return mapping if isinstance(mapping, dict) else None
 
     except Exception as e:
         logger.error(f"Failed to load schema mapping: {e}")
@@ -493,40 +495,40 @@ def load_schema_mapping(run_id: str) -> Optional[Dict[str, str]]:
 
 
 def invert_mapping(mapping: Dict[str, str]) -> Dict[str, str]:
-    """
-    Invert mapping from canonical -> actual to actual -> canonical.
+    """Invert mapping from canonical -> actual to actual -> canonical.
 
     Args:
         mapping: Mapping from canonical column names to actual column names
 
     Returns:
         Inverted mapping from actual column names to canonical column names
+
     """
     return {v: k for k, v in mapping.items()}
 
 
 def to_display(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Convert DataFrame columns to display labels for UI/export.
-    
+    """Convert DataFrame columns to display labels for UI/export.
+
     Args:
         df: DataFrame with canonical column names
-        
+
     Returns:
         DataFrame with display labels (Title Case)
+
     """
     return df.rename(columns=DISPLAY_LABELS)
 
 
 def normalize_legacy_headers(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize legacy Title Case headers to canonical lowercase.
-    
+    """Normalize legacy Title Case headers to canonical lowercase.
+
     Args:
         df: DataFrame that may have legacy headers
-        
+
     Returns:
         DataFrame with normalized headers
+
     """
     legacy_mappings = {
         "Disposition": "disposition",
@@ -540,25 +542,26 @@ def normalize_legacy_headers(df: pd.DataFrame) -> pd.DataFrame:
         "Suffix Class": "suffix_class",
         "Relationship": "relationship",
     }
-    
+
     # Check if any legacy headers exist
-    legacy_found = [col for col in legacy_mappings.keys() if col in df.columns]
-    
+    legacy_found = [col for col in legacy_mappings if col in df.columns]
+
     if legacy_found:
         # Log one-time notice about legacy header normalization
-        logger.info(f"normalize_legacy_headers | legacy_headers_found={legacy_found} | normalizing_to_canonical")
-        
+        logger.info(
+            f"normalize_legacy_headers | legacy_headers_found={legacy_found} | normalizing_to_canonical",
+        )
+
         # Apply normalization
         df = df.rename(columns=legacy_mappings)
-    
+
     return df
 
 
 def apply_canonical_rename(
-    df: pd.DataFrame, mapping_canonical_to_actual: Dict[str, str]
+    df: pd.DataFrame, mapping_canonical_to_actual: Dict[str, str],
 ) -> pd.DataFrame:
-    """
-    Rename columns from ACTUAL -> CANONICAL using the inverted mapping.
+    """Rename columns from ACTUAL -> CANONICAL using the inverted mapping.
     This must be called immediately after resolving schema and BEFORE any canonical constant is used.
 
     Args:
@@ -570,6 +573,7 @@ def apply_canonical_rename(
 
     Raises:
         ValueError: If required canonical columns are missing after renaming
+
     """
     actual_to_canonical = invert_mapping(mapping_canonical_to_actual)
     df_renamed = df.rename(columns=actual_to_canonical)
@@ -581,7 +585,7 @@ def apply_canonical_rename(
     if missing_columns:
         raise ValueError(
             f"Required canonical columns missing after renaming: {missing_columns}. "
-            f"Available columns: {list(df_renamed.columns)}"
+            f"Available columns: {list(df_renamed.columns)}",
         )
 
     logger.info(f"Applied canonical rename: {len(actual_to_canonical)} columns renamed")

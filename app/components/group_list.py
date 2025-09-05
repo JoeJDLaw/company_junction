@@ -1,20 +1,20 @@
-"""
-Group list component for Phase 1.18.1 refactor.
+"""Group list component for Phase 1.18.1 refactor.
 
 This module handles the paginated display of groups with navigation controls.
 """
 
-import streamlit as st
 from typing import Any, Dict, List, Tuple
 
-from src.utils.state_utils import get_page_state, set_page_state, get_backend_state
+import streamlit as st
+
+from src.utils.cache_keys import build_cache_key
 from src.utils.fragment_utils import fragment
 from src.utils.group_pagination import (
+    PageFetchTimeout,
     get_groups_page,
     get_total_groups_count,
 )
-from src.utils.cache_keys import build_cache_key
-from src.utils.group_pagination import PageFetchTimeout
+from src.utils.state_utils import get_backend_state, get_page_state, set_page_state
 
 
 def render_group_list(
@@ -24,8 +24,7 @@ def render_group_list(
     page_size: int,
     filters: Dict[str, Any],
 ) -> Tuple[List[Dict[str, Any]], int, int]:
-    """
-    Render the paginated group list with fragments.
+    """Render the paginated group list with fragments.
 
     Args:
         selected_run_id: The selected run ID
@@ -36,6 +35,7 @@ def render_group_list(
 
     Returns:
         Tuple of (page_groups, total_groups, max_page)
+
     """
     # Get backend state
     backend_state = get_backend_state(st.session_state)
@@ -66,7 +66,7 @@ def render_group_list(
 
     try:
         page_groups, actual_total = get_groups_page(
-            selected_run_id, sort_by, page_state.number, page_size, filters
+            selected_run_id, sort_by, page_state.number, page_size, filters,
         )
 
         # Update total if different (should be the same, but handle edge cases)
@@ -85,14 +85,14 @@ def render_group_list(
                 st.rerun()
         with col2:
             if st.button(
-                "📉 Reduce Page Size to 50", key=f"reduce_page_size_{selected_run_id}"
+                "📉 Reduce Page Size to 50", key=f"reduce_page_size_{selected_run_id}",
             ):
                 page_state.size = 50
                 set_page_state(st.session_state, page_state)
                 st.rerun()
 
         st.info(
-            "💡 **Tip:** For large datasets, try reducing the page size or applying filters to reduce the data load."
+            "💡 **Tip:** For large datasets, try reducing the page size or applying filters to reduce the data load.",
         )
         return [], 0, 1
 
@@ -100,7 +100,7 @@ def render_group_list(
         # Fallback to current behavior if pagination fails
         st.warning(f"Pagination failed, falling back to current behavior: {e}")
         st.error(
-            f'Groups pagination fallback | run_id={selected_run_id} error="{str(e)}"'
+            f'Groups pagination fallback | run_id={selected_run_id} error="{e!s}"',
         )
         return [], 0, 1
 
@@ -133,8 +133,9 @@ def render_group_list(
 
     # Phase 1.22.1: Show performance indicator when using fast path
     try:
-        from src.utils.artifact_management import get_artifact_paths
         import os
+
+        from src.utils.artifact_management import get_artifact_paths
 
         artifact_paths = get_artifact_paths(selected_run_id)
         group_stats_path = artifact_paths.get("group_stats_parquet")
@@ -144,8 +145,8 @@ def render_group_list(
             active_threshold = int(filters.get("min_edge_strength", 0) or 0)
             st.success(
                 f"⚡ **Fast stats mode**: Using pre-computed group statistics for instant loading · "
-                f"Similarity ≥ {active_threshold:.0f}%", 
-                icon="⚡"
+                f"Similarity ≥ {active_threshold:.0f}%",
+                icon="⚡",
             )
         else:
             st.info("📊 **Standard mode**: Computing group statistics on-demand")
@@ -163,8 +164,7 @@ def render_group_list_fragment(
     page_size: int,
     filters: Dict[str, Any],
 ) -> None:
-    """
-    Render the group list within a fragment to prevent page-wide blocking.
+    """Render the group list within a fragment to prevent page-wide blocking.
 
     Args:
         selected_run_id: The selected run ID
@@ -172,6 +172,7 @@ def render_group_list_fragment(
         page: The current page number
         page_size: The page size
         filters: The filters dictionary
+
     """
     # Add CSS for larger, more readable expander headers
     st.markdown(
@@ -187,10 +188,10 @@ def render_group_list_fragment(
             padding: 1rem !important;
         }
         </style>
-        """, 
-        unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True,
     )
-    
+
     # Duplicate render guard for the list
     key = f"group_list_rendered:{selected_run_id}:{page}:{sort_by}"
     if not st.session_state.get(key):
@@ -198,7 +199,7 @@ def render_group_list_fragment(
 
     # Wrap groups list in fragment to prevent page-wide blocking
     page_groups, total_groups, max_page = render_group_list(
-        selected_run_id, sort_by, page, page_size, filters
+        selected_run_id, sort_by, page, page_size, filters,
     )
 
     # Group by group_id and display each group
@@ -213,14 +214,18 @@ def render_group_list_fragment(
 
         # Create a more informative expander title with key fields
         primary_name_display = primary_name or "Unknown"
-        
+
         # Dynamic font scaling based on similarity score (0.9rem to 1.6rem)
         similarity_score = float(max_score or 0)
-        font_size = 0.9 + (similarity_score / 100.0) * 0.7  # 0.9rem at 0%, 1.6rem at 100%
+        font_size = (
+            0.9 + (similarity_score / 100.0) * 0.7
+        )  # 0.9rem at 0%, 1.6rem at 100%
         font_size = max(0.9, min(1.6, font_size))  # Clamp between 0.9 and 1.6
-        
+
         # Create expander title with dynamic font scaling
-        expander_title = f"Group {group_id} · {primary_name_display} · {group_size} records"
+        expander_title = (
+            f"Group {group_id} · {primary_name_display} · {group_size} records"
+        )
         if max_score is not None and max_score > 0:
             expander_title += f" · Similarity {int(round(max_score))}%"
         if disposition and disposition != "Unknown":
@@ -230,12 +235,14 @@ def render_group_list_fragment(
             # Add dynamic font scaling for the primary name inside the expander
             st.markdown(
                 f"<div style='font-size:{font_size:.1f}rem; font-weight:700; margin-bottom:0.5rem;'>{primary_name_display}</div>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
             # Show active threshold for this group
             active_threshold = int(filters.get("min_edge_strength", 0) or 0)
-            st.caption(f"Showing groups with Similarity Score ≥ {active_threshold:.0f}%")
-            
+            st.caption(
+                f"Showing groups with Similarity Score ≥ {active_threshold:.0f}%",
+            )
+
             # Display key group information for quick review
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -263,8 +270,16 @@ def render_group_list_fragment(
 
             # Render group details
             from app.components.group_details import render_group_details
-            render_group_details(selected_run_id, group_id, group_size, primary_name, expander_title, create_expander=False)
-        
+
+            render_group_details(
+                selected_run_id,
+                group_id,
+                group_size,
+                primary_name,
+                expander_title,
+                create_expander=False,
+            )
+
         # Add visual separator between groups (except for the last one)
         if i < len(page_groups) - 1:
             st.divider()

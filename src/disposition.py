@@ -1,5 +1,4 @@
-"""
-Disposition logic for Company Junction deduplication.
+"""Disposition logic for Company Junction deduplication.
 
 This module handles:
 - Record classification (Keep, Update, Delete, Verify)
@@ -8,10 +7,12 @@ This module handles:
 - LLM gate integration (stub for Phase 1)
 """
 
-import pandas as pd
-import re
-from typing import Dict, List, Optional, Any
 import logging
+import re
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
+
 from src.utils.schema_utils import DISPOSITION
 
 logger = logging.getLogger(__name__)
@@ -59,10 +60,9 @@ BLACKLIST = BLACKLIST_TOKENS + BLACKLIST_PHRASES
 
 
 def classify_disposition(
-    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any]
+    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any],
 ) -> str:
-    """
-    Classify disposition for a single record.
+    """Classify disposition for a single record.
 
     Args:
         row: Record to classify
@@ -71,6 +71,7 @@ def classify_disposition(
 
     Returns:
         Disposition string: 'Keep', 'Update', 'Delete', or 'Verify'
+
     """
     # Check for blacklisted names
     # Handle both standardized and original column names
@@ -105,16 +106,15 @@ def classify_disposition(
 
     if is_primary:
         return "Keep"
-    else:
-        return "Update"
+    return "Update"
 
 
 def _load_manual_blacklist() -> List[str]:
-    """
-    Load manual blacklist terms from JSON file.
+    """Load manual blacklist terms from JSON file.
 
     Returns:
         List of blacklist terms, empty list if file doesn't exist
+
     """
     try:
         from src.manual_io import load_manual_blacklist
@@ -126,11 +126,11 @@ def _load_manual_blacklist() -> List[str]:
 
 
 def _load_manual_dispositions() -> Dict[str, str]:
-    """
-    Load manual disposition overrides from JSON file.
+    """Load manual disposition overrides from JSON file.
 
     Returns:
         Dictionary mapping record_id to override disposition
+
     """
     try:
         from src.manual_io import load_manual_overrides
@@ -151,36 +151,40 @@ def _load_manual_dispositions() -> Dict[str, str]:
 
 
 def get_blacklist_terms(settings: Optional[Dict[str, Any]] = None) -> List[str]:
-    """
-    Get blacklist terms from configuration or fallback to built-in.
+    """Get blacklist terms from configuration or fallback to built-in.
 
     Args:
         settings: Configuration settings (optional)
 
     Returns:
         List of blacklist terms
+
     """
     if settings and "disposition" in settings:
         # Phase 1.35.3: Load from configuration first
         config_blacklist = settings.get("disposition", {}).get("blacklist", {})
         if config_blacklist:
-            tokens = config_blacklist.get("tokens", [])
-            phrases = config_blacklist.get("phrases", [])
+            tokens: List[str] = config_blacklist.get("tokens", [])
+            phrases: List[str] = config_blacklist.get("phrases", [])
             if tokens or phrases:
-                logger.info(f"disposition | loaded_blacklist | tokens={len(tokens)} | phrases={len(phrases)} | source=config")
+                logger.info(
+                    f"disposition | loaded_blacklist | tokens={len(tokens)} | phrases={len(phrases)} | source=config",
+                )
                 return tokens + phrases
-    
+
     # Fallback to built-in blacklist
-    logger.info(f"disposition | loaded_blacklist | tokens={len(BLACKLIST_TOKENS)} | phrases={len(BLACKLIST_PHRASES)} | source=builtin")
+    logger.info(
+        f"disposition | loaded_blacklist | tokens={len(BLACKLIST_TOKENS)} | phrases={len(BLACKLIST_PHRASES)} | source=builtin",
+    )
     return BLACKLIST.copy()
 
 
 def _compile_blacklist_regex() -> re.Pattern[str]:
-    """
-    Compile word-boundary regex for single-word tokens.
+    """Compile word-boundary regex for single-word tokens.
 
     Returns:
         Compiled regex pattern
+
     """
     import re
 
@@ -191,10 +195,9 @@ def _compile_blacklist_regex() -> re.Pattern[str]:
 
 
 def _is_blacklisted_improved(
-    name: str, manual_terms: Optional[set[str]] = None
+    name: str, manual_terms: Optional[set[str]] = None,
 ) -> bool:
-    """
-    Improved blacklist checking with word-boundary matching for tokens.
+    """Improved blacklist checking with word-boundary matching for tokens.
 
     Args:
         name: Company name to check
@@ -202,6 +205,7 @@ def _is_blacklisted_improved(
 
     Returns:
         True if blacklisted
+
     """
     if not name or pd.isna(name):
         return False
@@ -239,14 +243,14 @@ def _is_blacklisted_improved(
 
 
 def _is_blacklisted(name: str) -> bool:
-    """
-    Check if a company name is blacklisted.
+    """Check if a company name is blacklisted.
 
     Args:
         name: Company name to check
 
     Returns:
         True if blacklisted
+
     """
     # Load manual blacklist terms once
     manual_blacklist = _load_manual_blacklist()
@@ -256,14 +260,14 @@ def _is_blacklisted(name: str) -> bool:
 
 
 def _is_mostly_punctuation_or_stopwords(name: str) -> bool:
-    """
-    Check if name is mostly punctuation or stopwords.
+    """Check if name is mostly punctuation or stopwords.
 
     Args:
         name: Company name to check
 
     Returns:
         True if mostly punctuation or stopwords
+
     """
     if not name:
         return False
@@ -332,8 +336,7 @@ def _is_mostly_punctuation_or_stopwords(name: str) -> bool:
 
 
 def _is_suspicious_singleton(row: pd.Series, settings: Dict[str, Any]) -> bool:
-    """
-    Check if a singleton record is suspicious.
+    """Check if a singleton record is suspicious.
 
     Args:
         row: Record to check
@@ -341,6 +344,7 @@ def _is_suspicious_singleton(row: pd.Series, settings: Dict[str, Any]) -> bool:
 
     Returns:
         True if suspicious
+
     """
     # Handle both standardized and original column names
     account_name_col = "account_name" if "account_name" in row.index else "Account Name"
@@ -369,14 +373,14 @@ def _is_suspicious_singleton(row: pd.Series, settings: Dict[str, Any]) -> bool:
 
 
 def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict[str, Any]]:
-    """
-    Compute metadata for each group.
+    """Compute metadata for each group.
 
     Args:
         df_groups: DataFrame with group assignments
 
     Returns:
         Dictionary mapping group_id to metadata
+
     """
     group_metadata = {}
 
@@ -410,10 +414,9 @@ def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict[str, Any]]
 
 
 def apply_dispositions(
-    df_groups: pd.DataFrame, settings: Dict[str, Any]
+    df_groups: pd.DataFrame, settings: Dict[str, Any],
 ) -> pd.DataFrame:
-    """
-    Apply disposition classification to all records.
+    """Apply disposition classification to all records.
 
     Args:
         df_groups: DataFrame with group assignments
@@ -421,25 +424,32 @@ def apply_dispositions(
 
     Returns:
         DataFrame with disposition column added
+
     """
     logger.info("Applying disposition classification")
 
     # Phase 1.35.3: Check if vectorized disposition is enabled
-    use_vectorized = settings.get("disposition", {}).get("performance", {}).get("vectorized", True)
-    
+    use_vectorized = (
+        settings.get("disposition", {}).get("performance", {}).get("vectorized", True)
+    )
+
     if use_vectorized:
-        logger.info("disposition | backend=vectorized | records=%d | method=np.select", len(df_groups))
+        logger.info(
+            "disposition | backend=vectorized | records=%d | method=np.select",
+            len(df_groups),
+        )
         return _apply_dispositions_vectorized(df_groups, settings)
-    else:
-        logger.info("disposition | backend=legacy | records=%d | method=iterrows", len(df_groups))
-        return _apply_dispositions_legacy(df_groups, settings)
+    logger.info(
+        "disposition | backend=legacy | records=%d | method=iterrows",
+        len(df_groups),
+    )
+    return _apply_dispositions_legacy(df_groups, settings)
 
 
 def _apply_dispositions_vectorized(
-    df_groups: pd.DataFrame, settings: Dict[str, Any]
+    df_groups: pd.DataFrame, settings: Dict[str, Any],
 ) -> pd.DataFrame:
-    """
-    Apply disposition classification using vectorized operations (np.select).
+    """Apply disposition classification using vectorized operations (np.select).
 
     Args:
         df_groups: DataFrame with group assignments
@@ -447,150 +457,171 @@ def _apply_dispositions_vectorized(
 
     Returns:
         DataFrame with disposition column added
+
     """
-    import numpy as np
     import time
-    
+
+    import numpy as np
+
     start_time = time.time()
-    
+
     # Load manual overrides
     manual_overrides = _load_manual_dispositions()
     override_count = len(manual_overrides)
     if override_count > 0:
         logger.info(f"disposition | manual_overrides | count={override_count}")
-    
+
     # Compute group metadata
     group_metadata = compute_group_metadata(df_groups)
-    
+
     # Create result DataFrame
     result_df = df_groups.copy()
-    
+
     # Phase 1.35.3: Vectorized blacklist detection
     blacklist_terms = get_blacklist_terms(settings)
-    account_name_col = "account_name" if "account_name" in result_df.columns else "Account Name"
-    
+    account_name_col = (
+        "account_name" if "account_name" in result_df.columns else "Account Name"
+    )
+
     # Create blacklist masks
     name_series = result_df[account_name_col].fillna("").astype(str)
-    
+
     # Single-word token detection (word boundaries)
     # Get the pattern string from compiled regex
     token_pattern = _compile_blacklist_regex().pattern
-    token_mask = name_series.str.contains(token_pattern, case=False, na=False, regex=True)
-    
+    token_mask = name_series.str.contains(
+        token_pattern, case=False, na=False, regex=True,
+    )
+
     # Multi-word phrase detection (substring)
     phrase_mask = pd.Series([False] * len(result_df), index=result_df.index)
     for phrase in blacklist_terms:
         if " " in phrase:  # Multi-word phrase
             phrase_mask |= name_series.str.contains(phrase, case=False, na=False)
-    
+
     # Combined blacklist mask
     blacklist_mask = token_mask | phrase_mask
-    
+
     # Phase 1.35.3: Vectorized disposition classification using np.select
     # Define conditions and choices for np.select
     conditions = []
     choices = []
-    
+
     # Manual override condition (highest priority)
     if manual_overrides:
         override_mask = result_df.index.astype(str).isin(manual_overrides.keys())
         conditions.append(override_mask)
         choices.append("manual_override")
-    
+
     # Blacklist condition
-    conditions.append(blacklist_mask)
+    conditions.append(blacklist_mask.to_numpy())
     choices.append("Delete")
-    
+
     # Multiple names condition
-    multiple_names_mask = result_df.get("has_multiple_names", pd.Series([False] * len(result_df)))
-    conditions.append(multiple_names_mask)
+    multiple_names_mask = result_df.get(
+        "has_multiple_names", pd.Series([False] * len(result_df)),
+    )
+    conditions.append(multiple_names_mask.to_numpy())
     choices.append("Verify")
-    
+
     # Alias matches condition
-    alias_mask = result_df.get("alias_cross_refs", pd.Series([[]] * len(result_df))).apply(lambda x: len(x) > 0 if isinstance(x, list) else False)
-    conditions.append(alias_mask)
+    alias_mask = result_df.get(
+        "alias_cross_refs", pd.Series([[]] * len(result_df)),
+    ).apply(lambda x: len(x) > 0 if isinstance(x, list) else False)
+    conditions.append(alias_mask.to_numpy())
     choices.append("Verify")
-    
+
     # Suffix mismatch condition
     suffix_mismatch_mask = pd.Series([False] * len(result_df), index=result_df.index)
     for group_id, meta in group_metadata.items():
         if meta.get("has_suffix_mismatch", False):
             group_mask = result_df["group_id"] == group_id
             suffix_mismatch_mask |= group_mask
-    conditions.append(suffix_mismatch_mask)
+    conditions.append(suffix_mismatch_mask.to_numpy())
     choices.append("Verify")
-    
+
     # Group size and primary status conditions
-    group_size_series = result_df["group_id"].map(lambda x: group_metadata.get(x, {}).get("group_size", 1))
+    group_size_series = result_df["group_id"].map(
+        lambda x: group_metadata.get(x, {}).get("group_size", 1),
+    )
     is_primary_series = result_df.get("is_primary", pd.Series([False] * len(result_df)))
-    
+
     # Singleton suspicious condition
     singleton_mask = (group_size_series == 1) & (~blacklist_mask)
-    suspicious_singleton_mask = pd.Series([False] * len(result_df), index=result_df.index)
+    suspicious_singleton_mask = pd.Series(
+        [False] * len(result_df), index=result_df.index,
+    )
     if "disposition" in settings and "performance" in settings["disposition"]:
-        suspicious_regex = settings["disposition"]["performance"].get("suspicious_singleton_regex")
+        suspicious_regex = settings["disposition"]["performance"].get(
+            "suspicious_singleton_regex",
+        )
         if suspicious_regex:
-            suspicious_singleton_mask = name_series.str.contains(suspicious_regex, case=False, na=False)
+            suspicious_singleton_mask = name_series.str.contains(
+                suspicious_regex, case=False, na=False,
+            )
     singleton_suspicious = singleton_mask & suspicious_singleton_mask
-    conditions.append(singleton_suspicious)
+    conditions.append(singleton_suspicious.to_numpy())
     choices.append("Verify")
-    
+
     # Singleton clean condition
     singleton_clean = singleton_mask & (~suspicious_singleton_mask)
-    conditions.append(singleton_clean)
+    conditions.append(singleton_clean.to_numpy())
     choices.append("Keep")
-    
+
     # Multi-record group conditions
     multi_record_mask = group_size_series > 1
-    
+
     # Primary record condition
     primary_mask = multi_record_mask & is_primary_series
-    conditions.append(primary_mask)
+    conditions.append(primary_mask.to_numpy())
     choices.append("Keep")
-    
+
     # Duplicate record condition (default for multi-record non-primary)
     duplicate_mask = multi_record_mask & (~is_primary_series)
-    conditions.append(duplicate_mask)
+    conditions.append(duplicate_mask.to_numpy())
     choices.append("Update")
-    
+
     # Apply np.select for vectorized classification
     dispositions = np.select(conditions, choices, default="Keep")
-    
+
     # Apply manual overrides
     if manual_overrides:
         for record_id, override in manual_overrides.items():
             override_idx = result_df.index[result_df.index.astype(str) == record_id]
             if len(override_idx) > 0:
                 dispositions[override_idx[0]] = override
-    
+
     # Add disposition column
     result_df[DISPOSITION] = dispositions
-    
+
     # Phase 1.35.3: Vectorized reason generation
     reasons = _generate_disposition_reasons_vectorized(
-        result_df, group_metadata, blacklist_mask, manual_overrides, settings
+        result_df, group_metadata, blacklist_mask, manual_overrides, settings,
     )
     result_df["disposition_reason"] = reasons
-    
+
     # Log performance metrics
     duration = time.time() - start_time
-    logger.info(f"disposition | vectorized_complete | duration={duration:.2f}s | records={len(result_df)} | throughput={len(result_df)/duration:.0f}records/sec")
-    
+    logger.info(
+        f"disposition | vectorized_complete | duration={duration:.2f}s | records={len(result_df)} | throughput={len(result_df)/duration:.0f}records/sec",
+    )
+
     # Log disposition summary
     if DISPOSITION in result_df.columns:
         disposition_counts = result_df[DISPOSITION].value_counts()
         logger.info(f"disposition | summary | counts={disposition_counts.to_dict()}")
     else:
-        logger.warning(f"disposition | summary | column '{DISPOSITION}' not found in result_df.columns: {list(result_df.columns)}")
-    
+        logger.warning(
+            f"disposition | summary | column '{DISPOSITION}' not found in result_df.columns: {list(result_df.columns)}",
+        )
+
     return result_df
 
 
 def _apply_dispositions_legacy(
-    df_groups: pd.DataFrame, settings: Dict[str, Any]
+    df_groups: pd.DataFrame, settings: Dict[str, Any],
 ) -> pd.DataFrame:
-    """
-    Legacy disposition classification using iterrows (fallback).
+    """Legacy disposition classification using iterrows (fallback).
 
     Args:
         df_groups: DataFrame with group assignments
@@ -598,9 +629,10 @@ def _apply_dispositions_legacy(
 
     Returns:
         DataFrame with disposition column added
+
     """
     logger.info("disposition | using_legacy_method | iterrows_approach")
-    
+
     # Load manual overrides
     manual_overrides = _load_manual_dispositions()
     override_count = len(manual_overrides)
@@ -646,32 +678,34 @@ def _apply_dispositions_legacy(
 
     # Log disposition summary
     disposition_counts = result_df[DISPOSITION].value_counts()
-    logger.info(f"disposition | legacy_complete | summary={disposition_counts.to_dict()}")
+    logger.info(
+        f"disposition | legacy_complete | summary={disposition_counts.to_dict()}",
+    )
 
     return result_df
 
 
 def save_dispositions(df_dispositions: pd.DataFrame, output_path: str) -> None:
-    """
-    Save dispositions DataFrame to parquet file.
+    """Save dispositions DataFrame to parquet file.
 
     Args:
         df_dispositions: DataFrame with dispositions
         output_path: Output file path
+
     """
     df_dispositions.to_parquet(output_path, index=False)
     logger.info(f"Saved dispositions to {output_path}")
 
 
 def load_dispositions(input_path: str) -> pd.DataFrame:
-    """
-    Load dispositions DataFrame from parquet file.
+    """Load dispositions DataFrame from parquet file.
 
     Args:
         input_path: Input file path
 
     Returns:
         DataFrame with dispositions
+
     """
     try:
         df_dispositions = pd.read_parquet(input_path)
@@ -683,10 +717,9 @@ def load_dispositions(input_path: str) -> pd.DataFrame:
 
 
 def get_disposition_reason(
-    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any]
+    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any],
 ) -> str:
-    """
-    Get the reason for a disposition classification.
+    """Get the reason for a disposition classification.
 
     Args:
         row: Record to classify
@@ -695,6 +728,7 @@ def get_disposition_reason(
 
     Returns:
         Reason string
+
     """
     # Check for blacklisted names
     # Handle both standardized and original column names
@@ -729,19 +763,17 @@ def get_disposition_reason(
 
     if is_primary:
         return "primary_record"
-    else:
-        return "duplicate_record"
+    return "duplicate_record"
 
 
 def _generate_disposition_reasons_vectorized(
     df: pd.DataFrame,
-    group_metadata: Dict[str, Any],
+    group_metadata: Dict[int, Dict[str, Any]],
     blacklist_mask: pd.Series,
     manual_overrides: Dict[str, str],
-    settings: Dict[str, Any]
+    settings: Dict[str, Any],
 ) -> pd.Series:
-    """
-    Generate disposition reasons using vectorized operations.
+    """Generate disposition reasons using vectorized operations.
 
     Args:
         df: DataFrame with dispositions
@@ -752,30 +784,33 @@ def _generate_disposition_reasons_vectorized(
 
     Returns:
         Series with disposition reasons
+
     """
     import numpy as np
-    
+
     # Initialize reasons array
     reasons = np.full(len(df), "unknown", dtype=object)
-    
+
     # Manual override reasons
     if manual_overrides:
         for record_id, override in manual_overrides.items():
             override_idx = df.index[df.index.astype(str) == record_id]
             if len(override_idx) > 0:
                 reasons[override_idx[0]] = f"manual_override:{override}"
-    
+
     # Blacklist reasons
     reasons[blacklist_mask] = "blacklisted_name"
-    
+
     # Multiple names reasons
     multiple_names_mask = df.get("has_multiple_names", pd.Series([False] * len(df)))
     reasons[multiple_names_mask] = "multi_name_string_requires_split"
-    
+
     # Alias match reasons
-    alias_mask = df.get("alias_cross_refs", pd.Series([[]] * len(df))).apply(lambda x: len(x) > 0 if isinstance(x, list) else False)
+    alias_mask = df.get("alias_cross_refs", pd.Series([[]] * len(df))).apply(
+        lambda x: len(x) > 0 if isinstance(x, list) else False,
+    )
     reasons[alias_mask] = "alias_matches_detected"
-    
+
     # Suffix mismatch reasons
     suffix_mismatch_mask = pd.Series([False] * len(df), index=df.index)
     for group_id, meta in group_metadata.items():
@@ -783,37 +818,45 @@ def _generate_disposition_reasons_vectorized(
             group_mask = df["group_id"] == group_id
             suffix_mismatch_mask |= group_mask
     reasons[suffix_mismatch_mask] = "suffix_mismatch"
-    
+
     # Group size and primary status reasons
-    group_size_series = df["group_id"].map(lambda x: group_metadata.get(x, {}).get("group_size", 1))
+    group_size_series = df["group_id"].map(
+        lambda x: group_metadata.get(x, {}).get("group_size", 1),
+    )
     is_primary_series = df.get("is_primary", pd.Series([False] * len(df)))
-    
+
     # Singleton reasons
     singleton_mask = (group_size_series == 1) & (~blacklist_mask)
-    account_name_col = "account_name" if "account_name" in df.columns else "Account Name"
+    account_name_col = (
+        "account_name" if "account_name" in df.columns else "Account Name"
+    )
     name_series = df[account_name_col].fillna("").astype(str)
-    
+
     suspicious_singleton_mask = pd.Series([False] * len(df), index=df.index)
     if "disposition" in settings and "performance" in settings["disposition"]:
-        suspicious_regex = settings["disposition"]["performance"].get("suspicious_singleton_regex")
+        suspicious_regex = settings["disposition"]["performance"].get(
+            "suspicious_singleton_regex",
+        )
         if suspicious_regex:
-            suspicious_singleton_mask = name_series.str.contains(suspicious_regex, case=False, na=False)
-    
+            suspicious_singleton_mask = name_series.str.contains(
+                suspicious_regex, case=False, na=False,
+            )
+
     singleton_suspicious = singleton_mask & suspicious_singleton_mask
     reasons[singleton_suspicious] = "suspicious_singleton"
-    
+
     singleton_clean = singleton_mask & (~suspicious_singleton_mask)
     reasons[singleton_clean] = "clean_singleton"
-    
+
     # Multi-record group reasons
     multi_record_mask = group_size_series > 1
-    
+
     # Primary record reasons
     primary_mask = multi_record_mask & is_primary_series
     reasons[primary_mask] = "primary_record"
-    
+
     # Duplicate record reasons
     duplicate_mask = multi_record_mask & (~is_primary_series)
     reasons[duplicate_mask] = "duplicate_record"
-    
+
     return pd.Series(reasons, index=df.index)

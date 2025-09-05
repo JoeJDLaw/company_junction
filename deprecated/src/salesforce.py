@@ -1,5 +1,4 @@
-"""
-Salesforce integration module for the Company Junction pipeline.
+"""Salesforce integration module for the Company Junction pipeline.
 
 This module handles:
 - Salesforce CLI operations
@@ -8,9 +7,10 @@ This module handles:
 - Batch operations
 """
 
-import subprocess
 import logging
-from typing import List, Dict, Optional, Any
+import subprocess
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -20,11 +20,11 @@ class SalesforceCLI:
     """Wrapper for Salesforce CLI operations."""
 
     def __init__(self, org_alias: Optional[str] = None):
-        """
-        Initialize Salesforce CLI wrapper.
+        """Initialize Salesforce CLI wrapper.
 
         Args:
             org_alias: Salesforce org alias to use (optional)
+
         """
         self.org_alias = org_alias
         self._check_cli_installed()
@@ -33,21 +33,21 @@ class SalesforceCLI:
         """Check if Salesforce CLI is installed and accessible."""
         try:
             result = subprocess.run(
-                ["sf", "--version"], capture_output=True, text=True, check=True
+                ["sf", "--version"], capture_output=True, text=True, check=True,
             )
             logger.info(f"Salesforce CLI version: {result.stdout.strip()}")
         except (subprocess.CalledProcessError, FileNotFoundError):
             raise RuntimeError("Salesforce CLI not found. Please install it first.")
 
     def _run_command(self, command: List[str]) -> Dict[str, Any]:
-        """
-        Run a Salesforce CLI command.
+        """Run a Salesforce CLI command.
 
         Args:
             command: List of command arguments
 
         Returns:
             Dictionary containing command result
+
         """
         try:
             result = subprocess.run(command, capture_output=True, text=True, check=True)
@@ -73,10 +73,9 @@ class SalesforceCLI:
         return self._run_command(command)
 
     def update_record(
-        self, object_type: str, record_id: str, fields: Dict[str, Any]
+        self, object_type: str, record_id: str, fields: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """
-        Update a single Salesforce record.
+        """Update a single Salesforce record.
 
         Args:
             object_type: Salesforce object type (e.g., 'Account', 'Contact')
@@ -85,25 +84,25 @@ class SalesforceCLI:
 
         Returns:
             Command result dictionary
+
         """
         # Create a temporary JSON file with the update data
         _ = {
             "records": [
-                {"attributes": {"type": object_type}, "Id": record_id, **fields}
-            ]
+                {"attributes": {"type": object_type}, "Id": record_id, **fields},
+            ],
         }
 
         # TODO: Implement actual record update logic
         # This would typically use sf data update or similar command
         logger.info(
-            f"Would update {object_type} record {record_id} with fields: {fields}"
+            f"Would update {object_type} record {record_id} with fields: {fields}",
         )
 
         return {"success": True, "message": "Update operation simulated"}
 
     def delete_record(self, object_type: str, record_id: str) -> Dict[str, Any]:
-        """
-        Delete a Salesforce record.
+        """Delete a Salesforce record.
 
         Args:
             object_type: Salesforce object type
@@ -111,6 +110,7 @@ class SalesforceCLI:
 
         Returns:
             Command result dictionary
+
         """
         # TODO: Implement actual record deletion logic
         logger.info(f"Would delete {object_type} record {record_id}")
@@ -118,10 +118,9 @@ class SalesforceCLI:
         return {"success": True, "message": "Delete operation simulated"}
 
     def batch_update(
-        self, object_type: str, records: List[Dict[str, Any]]
+        self, object_type: str, records: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """
-        Perform batch update of multiple records.
+        """Perform batch update of multiple records.
 
         Args:
             object_type: Salesforce object type
@@ -129,6 +128,7 @@ class SalesforceCLI:
 
         Returns:
             Command result dictionary
+
         """
         # TODO: Implement batch update logic
         logger.info(f"Would batch update {len(records)} {object_type} records")
@@ -140,10 +140,9 @@ class SalesforceCLI:
 
 
 def sync_cleaned_data_to_salesforce(
-    cleaned_df: pd.DataFrame, object_type: str, org_alias: Optional[str] = None
+    cleaned_df: pd.DataFrame, object_type: str, org_alias: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    Sync cleaned and merged data back to Salesforce.
+    """Sync cleaned and merged data back to Salesforce.
 
     Args:
         cleaned_df: DataFrame containing cleaned data with merge information
@@ -152,6 +151,7 @@ def sync_cleaned_data_to_salesforce(
 
     Returns:
         Dictionary containing sync results
+
     """
     sf_cli = SalesforceCLI(org_alias)
 
@@ -194,6 +194,6 @@ def sync_cleaned_data_to_salesforce(
     results = {"updates": updates_count, "deletes": deletes_count, "errors": errors}
 
     logger.info(
-        f"Sync completed: {results['updates']} updates, {results['deletes']} deletes"
+        f"Sync completed: {results['updates']} updates, {results['deletes']} deletes",
     )
     return results

@@ -33,26 +33,49 @@ similarity:
     num_style_mismatch: 5
     punctuation_mismatch: 3
   max_alias_pairs: 100000
-  performance:
-    block_cap: 800  # Deterministic cap per block
-    secondary_blocking: "first_two_tokens"  # or "char_bigrams"
-    pair_threshold_medium: 0.63  # Keep existing threshold if stable
-    enable_vectorized_prefilters: true  # Enable character/token length filters
-    max_length_diff: 5  # Maximum character length difference for prefiltering
-    shard_jumbo_blocks: true  # NEW: shard large blocks deterministically
-    shard_strategy: "third_token_initial"  # NEW: "third_token_initial" | "first_bigram"
-    ban_top_tokens:
-      enable: false  # DISABLED: was preventing 99 Cents records from being grouped
-      top_k: 30  # NEW: number of top tokens to ban
+  # Soft-ban blocking strategy (only strategy supported)
+  blocking:
+    allowlist_tokens: ["99", "7", "24", "1-800", "360", "1", "2", "3", "4", "5", "6", "8", "9", "10"]
+    allowlist_bigrams: ["99 cents", "7 eleven", "24 hour", "1-800 got", "360 behavioral"]
+    denylist_tokens: ["the", "and", "of", "for", "in", "on", "at", "to", "from", "a", "an", "as", "by", "is", "it", "or", "be", "are", "was", "were", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "must", "can", "shall"]
+    stop_tokens: ["inc", "llc", "ltd"]  # Tokens to skip in first-token blocking
+    soft_ban:
+      shard_strategy: "second_token"  # "second_token" | "third_token_initial" | "char_trigram"
+      fallback_shard: "char_trigram"  # Fallback when second token still too large
+      max_shard_size: 200  # Shard again if still > 200
+      char_bigram_gate: 0.1  # Simple overlap ratio gate (0..1)
+      length_window: 10  # |len(a)-len(b)| <= 10
+      min_token_overlap: 1  # Require at least 1 shared token
+      max_candidates_per_record: 50  # Cap pairs per record
+      block_cap: 800  # Still honored for jumbo blocks
+    # Brand suggestions configuration
+    min_suggestion_count: 10  # Minimum token frequency to suggest
+    min_singleton_pct: 0.6    # Minimum singleton rate to suggest
 
   scoring:
     use_bulk_cdist: true  # NEW: use RapidFuzz bulk scoring
     gate_cutoff: 72  # NEW: token_set_ratio gate cutoff
-    medium: 84  # existing threshold
-    penalty:
-      num_style_mismatch: 5
-      suffix_mismatch: 25
-      punctuation_mismatch: 3
+  
+  # NEW: Enhanced normalization for better retail brand matching
+  normalization:
+    weak_tokens: ["only", "the", "and", "of", "for", "in", "on", "at", "to", "from"]
+    plural_singular_map:
+      stores: store
+      services: service
+      holdings: holding
+      companies: company
+      shops: shop
+      centers: center
+      offices: office
+      locations: location
+    canonical_retail_terms:
+      store: store
+      stores: store
+      shop: store
+      shops: store
+    enable_plural_normalization: true
+    enable_weak_token_filtering: true
+    enable_canonical_retail_terms: true
 
 grouping:
   edge_gating:
@@ -285,3 +308,10 @@ schema:
         account_name: ["Account Name"]
         account_id: ["Account ID"]
         created_date: ["Created Date"]
+
+# Diagnostics Configuration
+diagnostics:
+  enable_block_stats: true
+  output_dir: "data/interim"
+  write_csv: true
+  write_parquet: true

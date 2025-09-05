@@ -1,5 +1,4 @@
-"""
-Resource monitoring utilities for the pipeline.
+"""Resource monitoring utilities for the pipeline.
 
 This module provides CPU, memory, and disk usage monitoring
 with automatic worker count adjustment based on available resources.
@@ -41,7 +40,7 @@ def get_system_info() -> Dict[str, Any]:
                     "total_disk_gb": disk.total / (1024**3),
                     "free_disk_gb": disk.free / (1024**3),
                     "disk_percent": (disk.used / disk.total) * 100,
-                }
+                },
             )
         except Exception as e:
             logger.warning(f"Failed to get system info with psutil: {e}")
@@ -50,8 +49,7 @@ def get_system_info() -> Dict[str, Any]:
 
 
 def estimate_memory_per_worker() -> float:
-    """
-    Estimate memory usage per worker process in GB.
+    """Estimate memory usage per worker process in GB.
 
     This is a conservative estimate based on typical pandas operations.
     """
@@ -75,10 +73,9 @@ def estimate_memory_per_worker() -> float:
 
 
 def calculate_optimal_workers(
-    requested_workers: Optional[int] = None, memory_cap_percent: float = 75.0
+    requested_workers: Optional[int] = None, memory_cap_percent: float = 75.0,
 ) -> int:
-    """
-    Calculate optimal number of workers based on available resources.
+    """Calculate optimal number of workers based on available resources.
 
     Args:
         requested_workers: User-requested worker count (None for auto)
@@ -86,6 +83,7 @@ def calculate_optimal_workers(
 
     Returns:
         Optimal number of workers
+
     """
     cpu_count = os.cpu_count() or 1
 
@@ -122,7 +120,7 @@ def calculate_optimal_workers(
             f"Memory={total_memory_gb:.1f}GB, "
             f"Memory/worker={memory_per_worker:.1f}GB, "
             f"Memory-limited={memory_limited_workers}, "
-            f"Optimal={optimal_workers}"
+            f"Optimal={optimal_workers}",
         )
 
         return optimal_workers
@@ -133,14 +131,14 @@ def calculate_optimal_workers(
 
 
 def check_disk_space(warning_threshold_percent: float = 20.0) -> bool:
-    """
-    Check available disk space and warn if below threshold.
+    """Check available disk space and warn if below threshold.
 
     Args:
         warning_threshold_percent: Warning threshold for free space percentage
 
     Returns:
         True if disk space is adequate, False if warning threshold exceeded
+
     """
     if not PSUTIL_AVAILABLE:
         logger.warning("psutil not available - cannot check disk space")
@@ -153,15 +151,14 @@ def check_disk_space(warning_threshold_percent: float = 20.0) -> bool:
         if free_percent < warning_threshold_percent:
             logger.warning(
                 f"Low disk space: {free_percent:.1f}% free "
-                f"({disk.free / (1024**3):.1f} GB)"
+                f"({disk.free / (1024**3):.1f} GB)",
             )
             return False
-        else:
-            logger.info(
-                f"Disk space OK: {free_percent:.1f}% free "
-                f"({disk.free / (1024**3):.1f} GB)"
-            )
-            return True
+        logger.info(
+            f"Disk space OK: {free_percent:.1f}% free "
+            f"({disk.free / (1024**3):.1f} GB)",
+        )
+        return True
 
     except Exception as e:
         logger.warning(f"Failed to check disk space: {e}")
@@ -201,25 +198,25 @@ def log_resource_summary() -> None:
 
     if "error" not in memory_info:
         logger.info(
-            f"Memory: {memory_info['used_gb']:.1f}GB / {memory_info['total_gb']:.1f}GB ({memory_info['percent']:.1f}%)"
+            f"Memory: {memory_info['used_gb']:.1f}GB / {memory_info['total_gb']:.1f}GB ({memory_info['percent']:.1f}%)",
         )
         logger.info(f"Process memory: {memory_info['process_rss_gb']:.1f}GB RSS")
 
     if "total_disk_gb" in system_info:
         logger.info(
-            f"Disk: {system_info['free_disk_gb']:.1f}GB free / {system_info['total_disk_gb']:.1f}GB total"
+            f"Disk: {system_info['free_disk_gb']:.1f}GB free / {system_info['total_disk_gb']:.1f}GB total",
         )
 
     logger.info("========================")
 
 
 def monitor_parallel_execution(worker_count: int, operation_name: str) -> None:
-    """
-    Monitor resource usage during parallel execution.
+    """Monitor resource usage during parallel execution.
 
     Args:
         worker_count: Number of workers being used
         operation_name: Name of the operation being monitored
+
     """
     logger.info(f"=== Parallel Execution Monitor: {operation_name} ===")
     logger.info(f"Workers: {worker_count}")
@@ -231,7 +228,7 @@ def monitor_parallel_execution(worker_count: int, operation_name: str) -> None:
         memory_percent = (estimated_total_memory / memory_info["total_gb"]) * 100
 
         logger.info(
-            f"Estimated total memory usage: {estimated_total_memory:.1f}GB ({memory_percent:.1f}%)"
+            f"Estimated total memory usage: {estimated_total_memory:.1f}GB ({memory_percent:.1f}%)",
         )
 
         if memory_percent > 75:

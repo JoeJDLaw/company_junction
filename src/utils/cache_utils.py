@@ -1,5 +1,4 @@
-"""
-Cache utilities for versioned run management.
+"""Cache utilities for versioned run management.
 
 This module handles run ID generation, cache directory management,
 run index operations, and latest symlink handling for the pipeline.
@@ -14,7 +13,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logging_utils import get_logger
-from src.utils.path_utils import get_processed_dir, get_interim_dir
+from src.utils.path_utils import get_interim_dir, get_processed_dir
 
 
 # Phase 1 destructive operations fuse
@@ -42,8 +41,7 @@ def compute_file_hash(file_path: str) -> str:
 
 
 def generate_run_id(input_paths: List[str], config_paths: List[str]) -> str:
-    """
-    Generate a unique run ID based on input and config file hashes.
+    """Generate a unique run ID based on input and config file hashes.
 
     Format: {input_hash[:8]}_{config_hash[:8]}_{YYYYMMDDHHMMSS}
     """
@@ -79,7 +77,7 @@ def create_cache_directories(run_id: str) -> Tuple[str, str]:
     if not run_id:
         logger.error("Missing run_id; refusing to write to non-scoped processed path")
         sys.exit(2)
-    
+
     interim_dir, processed_dir = get_cache_directories(run_id)
 
     os.makedirs(interim_dir, exist_ok=True)
@@ -95,10 +93,10 @@ def load_run_index() -> Dict[str, Any]:
         return {}
 
     try:
-        with open(RUN_INDEX_PATH, "r") as f:
+        with open(RUN_INDEX_PATH) as f:
             data = json.load(f)
             return data if isinstance(data, dict) else {}
-    except (json.JSONDecodeError, IOError) as e:
+    except (OSError, json.JSONDecodeError) as e:
         logger.warning(f"Failed to load run index: {e}")
         return {}
 
@@ -110,7 +108,7 @@ def save_run_index(run_index: Dict[str, Any]) -> None:
     try:
         with open(RUN_INDEX_PATH, "w") as f:
             json.dump(run_index, f, indent=2)
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Failed to save run index: {e}")
 
 
@@ -164,7 +162,7 @@ def create_latest_pointer(run_id: str) -> None:
     """Create latest pointer to the most recent successful run."""
     if not _get_destructive_fuse():
         logger.warning(
-            "Latest pointer creation disabled: Phase 1 destructive fuse not enabled"
+            "Latest pointer creation disabled: Phase 1 destructive fuse not enabled",
         )
         return
 
@@ -189,7 +187,7 @@ def create_latest_pointer(run_id: str) -> None:
             json.dump({"run_id": run_id, "timestamp": datetime.now().isoformat()}, f)
         os.replace(temp_json, latest_json)
         logger.info(f"Created latest JSON pointer: {latest_json}")
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Failed to create latest JSON pointer: {e}")
         # Clean up temp file if it exists
         if os.path.exists(temp_json):
@@ -207,13 +205,13 @@ def get_latest_run_id() -> Optional[str]:
     # Try JSON first (more reliable)
     if os.path.exists(latest_json):
         try:
-            with open(latest_json, "r") as f:
+            with open(latest_json) as f:
                 data = json.load(f)
                 if isinstance(data, dict):
                     run_id = data.get("run_id")
                     if isinstance(run_id, str):
                         return run_id
-        except (json.JSONDecodeError, IOError):
+        except (OSError, json.JSONDecodeError):
             pass
 
     # Fallback to symlink
@@ -268,7 +266,7 @@ def cleanup_failed_runs() -> None:
     """Clean up directories for failed runs."""
     if not _get_destructive_fuse():
         logger.warning(
-            "Cleanup failed runs disabled: Phase 1 destructive fuse not enabled"
+            "Cleanup failed runs disabled: Phase 1 destructive fuse not enabled",
         )
         return
 
@@ -300,6 +298,7 @@ def preview_delete_runs(run_ids: List[str]) -> Dict[str, Any]:
 
     Returns:
         Dict with deletion preview information
+
     """
     run_index = load_run_index()
     preview: Dict[str, Any] = {
@@ -350,7 +349,7 @@ def preview_delete_runs(run_ids: List[str]) -> Dict[str, Any]:
                 "status": status,
                 "bytes": run_bytes,
                 "files": run_files,
-            }
+            },
         )
         preview["total_bytes"] += run_bytes
 
@@ -365,6 +364,7 @@ def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
 
     Returns:
         Dict with deletion results
+
     """
     if not _get_destructive_fuse():
         logger.warning("Delete runs disabled: Phase 1 destructive fuse not enabled")
@@ -423,7 +423,7 @@ def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
                         for file in files:
                             try:
                                 run_bytes_freed += os.path.getsize(
-                                    os.path.join(root, file)
+                                    os.path.join(root, file),
                                 )
                             except OSError:
                                 pass
@@ -464,6 +464,7 @@ def recompute_latest_pointer() -> Optional[str]:
 
     Returns:
         The new latest run ID, or None if no completed runs exist
+
     """
     run_index = load_run_index()
 
@@ -494,7 +495,7 @@ def remove_latest_pointer() -> None:
     """Remove the latest pointer (symlink and JSON)."""
     if not _get_destructive_fuse():
         logger.warning(
-            "Latest pointer removal disabled: Phase 1 destructive fuse not enabled"
+            "Latest pointer removal disabled: Phase 1 destructive fuse not enabled",
         )
         return
 
@@ -533,7 +534,7 @@ def log_deletion_audit(run_ids: List[str], bytes_freed: int) -> None:
         with open(audit_log_path, "a") as f:
             f.write(json.dumps(audit_entry) + "\n")
         logger.info(f"Logged deletion audit: {len(run_ids)} runs, {bytes_freed} bytes")
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Failed to log deletion audit: {e}")
 
 
@@ -555,6 +556,7 @@ def list_runs_deduplicated() -> List[Tuple[str, Dict[str, Any]]]:
 
     Returns:
         List of deduplicated runs sorted by timestamp (newest first)
+
     """
     run_index = load_run_index()
 
@@ -581,7 +583,7 @@ def list_runs_deduplicated() -> List[Tuple[str, Dict[str, Any]]]:
             deduplicated_runs.append(group_runs[0])
             total_duplicates += len(group_runs) - 1
             logger.info(
-                f"Run deduplication: kept {group_runs[0][0]} from group of {len(group_runs)} runs"
+                f"Run deduplication: kept {group_runs[0][0]} from group of {len(group_runs)} runs",
             )
         else:
             deduplicated_runs.append(group_runs[0])
@@ -591,7 +593,7 @@ def list_runs_deduplicated() -> List[Tuple[str, Dict[str, Any]]]:
 
     if total_duplicates > 0:
         logger.info(
-            f"Run deduplication: removed {total_duplicates} duplicates from {len(deduplicated_runs) + total_duplicates} total runs"
+            f"Run deduplication: removed {total_duplicates} duplicates from {len(deduplicated_runs) + total_duplicates} total runs",
         )
 
     return deduplicated_runs
@@ -605,6 +607,7 @@ def is_run_truly_inflight(run_id: str) -> bool:
 
     Returns:
         True if there's an active process for this run, False otherwise
+
     """
     try:
         import psutil
@@ -616,7 +619,7 @@ def is_run_truly_inflight(run_id: str) -> bool:
                     cmdline = " ".join(proc.info["cmdline"])
                     if "cleaning.py" in cmdline and run_id in cmdline:
                         logger.info(
-                            f"Found active process {proc.info['pid']} for run {run_id}"
+                            f"Found active process {proc.info['pid']} for run {run_id}",
                         )
                         return True
             except (psutil.NoSuchProcess, psutil.AccessDenied):

@@ -1,39 +1,38 @@
-"""
-Path utilities for the company junction pipeline.
+"""Path utilities for the company junction pipeline.
 """
 
-from pathlib import Path
-from typing import Optional
 import json
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
 
 def get_project_root() -> Path:
-    """
-    Get the project root directory.
+    """Get the project root directory.
 
     Returns:
         Path to the project root
+
     """
     return Path(__file__).parent.parent.parent
 
 
 def ensure_directory_exists(directory_path: str) -> None:
-    """
-    Create directory if it doesn't exist.
+    """Create directory if it doesn't exist.
 
     Args:
         directory_path: Path to the directory to create
+
     """
     Path(directory_path).mkdir(parents=True, exist_ok=True)
 
 
 def get_data_paths() -> dict:
-    """
-    Get standard data directory paths.
+    """Get standard data directory paths.
 
     Returns:
         Dictionary containing paths to raw, interim, and processed data directories
+
     """
     project_root = get_project_root()
     return {
@@ -51,6 +50,7 @@ def get_config_path(filename: str = "settings.yaml") -> Path:
 
     Returns:
         Path to the config file, relative to project root
+
     """
     # Try to find the project root by looking for config directory
     current = Path.cwd()
@@ -66,7 +66,7 @@ def get_config_path(filename: str = "settings.yaml") -> Path:
     return Path("config") / filename
 
 
-def get_processed_dir(run_id: str) -> Path:
+def get_processed_dir(run_id: Optional[str]) -> Path:
     """Get the processed data directory for a run.
 
     Args:
@@ -74,15 +74,16 @@ def get_processed_dir(run_id: str) -> Path:
 
     Returns:
         Path to the processed directory, relative to project root
-    
+
     Raises:
         ValueError: If run_id is empty or None
+
     """
     if not run_id:
         raise ValueError("run_id cannot be empty")
     if run_id is None:
         raise ValueError("run_id cannot be None")
-    
+
     return Path("data") / "processed" / run_id
 
 
@@ -94,15 +95,16 @@ def get_interim_dir(run_id: str) -> Path:
 
     Returns:
         Path to the interim directory, relative to project root
-    
+
     Raises:
         ValueError: If run_id is empty or None
+
     """
     if not run_id:
         raise ValueError("run_id cannot be empty")
     if run_id is None:
         raise ValueError("run_id cannot be None")
-    
+
     return Path("data") / "interim" / run_id
 
 
@@ -115,6 +117,7 @@ def get_artifact_path(run_id: str, artifact: str) -> Path:
 
     Returns:
         Path to the artifact, relative to project root
+
     """
     # Check processed directory first, then interim
     processed_path = get_processed_dir(run_id) / artifact
@@ -123,33 +126,31 @@ def get_artifact_path(run_id: str, artifact: str) -> Path:
     # Return the path that exists, or processed as default
     if processed_path.exists():
         return processed_path
-    elif interim_path.exists():
+    if interim_path.exists():
         return interim_path
-    else:
-        # Default to processed directory
-        return processed_path
+    # Default to processed directory
+    return processed_path
 
 
 def get_latest_run_id() -> Optional[str]:
-    """
-    Get the latest run ID from the latest symlink or latest.json metadata.
-    
+    """Get the latest run ID from the latest symlink or latest.json metadata.
+
     Returns:
         The latest run ID, or None if no latest run exists
+
     """
-    
     # Try to read from latest.json first (more reliable)
     latest_json = Path("data/processed/latest.json")
     if latest_json.exists():
         try:
-            with open(latest_json, 'r') as f:
+            with open(latest_json) as f:
                 data = json.load(f)
                 run_id = data.get("run_id")
                 if run_id is not None:  # Allow null/None values
-                    return run_id
-        except (json.JSONDecodeError, IOError):
+                    return str(run_id)
+        except (OSError, json.JSONDecodeError):
             pass  # Fall back to symlink
-    
+
     # Fall back to symlink
     latest_symlink = Path("data/processed/latest")
     if latest_symlink.exists() and latest_symlink.is_symlink():
@@ -159,54 +160,53 @@ def get_latest_run_id() -> Optional[str]:
                 return target.name
         except (OSError, RuntimeError):
             pass
-    
+
     return None
 
 
 def read_latest_run_id() -> Optional[str]:
-    """
-    Read the latest run ID from latest.json metadata file.
-    
+    """Read the latest run ID from latest.json metadata file.
+
     Returns:
         The latest run ID, or None if no latest run exists or file is invalid
+
     """
-    
     latest_json = Path("data/processed/latest.json")
     if not latest_json.exists():
         return None
-    
+
     try:
-        with open(latest_json, 'r') as f:
+        with open(latest_json) as f:
             data = json.load(f)
-            return data.get("run_id")  # Can be None for empty state
-    except (json.JSONDecodeError, IOError):
+            run_id = data.get("run_id")  # Can be None for empty state
+            return str(run_id) if run_id is not None else None
+    except (OSError, json.JSONDecodeError):
         return None
 
 
 def write_latest_pointer(run_id: Optional[str]) -> None:
-    """
-    Write the latest run pointer to latest.json and optionally create/update symlink.
-    
+    """Write the latest run pointer to latest.json and optionally create/update symlink.
+
     Args:
         run_id: The run ID to set as latest, or None for empty state
+
     """
-    
     latest_json = Path("data/processed/latest.json")
     latest_symlink = Path("data/processed/latest")
-    
+
     # Ensure processed directory exists
     latest_json.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Write metadata file
     metadata = {
         "run_id": run_id,
         "updated_at": datetime.now().isoformat(),
-        "empty_state": run_id is None
+        "empty_state": run_id is None,
     }
-    
-    with open(latest_json, 'w') as f:
+
+    with open(latest_json, "w") as f:
         json.dump(metadata, f, indent=2)
-    
+
     # Handle symlink based on run_id
     if run_id is None:
         # Remove symlink for empty state
@@ -237,4 +237,5 @@ def write_latest_pointer(run_id: Optional[str]) -> None:
             except (OSError, PermissionError) as e:
                 # Log error but don't fail
                 import logging
+
                 logging.getLogger(__name__).warning(f"Failed to create symlink: {e}")

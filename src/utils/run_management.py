@@ -1,26 +1,31 @@
-"""
-Run management utilities for ui_helpers refactor.
+"""Run management utilities for ui_helpers refactor.
 
 This module handles run lifecycle management.
 """
 
-import os
 import json
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-from src.utils.cache_utils import list_runs_deduplicated, load_run_index, get_latest_run_id
-from src.utils.path_utils import get_interim_dir, get_processed_dir
+from typing import Any, Dict, List, Optional
+
+from src.utils.cache_utils import (
+    get_latest_run_id,
+    list_runs_deduplicated,
+    load_run_index,
+)
 from src.utils.logging_utils import get_logger
+from src.utils.path_utils import get_interim_dir, get_processed_dir
 
 logger = get_logger(__name__)
 
+
 def list_runs() -> List[Dict[str, Any]]:
-    """
-    Get a sorted list of all runs with metadata, with duplicates removed.
+    """Get a sorted list of all runs with metadata, with duplicates removed.
 
     Returns:
         List of run dictionaries sorted by timestamp (newest first)
+
     """
     # Get deduplicated runs
     deduplicated_runs = list_runs_deduplicated()
@@ -38,21 +43,21 @@ def list_runs() -> List[Dict[str, Any]]:
                 "input_hash": run_data.get("input_hash", ""),
                 "config_hash": run_data.get("config_hash", ""),
                 "dag_version": run_data.get("dag_version", "1.0.0"),
-            }
+            },
         )
 
     return runs
 
 
 def get_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
-    """
-    Get detailed metadata for a specific run.
+    """Get detailed metadata for a specific run.
 
     Args:
         run_id: The run ID to get metadata for
 
     Returns:
         Run metadata dictionary or None if run not found
+
     """
     run_index = load_run_index()
 
@@ -95,14 +100,14 @@ def get_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
 
 
 def validate_run_artifacts(run_id: str) -> Dict[str, Any]:
-    """
-    Validate that a run has all required artifacts.
+    """Validate that a run has all required artifacts.
 
     Args:
         run_id: The run ID to validate
 
     Returns:
         Dictionary with validation results
+
     """
     validation: Dict[str, Any] = {
         "run_exists": False,
@@ -160,11 +165,11 @@ def validate_run_artifacts(run_id: str) -> Dict[str, Any]:
 
 
 def get_default_run_id() -> str:
-    """
-    Get the default run ID (latest successful run).
+    """Get the default run ID (latest successful run).
 
     Returns:
         Latest run ID or empty string if none available
+
     """
     latest_run_id = get_latest_run_id()
     if latest_run_id:
@@ -180,10 +185,9 @@ def get_default_run_id() -> str:
 
 
 def format_run_display_name(
-    run_id: str, metadata: Optional[Dict[str, Any]] = None
+    run_id: str, metadata: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """
-    Format a run ID for display in the UI.
+    """Format a run ID for display in the UI.
 
     Args:
         run_id: The run ID
@@ -191,6 +195,7 @@ def format_run_display_name(
 
     Returns:
         Formatted display name
+
     """
     if not metadata:
         metadata = get_run_metadata(run_id)
@@ -218,14 +223,14 @@ def format_run_display_name(
 
 
 def load_stage_state(run_id: str) -> Optional[Dict[str, Any]]:
-    """
-    Load and parse MiniDAG stage state for a run.
+    """Load and parse MiniDAG stage state for a run.
 
     Args:
         run_id: The run ID to load state for
 
     Returns:
         Parsed stage state or None if not available
+
     """
     state_path = get_interim_dir(run_id) / "pipeline_state.json"
 
@@ -233,7 +238,7 @@ def load_stage_state(run_id: str) -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        with open(state_path, "r") as f:
+        with open(state_path) as f:
             state_data = json.load(f)
 
         if not isinstance(state_data, dict):
@@ -263,9 +268,13 @@ def load_stage_state(run_id: str) -> Optional[Dict[str, Any]]:
                 start_str = ""
                 end_str = ""
                 if start_time is not None and start_time > 0:
-                    start_str = datetime.fromtimestamp(start_time).strftime("%H:%M:%S")
+                    start_str = datetime.fromtimestamp(float(start_time)).strftime(
+                        "%H:%M:%S",
+                    )
                 if end_time is not None and end_time > 0:
-                    end_str = datetime.fromtimestamp(start_time).strftime("%H:%M:%S")
+                    end_str = datetime.fromtimestamp(float(end_time)).strftime(
+                        "%H:%M:%S",
+                    )
 
                 stage_info.append(
                     {
@@ -277,7 +286,7 @@ def load_stage_state(run_id: str) -> Optional[Dict[str, Any]]:
                         "end_str": end_str,
                         "duration": duration,
                         "duration_str": f"{duration:.2f}s" if duration > 0 else "N/A",
-                    }
+                    },
                 )
 
         return {
@@ -287,6 +296,6 @@ def load_stage_state(run_id: str) -> Optional[Dict[str, Any]]:
             "state_path": str(state_path),
         }
 
-    except (json.JSONDecodeError, IOError) as e:
+    except (OSError, json.JSONDecodeError) as e:
         logger.warning(f"Failed to load stage state for {run_id}: {e}")
         return None

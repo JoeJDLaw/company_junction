@@ -1,19 +1,19 @@
-"""
-Tests for grouping functionality with edge-gating and stable group IDs.
+"""Tests for grouping functionality with edge-gating and stable group IDs.
 """
 
-import pandas as pd
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.grouping import (
-    can_join_group,
     apply_canopy_bound,
-    create_groups_with_edge_gating,
+    can_join_group,
     create_groups_standard,
+    create_groups_with_edge_gating,
 )
 from src.utils.hash_utils import config_hash, stable_group_id
 
@@ -93,7 +93,7 @@ class TestCanJoinGroup:
         stop_tokens = {"inc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens
+            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
         )
 
         assert can_join is True
@@ -113,7 +113,7 @@ class TestCanJoinGroup:
         stop_tokens = {"inc", "llc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens
+            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
         )
 
         assert can_join is True
@@ -130,7 +130,7 @@ class TestCanJoinGroup:
         stop_tokens = {"inc", "llc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens
+            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
         )
 
         assert can_join is False
@@ -150,7 +150,7 @@ class TestCanJoinGroup:
         stop_tokens = {"inc", "llc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens
+            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
         )
 
         assert can_join is False
@@ -170,14 +170,14 @@ class TestCanopyBound:
         config = {
             "grouping": {
                 "edge_gating": {
-                    "canopy_bound": {"enabled": True, "max_without_high_edge": 8}
-                }
+                    "canopy_bound": {"enabled": True, "max_without_high_edge": 8},
+                },
             },
             "similarity": {"high": 92},
         }
 
         can_join = apply_canopy_bound(
-            group_members, primary_id, candidate_id, edge_scores, config
+            len(group_members), primary_id, candidate_id, edge_scores, config,
         )
 
         assert can_join is True
@@ -191,14 +191,14 @@ class TestCanopyBound:
         config = {
             "grouping": {
                 "edge_gating": {
-                    "canopy_bound": {"enabled": True, "max_without_high_edge": 8}
-                }
+                    "canopy_bound": {"enabled": True, "max_without_high_edge": 8},
+                },
             },
             "similarity": {"high": 92},
         }
 
         can_join = apply_canopy_bound(
-            group_members, primary_id, candidate_id, edge_scores, config
+            len(group_members), primary_id, candidate_id, edge_scores, config,
         )
 
         assert can_join is True
@@ -212,14 +212,14 @@ class TestCanopyBound:
         config = {
             "grouping": {
                 "edge_gating": {
-                    "canopy_bound": {"enabled": True, "max_without_high_edge": 8}
-                }
+                    "canopy_bound": {"enabled": True, "max_without_high_edge": 8},
+                },
             },
             "similarity": {"high": 92},
         }
 
         can_join = apply_canopy_bound(
-            group_members, primary_id, candidate_id, edge_scores, config
+            len(group_members), primary_id, candidate_id, edge_scores, config,
         )
 
         assert can_join is False
@@ -233,14 +233,14 @@ class TestCanopyBound:
         config = {
             "grouping": {
                 "edge_gating": {
-                    "canopy_bound": {"enabled": False, "max_without_high_edge": 8}
-                }
+                    "canopy_bound": {"enabled": False, "max_without_high_edge": 8},
+                },
             },
             "similarity": {"high": 92},
         }
 
         can_join = apply_canopy_bound(
-            group_members, primary_id, candidate_id, edge_scores, config
+            len(group_members), primary_id, candidate_id, edge_scores, config,
         )
 
         assert can_join is True
@@ -261,7 +261,7 @@ class TestGroupCreation:
                     '["company", "llc"]',
                     '["different", "corp"]',
                 ],
-            }
+            },
         )
 
         pairs_df = pd.DataFrame(
@@ -269,13 +269,13 @@ class TestGroupCreation:
                 "account_id_1": ["001Hs000054S8kI", "001Hs000054S8kI"],
                 "account_id_2": ["001Hs000054SAQt", "001Hs000054SDWt"],
                 "score": [90.0, 85.0],
-            }
+            },
         )
 
         config = {
             "similarity": {"high": 92, "medium": 84},
             "grouping": {
-                "edge_gating": {"enabled": True, "allow_medium_plus_shared_token": True}
+                "edge_gating": {"enabled": True, "allow_medium_plus_shared_token": True},
             },
         }
 
@@ -283,7 +283,7 @@ class TestGroupCreation:
 
         # Create groups
         groups_df = create_groups_with_edge_gating(
-            accounts_df, pairs_df, config, stop_tokens
+            accounts_df, pairs_df, config, stop_tokens,
         )
 
         # Verify results
@@ -304,7 +304,7 @@ class TestGroupCreation:
             {
                 "account_id": ["001Hs000054S8kI", "001Hs000054SAQt", "001Hs000054SDWt"],
                 "name_core": ["company inc", "company llc", "different corp"],
-            }
+            },
         )
 
         pairs_df = pd.DataFrame(
@@ -312,7 +312,7 @@ class TestGroupCreation:
                 "account_id_1": ["001Hs000054S8kI", "001Hs000054S8kI"],
                 "account_id_2": ["001Hs000054SAQt", "001Hs000054SDWt"],
                 "score": [90.0, 85.0],
-            }
+            },
         )
 
         config = {

@@ -1,16 +1,16 @@
-"""
-Tests for name normalization functionality.
+"""Tests for name normalization functionality.
 """
 
-import unittest
-import pandas as pd
 import sys
+import unittest
 from pathlib import Path
+
+import pandas as pd
 
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from src.normalize import normalize_name, excel_serial_to_datetime, normalize_dataframe
+from src.normalize import excel_serial_to_datetime, normalize_dataframe, normalize_name
 
 
 class TestNormalize(unittest.TestCase):
@@ -54,7 +54,7 @@ class TestNormalize(unittest.TestCase):
         # Test no suffix
         result = normalize_name("Acme Company")
         self.assertEqual(
-            result.suffix_class, "CO"
+            result.suffix_class, "CO",
         )  # "Company" is recognized as CO suffix
         self.assertEqual(result.name_core, "acme")
 
@@ -133,8 +133,8 @@ class TestNormalize(unittest.TestCase):
                     "20-20 Plumbing & Heating Inc",
                     "20/20 Plumbing & Heating LLC",
                     "Acme Corporation",
-                ]
-            }
+                ],
+            },
         )
 
         result = normalize_dataframe(df, "Account Name")

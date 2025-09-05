@@ -1,20 +1,20 @@
-"""
-Import audit test for Phase 1.18.1 refactor.
+"""Import audit test for Phase 1.18.1 refactor.
 
 This test imports every module under app.components and src.utils to catch broken imports.
 """
 
-import pytest
 import importlib
 
+import pytest
 
-def test_import_src_utils():
+
+def test_import_src_utils() -> None:
     """Test importing src.utils modules."""
     utils = [
         "src.utils.cache_utils",
         "src.utils.logging_utils",
         "src.utils.path_utils",
-        "src.utils.ui_helpers",
+        # "src.utils.ui_helpers",  # Deprecated - moved to deprecated/ folder
         "src.utils.state_utils",  # Phase 1.18.1 new
         "src.utils.sort_utils",  # Phase 1.18.1 new
         "src.utils.cli_builder",
@@ -37,7 +37,7 @@ def test_import_src_utils():
             pytest.fail(f"Failed to import {util}: {e}")
 
 
-def test_import_app_components():
+def test_import_app_components() -> None:
     """Test importing app.components modules."""
     components = [
         "app.components",
@@ -55,7 +55,7 @@ def test_import_app_components():
             pytest.fail(f"Failed to import {component}: {e}")
 
 
-def test_import_app_modules():
+def test_import_app_modules() -> None:
     """Test importing app modules."""
     app_modules = [
         "app.main",
@@ -68,7 +68,7 @@ def test_import_app_modules():
             pytest.fail(f"Failed to import {module}: {e}")
 
 
-def test_import_src_modules():
+def test_import_src_modules() -> None:
     """Test importing src modules."""
     src_modules = [
         "src.utils",
@@ -81,11 +81,11 @@ def test_import_src_modules():
             pytest.fail(f"Failed to import {module}: {e}")
 
 
-def test_import_src_utils_submodules():
+def test_import_src_utils_submodules() -> None:
     """Test importing src.utils submodules."""
 
 
-def test_absolute_imports_work():
+def test_absolute_imports_work() -> None:
     """Test that absolute imports work correctly."""
     # Test importing the new modules
     import app.components
@@ -101,7 +101,7 @@ def test_absolute_imports_work():
     assert src.utils.sort_utils is not None
 
 
-def test_no_relative_imports():
+def test_no_relative_imports() -> None:
     """Test that no relative imports are used in the new modules."""
     # This is a basic test - in practice, you'd want to scan the actual source files
     # to ensure no relative imports are used
@@ -112,7 +112,7 @@ def test_no_relative_imports():
     assert True
 
 
-def test_circular_imports():
+def test_circular_imports() -> None:
     """Test that there are no circular imports between app.components and src.utils."""
     # Import all modules to check for circular imports
 
@@ -120,7 +120,7 @@ def test_circular_imports():
     assert True
 
 
-def test_component_imports():
+def test_component_imports() -> None:
     """Test that components can import their dependencies."""
     # Test that components can import state_utils
     from src.utils import state_utils
@@ -132,13 +132,12 @@ def test_component_imports():
 
     assert sort_utils is not None
 
-    # Test that components can import ui_helpers
-    from src.utils import ui_helpers
+    # Test that components can import ui_helpers - DEPRECATED
+    # from src.utils import ui_helpers
+    # assert ui_helpers is not None
 
-    assert ui_helpers is not None
 
-
-def test_utils_no_streamlit_imports():
+def test_utils_no_streamlit_imports() -> None:
     """Test that src.utils modules don't import Streamlit."""
     # This is a basic test - in practice, you'd want to scan the actual source files
     # to ensure no Streamlit imports are used in src.utils modules

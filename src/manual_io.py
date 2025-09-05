@@ -1,15 +1,14 @@
-"""
-Centralized manual I/O operations for Phase 1.9.
+"""Centralized manual I/O operations for Phase 1.9.
 
 This module provides the single source of truth for reading and writing
 manual blacklist and disposition override files.
 """
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Set, Optional, Any
-import logging
+from typing import Any, Dict, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +21,7 @@ def ensure_manual_directory() -> Path:
 
 
 def _atomic_write_json(data: Any, file_path: Path) -> bool:
-    """
-    Write JSON data atomically using a temporary file.
+    """Write JSON data atomically using a temporary file.
 
     Args:
         data: Data to write
@@ -31,6 +29,7 @@ def _atomic_write_json(data: Any, file_path: Path) -> bool:
 
     Returns:
         True if successful, False otherwise
+
     """
     try:
         # Create temporary file in same directory
@@ -56,14 +55,14 @@ def _atomic_write_json(data: Any, file_path: Path) -> bool:
 
 
 def load_manual_blacklist(path: str = "data/manual/manual_blacklist.json") -> Set[str]:
-    """
-    Load manual blacklist terms from JSON file.
+    """Load manual blacklist terms from JSON file.
 
     Args:
         path: Path to the blacklist file
 
     Returns:
         Set of blacklist terms, empty set if file doesn't exist or is malformed
+
     """
     file_path = Path(path)
 
@@ -71,7 +70,7 @@ def load_manual_blacklist(path: str = "data/manual/manual_blacklist.json") -> Se
         return set()
 
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             data = json.load(f)
             terms = data.get("terms", [])
             return set(terms)
@@ -81,10 +80,9 @@ def load_manual_blacklist(path: str = "data/manual/manual_blacklist.json") -> Se
 
 
 def save_manual_blacklist(
-    terms: Set[str], path: str = "data/manual/manual_blacklist.json"
+    terms: Set[str], path: str = "data/manual/manual_blacklist.json",
 ) -> bool:
-    """
-    Save manual blacklist terms to JSON file.
+    """Save manual blacklist terms to JSON file.
 
     Args:
         terms: Set of blacklist terms
@@ -92,6 +90,7 @@ def save_manual_blacklist(
 
     Returns:
         True if successful, False otherwise
+
     """
     ensure_manual_directory()
     file_path = Path(path)
@@ -104,14 +103,14 @@ def save_manual_blacklist(
 def load_manual_overrides(
     path: str = "data/manual/manual_dispositions.json",
 ) -> Dict[str, Dict[str, Any]]:
-    """
-    Load manual disposition overrides from JSON file.
+    """Load manual disposition overrides from JSON file.
 
     Args:
         path: Path to the overrides file
 
     Returns:
         Dictionary mapping record_id to override data, empty dict if file doesn't exist
+
     """
     file_path = Path(path)
 
@@ -119,7 +118,7 @@ def load_manual_overrides(
         return {}
 
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             overrides = json.load(f)
 
         # Convert list to dict if needed (backward compatibility)
@@ -135,11 +134,10 @@ def load_manual_overrides(
         # Ensure it's a dict
         if isinstance(overrides, dict):
             return overrides
-        else:
-            logger.warning(
-                f"Invalid overrides format in {path}: expected dict or list, got {type(overrides)}"
-            )
-            return {}
+        logger.warning(
+            f"Invalid overrides format in {path}: expected dict or list, got {type(overrides)}",
+        )
+        return {}
 
     except Exception as e:
         logger.warning(f"Could not load manual overrides from {path}: {e}")
@@ -150,8 +148,7 @@ def save_manual_overrides(
     overrides: Dict[str, Dict[str, Any]],
     path: str = "data/manual/manual_dispositions.json",
 ) -> bool:
-    """
-    Save manual disposition overrides to JSON file.
+    """Save manual disposition overrides to JSON file.
 
     Args:
         overrides: Dictionary mapping record_id to override data
@@ -159,6 +156,7 @@ def save_manual_overrides(
 
     Returns:
         True if successful, False otherwise
+
     """
     ensure_manual_directory()
     file_path = Path(path)
@@ -176,8 +174,7 @@ def upsert_manual_override(
     reviewer: str = "streamlit_user",
     path: str = "data/manual/manual_dispositions.json",
 ) -> bool:
-    """
-    Add or update a manual disposition override.
+    """Add or update a manual disposition override.
 
     Args:
         record_id: Unique record identifier
@@ -188,6 +185,7 @@ def upsert_manual_override(
 
     Returns:
         True if successful, False otherwise
+
     """
     overrides = load_manual_overrides(path)
 
@@ -204,10 +202,9 @@ def upsert_manual_override(
 
 
 def remove_manual_override(
-    record_id: str, path: str = "data/manual/manual_dispositions.json"
+    record_id: str, path: str = "data/manual/manual_dispositions.json",
 ) -> bool:
-    """
-    Remove a manual disposition override.
+    """Remove a manual disposition override.
 
     Args:
         record_id: Unique record identifier
@@ -215,6 +212,7 @@ def remove_manual_override(
 
     Returns:
         True if successful, False otherwise
+
     """
     overrides = load_manual_overrides(path)
 
@@ -226,10 +224,9 @@ def remove_manual_override(
 
 
 def get_manual_override(
-    record_id: str, path: str = "data/manual/manual_dispositions.json"
+    record_id: str, path: str = "data/manual/manual_dispositions.json",
 ) -> Optional[str]:
-    """
-    Get manual override for a specific record.
+    """Get manual override for a specific record.
 
     Args:
         record_id: Unique record identifier
@@ -237,6 +234,7 @@ def get_manual_override(
 
     Returns:
         Override disposition if found, None otherwise
+
     """
     overrides = load_manual_overrides(path)
     override_data = overrides.get(record_id)

@@ -1,21 +1,22 @@
-"""
-Test cache utilities functionality.
+"""Test cache utilities functionality.
 """
 
-import os
 import json
+import os
+from typing import Any, Dict
+
 import pytest
 
 from src.utils.cache_utils import (
-    get_latest_run_id,
-    create_latest_pointer,
-    remove_latest_pointer,
-    prune_old_runs,
     cleanup_failed_runs,
-    preview_delete_runs,
+    create_latest_pointer,
     delete_runs,
-    recompute_latest_pointer,
+    get_latest_run_id,
     get_next_latest_run,
+    preview_delete_runs,
+    prune_old_runs,
+    recompute_latest_pointer,
+    remove_latest_pointer,
 )
 
 
@@ -106,7 +107,7 @@ def failed_runs(cache_utils_workspace):
     """Create failed run data for testing."""
     workspace = cache_utils_workspace
 
-    failed_run = {
+    failed_run: Dict[str, Any] = {
         "run_id": "failed_456_20231201120001",
         "status": "failed",
         "timestamp": "2023-12-01T12:00:01",
@@ -136,8 +137,9 @@ def failed_runs(cache_utils_workspace):
 
     # Add to run_index.json
     run_index_path = workspace / "data" / "run_index.json"
+    run_index: Dict[str, Any]
     if run_index_path.exists():
-        with open(run_index_path, "r") as f:
+        with open(run_index_path) as f:
             run_index = json.load(f)
     else:
         run_index = {}
@@ -173,7 +175,7 @@ def test_latest_pointer_operations(sample_runs, cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_prune_old_runs(sample_runs, cache_utils_workspace):
     """Test pruning old runs."""
@@ -195,7 +197,7 @@ def test_prune_old_runs(sample_runs, cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_cleanup_failed_runs(failed_runs, cache_utils_workspace):
     """Test cleanup of failed runs."""
@@ -210,14 +212,14 @@ def test_cleanup_failed_runs(failed_runs, cache_utils_workspace):
 
     # Check run_index.json was updated
     run_index_path = workspace / "data" / "run_index.json"
-    with open(run_index_path, "r") as f:
+    with open(run_index_path) as f:
         run_index = json.load(f)
 
     assert failed_run["run_id"] not in run_index
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_preview_delete_runs(sample_runs, cache_utils_workspace):
     """Test preview of run deletion."""
@@ -237,7 +239,7 @@ def test_preview_delete_runs(sample_runs, cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_delete_runs(sample_runs, cache_utils_workspace):
     """Test actual run deletion."""
@@ -261,7 +263,7 @@ def test_delete_runs(sample_runs, cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_recompute_latest_pointer(sample_runs, cache_utils_workspace):
     """Test recomputing latest pointer."""
@@ -284,7 +286,7 @@ def test_recompute_latest_pointer(sample_runs, cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_remove_latest_pointer(sample_runs, cache_utils_workspace):
     """Test removing latest pointer."""
@@ -305,7 +307,7 @@ def test_remove_latest_pointer(sample_runs, cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_get_next_latest_run(sample_runs, cache_utils_workspace):
     """Test getting next latest run."""
@@ -326,7 +328,7 @@ def test_get_next_latest_run(sample_runs, cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_recompute_latest_pointer_empty(cache_utils_workspace):
     """Test recomputing latest pointer when no runs exist."""
@@ -339,7 +341,7 @@ def test_recompute_latest_pointer_empty(cache_utils_workspace):
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_delete_runs_with_stuck_running_status(sample_runs, cache_utils_workspace):
     """Test deleting runs with stuck running status."""
@@ -350,7 +352,7 @@ def test_delete_runs_with_stuck_running_status(sample_runs, cache_utils_workspac
     stuck_run_dir = workspace / "data" / "processed" / stuck_run
     pipeline_state_path = stuck_run_dir / "pipeline_state.json"
 
-    with open(pipeline_state_path, "r") as f:
+    with open(pipeline_state_path) as f:
         pipeline_state = json.load(f)
 
     pipeline_state["status"] = "running"
@@ -366,7 +368,7 @@ def test_delete_runs_with_stuck_running_status(sample_runs, cache_utils_workspac
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities"
+    reason="TODO: Phase 1.26.1 - Update cache utils tests for new path utilities",
 )
 def test_delete_all_runs_scenarios(sample_runs, cache_utils_workspace):
     """Test various deletion scenarios."""

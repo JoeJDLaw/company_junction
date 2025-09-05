@@ -1,6 +1,7 @@
+"""Test similarity computation functionality.
 """
-Test similarity computation functionality.
-"""
+
+from typing import Any, Dict
 
 import pandas as pd
 import pytest
@@ -26,7 +27,7 @@ def sample_data():
                 "inc",
                 "incorporated",
             ],
-        }
+        },
     )
 
     # Ensure required columns are present
@@ -57,7 +58,9 @@ def settings():
 class TestSimilarity:
     """Test similarity computation functionality."""
 
-    def test_candidate_pair_generation(self, sample_data, settings) -> None:
+    def test_candidate_pair_generation(
+        self, sample_data: Any, settings: Dict[str, Any],
+    ) -> None:
         """Test that candidate pairs are generated correctly."""
         pairs_df = pair_scores(sample_data, settings)
 
@@ -76,7 +79,7 @@ class TestSimilarity:
             {
                 "name_core": ["acme inc", "acme inc"],
                 "suffix_class": ["inc", "inc"],
-            }
+            },
         )
 
         # Ensure required columns are present
@@ -95,7 +98,7 @@ class TestSimilarity:
             {
                 "name_core": ["acme inc", "acme llc"],
                 "suffix_class": ["inc", "llc"],
-            }
+            },
         )
 
         # Ensure required columns are present

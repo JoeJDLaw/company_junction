@@ -1,12 +1,12 @@
-"""
-Optional dependencies management for ui_helpers refactor.
+"""Optional dependencies management for ui_helpers refactor.
 
 This module centralizes capability checks for optional dependencies
 like duckdb, pyarrow, and streamlit.
 """
 
-from typing import Dict, Optional, Any
 import importlib
+from typing import Any, Dict, Optional
+
 
 def try_import(module: str) -> Optional[Any]:
     """Try to import a module, return None if unavailable."""
@@ -15,6 +15,7 @@ def try_import(module: str) -> Optional[Any]:
     except ImportError:
         return None
 
+
 def try_import_many(modules: Dict[str, str]) -> Dict[str, Optional[Any]]:
     """Try to import multiple modules, return dict of results."""
     result = {}
@@ -22,13 +23,12 @@ def try_import_many(modules: Dict[str, str]) -> Dict[str, Optional[Any]]:
         result[alias] = try_import(module_name)
     return result
 
+
 # Centralized capability checks
 DUCKDB = try_import("duckdb")
-PYARROW = try_import_many({
-    "pc": "pyarrow.compute",
-    "ds": "pyarrow.dataset", 
-    "pq": "pyarrow.parquet"
-})
+PYARROW = try_import_many(
+    {"pc": "pyarrow.compute", "ds": "pyarrow.dataset", "pq": "pyarrow.parquet"},
+)
 STREAMLIT = try_import("streamlit")
 PROMETHEUS = try_import("prometheus_client")
 

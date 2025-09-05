@@ -1,19 +1,20 @@
-"""
-Tests for alias matching parallelism unification.
+"""Tests for alias matching parallelism unification.
 
 Verifies that ParallelExecutor integration produces identical results to legacy parallel_map.
 """
 
-import pytest
-import pandas as pd
+from typing import Any, Dict
 from unittest.mock import Mock
 
-from src.utils.parallel_utils import ParallelExecutor
+import pandas as pd
+import pytest
+
 from src.alias_matching import (
-    compute_alias_matches,
-    _process_one_record_optimized,
     _build_first_token_bucket,
+    _process_one_record_optimized,
+    compute_alias_matches,
 )
+from src.utils.parallel_utils import ParallelExecutor
 
 
 class TestAliasMatchingParallelism:
@@ -59,7 +60,7 @@ class TestAliasMatchingParallelism:
             index=[100, 101, 102, 103, 104],
         )
 
-        self.settings = {
+        self.settings: Dict[str, Any] = {
             "similarity": {"high": 92, "max_alias_pairs": 1000},
             "alias": {"optimize": True, "progress_interval_s": 1.0},
             "parallelism": {"workers": 2, "backend": "loky", "chunk_size": 1000},
@@ -80,7 +81,7 @@ class TestAliasMatchingParallelism:
                     "match_group_id": "G1",
                     "score": 95,
                     "suffix_match": True,
-                }
+                },
             ],
             [
                 {
@@ -90,13 +91,13 @@ class TestAliasMatchingParallelism:
                     "match_group_id": "G1",
                     "score": 95,
                     "suffix_match": True,
-                }
+                },
             ],
         ]
 
         # Call compute_alias_matches with ParallelExecutor
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor
+            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor,
         )
 
         # Verify ParallelExecutor was used
@@ -119,7 +120,7 @@ class TestAliasMatchingParallelism:
 
         # Call compute_alias_matches
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor
+            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor,
         )
 
         # Should use sequential processing
@@ -132,7 +133,7 @@ class TestAliasMatchingParallelism:
         """Test fallback to sequential processing when no executor provided."""
         # Call compute_alias_matches without parallel_executor
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings
+            self.df_norm, self.df_groups, self.settings,
         )
 
         # Should work without errors
@@ -202,7 +203,7 @@ class TestAliasMatchingParallelism:
                     "match_group_id": "G1",
                     "score": 95,
                     "suffix_match": True,
-                }
+                },
             ],
             [
                 {
@@ -212,12 +213,12 @@ class TestAliasMatchingParallelism:
                     "match_group_id": "G1",
                     "score": 95,
                     "suffix_match": True,
-                }
+                },
             ],
         ]
 
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor
+            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor,
         )
 
         # Should flatten results correctly
@@ -246,8 +247,8 @@ class TestAliasMatchingParallelism:
                         "match_group_id": "G1",
                         "score": 95,
                         "suffix_match": True,
-                    }
-                ]
+                    },
+                ],
             ]
 
             # Call compute_alias_matches
@@ -268,7 +269,7 @@ class TestAliasMatchingParallelism:
         mock_executor.should_use_parallel.side_effect = lambda x: True
         mock_executor.workers = 2  # Add workers attribute
         mock_executor.execute_chunked.side_effect = Exception(
-            "Parallel execution failed"
+            "Parallel execution failed",
         )
 
         # Should handle the error gracefully
@@ -296,7 +297,7 @@ class TestAliasMatchingParallelism:
                 "match_group_id": "G1",
                 "score": 95,
                 "suffix_match": True,
-            }
+            },
         ]
         chunk2 = [
             {
@@ -306,7 +307,7 @@ class TestAliasMatchingParallelism:
                 "match_group_id": "G1",
                 "score": 95,
                 "suffix_match": True,
-            }
+            },
         ]
 
         # Test both chunk orders

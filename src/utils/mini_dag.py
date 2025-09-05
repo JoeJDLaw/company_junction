@@ -1,19 +1,20 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Literal, Any, Tuple
-from pathlib import Path
+
+import hashlib
 import json
 import logging
+import os
 import tempfile
 import time
-import os
-import hashlib
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from src.utils.path_utils import get_interim_dir
 from src.utils.pipeline_constants import (
     PIPELINE_STAGES,
-    STAGE_INTERMEDIATE_FILES,
     RESUME_STATE_REPAIR_ENABLED,
+    STAGE_INTERMEDIATE_FILES,
     ResumeDecision,
 )
 
@@ -76,6 +77,7 @@ class MiniDAG:
 
         Args:
             stage: Name of the stage that was interrupted
+
         """
         # Mark the current stage as interrupted
         if stage in self._stages:
@@ -138,12 +140,12 @@ class MiniDAG:
         return running_stages[0] if running_stages else None
 
     def validate_intermediate_files(
-        self, stage_name: str, interim_dir: Optional[Path] = None
+        self, stage_name: str, interim_dir: Optional[Path] = None,
     ) -> bool:
         """Check if intermediate files exist for a given stage."""
         if interim_dir is None:
             # Use the run_id from metadata if available, otherwise fallback to default
-            if hasattr(self, 'run_id') and self.run_id:
+            if hasattr(self, "run_id") and self.run_id:
                 interim_dir = get_interim_dir(self.run_id)
             else:
                 interim_dir = get_interim_dir("default")
@@ -161,10 +163,9 @@ class MiniDAG:
         return True
 
     def get_smart_resume_stage(
-        self, interim_dir: Optional[Path] = None
+        self, interim_dir: Optional[Path] = None,
     ) -> Optional[str]:
-        """
-        Intelligently determine where to resume from based on:
+        """Intelligently determine where to resume from based on:
         1. Last completed stage in state file
         2. Existence of intermediate files
         3. Pipeline state consistency
@@ -173,14 +174,14 @@ class MiniDAG:
         """
         if interim_dir is None:
             # Use the run_id from metadata if available, otherwise fallback to default
-            if hasattr(self, 'run_id') and self.run_id:
+            if hasattr(self, "run_id") and self.run_id:
                 interim_dir = get_interim_dir(self.run_id)
             else:
                 interim_dir = get_interim_dir("default")
 
         # Use enhanced validation
         can_resume, reason, decision = self.validate_resume_capability(interim_dir)
-        
+
         if not can_resume:
             self._logger.info(f"Auto-resume decision: {decision} - {reason}")
             return None
@@ -199,22 +200,20 @@ class MiniDAG:
                 next_stage = stage_order[last_index + 1]
                 if self.validate_intermediate_files(next_stage, interim_dir):
                     self._logger.info(
-                        f"Auto-resume decision: NEXT_STAGE_READY - resuming from '{next_stage}'"
+                        f"Auto-resume decision: NEXT_STAGE_READY - resuming from '{next_stage}'",
                     )
                     return next_stage
-                else:
-                    self._logger.info(
-                        f"Auto-resume decision: NEXT_STAGE_MISSING - resuming from '{last_completed}'"
-                    )
-                    return last_completed  # Resume from last completed
-            else:
                 self._logger.info(
-                    f"Auto-resume decision: FINAL_STAGE - already at final stage '{last_completed}'"
+                    f"Auto-resume decision: NEXT_STAGE_MISSING - resuming from '{last_completed}'",
                 )
-                return last_completed  # Already at final stage
+                return last_completed  # Resume from last completed
+            self._logger.info(
+                f"Auto-resume decision: FINAL_STAGE - already at final stage '{last_completed}'",
+            )
+            return last_completed  # Already at final stage
         except ValueError:
             self._logger.warning(
-                f"Auto-resume decision: INVALID_STAGE_ORDER - resuming from '{last_completed}'"
+                f"Auto-resume decision: INVALID_STAGE_ORDER - resuming from '{last_completed}'",
             )
             return last_completed  # Stage not in order, resume from last completed
 
@@ -247,16 +246,16 @@ class MiniDAG:
         return bool(current_hash == stored_hash)
 
     def validate_resume_capability(
-        self, interim_dir: Optional[Path] = None
+        self, interim_dir: Optional[Path] = None,
     ) -> Tuple[bool, str, ResumeDecision]:
-        """
-        Validate if the pipeline can resume from the current state.
-        
+        """Validate if the pipeline can resume from the current state.
+
         Returns:
             Tuple of (can_resume, reason, decision_code)
+
         """
         if interim_dir is None:
-            if hasattr(self, 'run_id') and self.run_id:
+            if hasattr(self, "run_id") and self.run_id:
                 interim_dir = get_interim_dir(self.run_id)
             else:
                 interim_dir = get_interim_dir("default")
@@ -272,7 +271,11 @@ class MiniDAG:
 
         # Validate intermediate files for the last completed stage
         if not self.validate_intermediate_files(last_completed, interim_dir):
-            return False, f"Missing intermediate files for stage '{last_completed}'", "MISSING_FILES"
+            return (
+                False,
+                f"Missing intermediate files for stage '{last_completed}'",
+                "MISSING_FILES",
+            )
 
         # Check state consistency
         if not self._validate_state_consistency():
@@ -281,7 +284,11 @@ class MiniDAG:
                 if self._repair_state_inconsistency():
                     self._logger.info("State inconsistency repaired successfully")
                 else:
-                    return False, "State inconsistency could not be repaired", "STATE_INCONSISTENT"
+                    return (
+                        False,
+                        "State inconsistency could not be repaired",
+                        "STATE_INCONSISTENT",
+                    )
             else:
                 return False, "State inconsistency detected", "STATE_INCONSISTENT"
 
@@ -294,8 +301,13 @@ class MiniDAG:
             if stage.status == "completed":
                 # Verify all dependencies are also completed
                 for dep in stage.deps:
-                    if dep not in self._stages or self._stages[dep].status != "completed":
-                        self._logger.warning(f"Stage '{stage_name}' completed but dependency '{dep}' is not")
+                    if (
+                        dep not in self._stages
+                        or self._stages[dep].status != "completed"
+                    ):
+                        self._logger.warning(
+                            f"Stage '{stage_name}' completed but dependency '{dep}' is not",
+                        )
                         return False
         return True
 
@@ -325,39 +337,45 @@ class MiniDAG:
             return False
 
     def get_resume_validation_summary(
-        self, interim_dir: Optional[Path] = None
+        self, interim_dir: Optional[Path] = None,
     ) -> Dict[str, Any]:
-        """
-        Get a comprehensive summary of resume validation status.
-        
+        """Get a comprehensive summary of resume validation status.
+
         Returns:
             Dictionary with validation details
+
         """
         can_resume, reason, decision = self.validate_resume_capability(interim_dir)
         last_completed = self.get_last_completed_stage()
-        
+
         summary = {
             "can_resume": can_resume,
             "reason": reason,
             "decision_code": decision,
             "last_completed_stage": last_completed,
-            "interim_dir": str(interim_dir or get_interim_dir(self.run_id or "default")),
-            "stage_status": {name: stage.status for name, stage in self._stages.items()},
+            "interim_dir": str(
+                interim_dir or get_interim_dir(self.run_id or "default"),
+            ),
+            "stage_status": {
+                name: stage.status for name, stage in self._stages.items()
+            },
             "validation_timestamp": time.time(),
         }
-        
+
         # Add file validation details if we have a last completed stage
         if last_completed:
             summary["file_validation"] = {
                 "stage": last_completed,
-                "files_exist": self.validate_intermediate_files(last_completed, interim_dir),
+                "files_exist": self.validate_intermediate_files(
+                    last_completed, interim_dir,
+                ),
                 "expected_files": STAGE_INTERMEDIATE_FILES.get(last_completed, []),
             }
-        
+
         return summary
 
     def _update_state_metadata(
-        self, input_path: Path, config_path: Path, cmdline: str
+        self, input_path: Path, config_path: Path, cmdline: str,
     ) -> None:
         """Update state metadata with current run information."""
         self._metadata.update(
@@ -368,7 +386,7 @@ class MiniDAG:
                 "dag_version": "1.0.0",
                 "cmdline": cmdline,
                 "ts": time.time(),
-            }
+            },
         )
         self._save()
 
@@ -448,7 +466,7 @@ class MiniDAG:
     def _atomic_write(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
-            "w", delete=False, dir=str(path.parent)
+            "w", delete=False, dir=str(path.parent),
         ) as tmp:
             tmp.write(content)
             tmp_path = Path(tmp.name)

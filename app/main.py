@@ -1,5 +1,4 @@
-"""
-Streamlit GUI for the Company Junction deduplication pipeline.
+"""Streamlit GUI for the Company Junction deduplication pipeline.
 
 This app provides an interactive interface for:
 - Loading review-ready data from pipeline output
@@ -36,25 +35,25 @@ python run_streamlit.py
 - **Audit**: `data/processed/review_meta.json` contains run metadata and statistics.
 """
 
-import streamlit as st
-import pandas as pd
-import yaml
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
-from src.utils.logging_utils import setup_logging, get_logger
-from src.utils.state_utils import migrate_legacy_keys
+import pandas as pd
+import streamlit as st
+import yaml
+
 from app.components import (
     render_controls,
-    render_group_list,
-    render_maintenance,
     render_export,
+    render_maintenance,
 )
+from src.utils.logging_utils import get_logger, setup_logging
+from src.utils.state_utils import migrate_legacy_keys
 
 
 def load_settings() -> Dict[str, Any]:
     """Load application settings from config file."""
     try:
-        with open("config/settings.yaml", "r") as f:
+        with open("config/settings.yaml") as f:
             settings = yaml.safe_load(f)
         return settings or {}
     except Exception as e:
@@ -100,7 +99,7 @@ def load_review_data(run_id: str) -> Optional[pd.DataFrame]:
                     df = pd.read_csv(artifact_paths["review_ready_csv"])
                     if "alias_cross_refs" in df.columns:
                         df["alias_cross_refs"] = df["alias_cross_refs"].apply(
-                            parse_alias_cross_refs
+                            parse_alias_cross_refs,
                         )
                     st.success(f"Loaded {len(df)} records from run {run_id}")
                     return df
@@ -124,23 +123,21 @@ def parse_alias_cross_refs(cross_refs_str: str) -> List[Dict[str, Any]]:
     try:
         import json
 
-        if isinstance(cross_refs_str, str):
-            return json.loads(cross_refs_str)
-        return cross_refs_str
+        return cast("list[dict[str, Any]]", json.loads(cross_refs_str))
     except (json.JSONDecodeError, TypeError):
         return []
 
 
-def main():
+def main() -> None:
     """Main application entry point."""
     # Setup logging
     setup_logging()
     logger = get_logger(__name__)
-    
+
     # Track missing column warnings to avoid duplicates
     missing_msgs = set()
-    
-    def warn_once(msg: str):
+
+    def warn_once(msg: str) -> None:
         if msg not in missing_msgs:
             st.warning(msg)
             missing_msgs.add(msg)
@@ -167,7 +164,7 @@ def main():
     st.sidebar.header("Run Selection")
 
     # Get available runs
-    from src.utils.run_management import list_runs, format_run_display_name
+    from src.utils.run_management import format_run_display_name, list_runs
 
     try:
         runs = list_runs()
@@ -185,18 +182,20 @@ def main():
     # Disposition filter
     dispositions = ["Keep", "Update", "Delete", "Verify"]
     selected_dispositions = st.sidebar.multiselect(
-        "Disposition", dispositions, default=dispositions
+        "Disposition", dispositions, default=dispositions,
     )
 
     # Group size filter (currently affects Export only)
     min_group_size = st.sidebar.number_input(
-        "Min Group Size (Export only)", min_value=1, value=1, step=1
+        "Min Group Size (Export only)", min_value=1, value=1, step=1,
     )
 
     # (Similarity is controlled in controls.py; no shadow control here)
 
     # Additional filters
-    show_suffix_mismatch = st.sidebar.checkbox("Show Suffix Mismatch Only (Export only)", value=False)
+    show_suffix_mismatch = st.sidebar.checkbox(
+        "Show Suffix Mismatch Only (Export only)", value=False,
+    )
     has_aliases = st.sidebar.checkbox("Has Aliases Only (Export only)", value=False)
 
     # Build filters dictionary
@@ -211,18 +210,20 @@ def main():
     # Handle no runs case (empty state)
     if not runs:
         st.info("🏗️ **No runs found**")
-        st.markdown("""
+        st.markdown(
+            """
         The pipeline hasn't been run yet, or all runs have been cleaned up.
-        
+
         **To get started:**
         1. Run the deduplication pipeline to create your first review
         2. Or restore runs from backup if they were accidentally deleted
-        
+
         **Available actions:**
         - Use the maintenance panel to manage pipeline runs
         - Check the cleanup tool for run management options
-        """)
-        
+        """,
+        )
+
         # Still render maintenance in sidebar for pipeline management
         render_maintenance("no_runs")
         return
@@ -251,7 +252,7 @@ def main():
         default_index = 0  # First other run
 
     selected_run_display = st.sidebar.selectbox(
-        "Select Run", run_options, index=default_index
+        "Select Run", run_options, index=default_index,
     )
 
     # Find selected run ID
@@ -281,15 +282,17 @@ def main():
     # (Maintenance is rendered in sidebar by render_maintenance function)
 
     # Show run status for non-complete runs
-    if selected_run["status"] == "running":
+    if selected_run is not None and selected_run["status"] == "running":
         st.info(f"⏳ Run {selected_run_id} is still processing...")
         st.progress(0.5)  # Placeholder progress
         return
-    elif selected_run["status"] == "failed":
+    if selected_run is not None and selected_run["status"] == "failed":
         st.error(f"❌ Run {selected_run_id} failed during execution")
         return
-    elif selected_run["status"] != "complete":
-        st.warning(f"⚠️ Run {selected_run_id} has status: {selected_run['status']}")
+    if selected_run is not None and selected_run["status"] != "complete":
+        st.warning(
+            f"⚠️ Run {selected_run_id} has status: {selected_run['status'] if selected_run else 'unknown'}",
+        )
         return
 
     # Load review data
@@ -301,9 +304,13 @@ def main():
     filtered_df = df.copy()
 
     if selected_dispositions and "disposition" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["disposition"].isin(selected_dispositions)]
+        filtered_df = filtered_df[
+            filtered_df["disposition"].isin(selected_dispositions)
+        ]
     elif selected_dispositions and "disposition" not in filtered_df.columns:
-        warn_once("Export filter skipped: 'disposition' column not present in this run.")
+        warn_once(
+            "Export filter skipped: 'disposition' column not present in this run.",
+        )
 
     if min_group_size > 1 and "group_id" in filtered_df.columns:
         group_sizes = filtered_df.groupby("group_id").size()
@@ -314,30 +321,43 @@ def main():
 
     # (Similarity filter for export is applied after render_controls to keep parity)
 
-    if show_suffix_mismatch and "group_id" in filtered_df.columns and "suffix_class" in filtered_df.columns:
+    if (
+        show_suffix_mismatch
+        and "group_id" in filtered_df.columns
+        and "suffix_class" in filtered_df.columns
+    ):
         # Filter for groups with suffix mismatches
         group_suffixes = filtered_df.groupby("group_id")["suffix_class"].nunique()
         mismatch_groups = group_suffixes[group_suffixes > 1].index
         filtered_df = filtered_df[filtered_df["group_id"].isin(mismatch_groups)]
     elif show_suffix_mismatch and "suffix_class" not in filtered_df.columns:
-        warn_once("Export filter skipped: 'suffix_class' column not present in this run.")
+        warn_once(
+            "Export filter skipped: 'suffix_class' column not present in this run.",
+        )
 
-    if has_aliases and "alias_cross_refs" in filtered_df.columns and "group_id" in filtered_df.columns:
+    if (
+        has_aliases
+        and "alias_cross_refs" in filtered_df.columns
+        and "group_id" in filtered_df.columns
+    ):
         has_alias_groups = filtered_df[
-            filtered_df["alias_cross_refs"].notna() & (filtered_df["alias_cross_refs"] != "")
+            filtered_df["alias_cross_refs"].notna()
+            & (filtered_df["alias_cross_refs"] != "")
         ]["group_id"].unique()
         filtered_df = filtered_df[filtered_df["group_id"].isin(has_alias_groups)]
     elif has_aliases and "alias_cross_refs" not in filtered_df.columns:
-        warn_once("Export filter skipped: 'alias_cross_refs' column not present in this run.")
+        warn_once(
+            "Export filter skipped: 'alias_cross_refs' column not present in this run.",
+        )
 
     # Render controls first to get similarity_threshold
     filters, sort_by, page, page_size, similarity_threshold = render_controls(
-        selected_run_id, settings, filters
+        selected_run_id, settings, filters,
     )
-    
+
     # Render maintenance in sidebar
     render_maintenance(selected_run_id)
-    
+
     # Similarity filter caption is now shown in controls.py directly under the slider
 
     # Phase 1.35.2: Apply similarity threshold filtering (export parity)
@@ -346,13 +366,17 @@ def main():
             filtered_df = filtered_df[
                 filtered_df["weakest_edge_to_primary"] >= float(similarity_threshold)
             ]
-            st.info(f"📊 Filtered to groups with Similarity ≥ {int(similarity_threshold)}%")
+            st.info(
+                f"📊 Filtered to groups with Similarity ≥ {int(similarity_threshold)}%",
+            )
         else:
-            warn_once("Similarity export filter skipped: 'weakest_edge_to_primary' column not present in this run.")
+            warn_once(
+                "Similarity export filter skipped: 'weakest_edge_to_primary' column not present in this run.",
+            )
 
     # Display groups
     st.subheader("Duplicate Groups")
-    
+
     # Show active disposition context
     if selected_dispositions:
         disposition_bullets = " • ".join(selected_dispositions)
@@ -360,6 +384,7 @@ def main():
 
     # Render group list with expanders
     from app.components.group_list import render_group_list_fragment
+
     render_group_list_fragment(selected_run_id, sort_by, page, page_size, filters)
 
     # (Group details are rendered inside each row's expander by the group list component.)

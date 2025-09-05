@@ -1,10 +1,8 @@
-"""
-Test BLAS environment variable clamping functionality.
+"""Test BLAS environment variable clamping functionality.
 """
 
 import os
 from unittest.mock import patch
-
 
 from src.utils.parallel_utils import ensure_single_thread_blas
 

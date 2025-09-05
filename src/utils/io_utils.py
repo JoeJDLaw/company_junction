@@ -2,10 +2,12 @@
 
 import functools
 import logging
-import yaml
-import pandas as pd
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional, cast
+
+import pandas as pd
+import yaml
 
 from src.utils.logging_utils import get_logger
 from src.utils.path_utils import get_config_path
@@ -28,6 +30,7 @@ def load_settings(path: str) -> Dict[str, Any]:
 
     Returns:
         Dictionary with settings (user config merged over defaults)
+
     """
     global _settings_load_count
     _settings_load_count += 1
@@ -74,7 +77,7 @@ def load_settings(path: str) -> Dict[str, Any]:
     }
 
     try:
-        with open(path, "r") as f:
+        with open(path) as f:
             user_config = yaml.safe_load(f) or {}
 
         # Deep merge user config over defaults
@@ -96,7 +99,7 @@ def load_settings(path: str) -> Dict[str, Any]:
         logging.warning(f"Settings file not found: {path}. Using defaults.")
         return DEFAULTS
     except Exception as e:
-        logging.error(f"Error loading settings: {e}. Using defaults.")
+        logging.exception(f"Error loading settings: {e}. Using defaults.")
         return DEFAULTS
 
 
@@ -108,6 +111,7 @@ def reload_settings(path: str) -> Dict[str, Any]:
 
     Returns:
         Freshly loaded settings
+
     """
     load_settings.cache_clear()
     return load_settings(path)
@@ -118,6 +122,7 @@ def get_settings_load_count() -> int:
 
     Returns:
         Count of settings loads (for debugging)
+
     """
     return _settings_load_count
 
@@ -130,12 +135,13 @@ def load_relationship_ranks(path: str) -> Dict[str, int]:
 
     Returns:
         Dictionary mapping relationship names to ranks (lower is better)
+
     """
     try:
         df = pd.read_csv(path)
         return dict(zip(df["Relationship"], df["Rank"]))
     except Exception as e:
-        logging.error(f"Error loading relationship ranks: {e}")
+        logging.exception(f"Error loading relationship ranks: {e}")
         return {}
 
 
@@ -147,6 +153,7 @@ def get_file_info(file_path: str) -> dict:
 
     Returns:
         Dictionary containing file information
+
     """
     path = Path(file_path)
     if not path.exists():
@@ -161,7 +168,7 @@ def get_file_info(file_path: str) -> dict:
 
 
 def list_data_files(
-    directory: str, extensions: Optional[List[str]] = None
+    directory: str, extensions: Optional[List[str]] = None,
 ) -> List[str]:
     """List data files in a directory.
 
@@ -171,6 +178,7 @@ def list_data_files(
 
     Returns:
         List of file paths
+
     """
     if extensions is None:
         extensions = [".csv", ".xlsx", ".xls"]
@@ -182,6 +190,33 @@ def list_data_files(
     return [str(f) for f in files]
 
 
+def _read_csv_typed(
+    path: Path,
+    *,
+    dtype: Optional[Mapping[str, str]] = None,
+    engine: str,
+    low_memory: bool,
+    na_values: Sequence[str],
+    keep_default_na: bool,
+    nrows: Optional[int] = None,
+) -> pd.DataFrame:
+    """Narrow, keyword-only wrapper around pandas.read_csv to make mypy's
+    overload resolution unambiguous. **No behavioral change.**
+    """
+    return cast(
+        "pd.DataFrame",
+        pd.read_csv(  # type: ignore[call-overload]
+            path,
+            dtype=dtype,
+            engine=engine,
+            low_memory=low_memory,
+            na_values=list(na_values),
+            keep_default_na=keep_default_na,
+            nrows=nrows,
+        ),
+    )
+
+
 def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> Dict[str, str]:
     """Infer a stable CSV schema by analyzing a sample of the data.
 
@@ -191,6 +226,7 @@ def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> Dict[str, str]
 
     Returns:
         Dictionary mapping column names to pandas dtypes
+
     """
     file_path_obj = Path(file_path)
     if not file_path_obj.exists():
@@ -201,7 +237,7 @@ def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> Dict[str, str]
     # Read sample with low_memory=False to avoid dtype warnings during inference
     try:
         # Use c engine for consistent performance (PyArrow removed)
-        sample_df = pd.read_csv(
+        sample_df = _read_csv_typed(
             file_path_obj,
             nrows=sample_rows,
             low_memory=False,
@@ -211,7 +247,7 @@ def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> Dict[str, str]
         )
     except Exception as e:
         logger.warning(f"CSV reading failed, using c engine: {e}")
-        sample_df = pd.read_csv(
+        sample_df = _read_csv_typed(
             file_path_obj,
             nrows=sample_rows,
             low_memory=False,
@@ -267,6 +303,7 @@ def read_csv_stable(
 
     Returns:
         DataFrame with stable dtypes
+
     """
     file_path_obj = Path(file_path)
     if not file_path_obj.exists():
@@ -280,13 +317,16 @@ def read_csv_stable(
     if dtype_map is None:
         dtype_map = infer_csv_schema(str(file_path))
 
+    # At this point, dtype_map is guaranteed to be Dict[str, str]
+    assert dtype_map is not None
+
     logger.info(
-        f"Reading {file_path} with engine={engine}, dtypes={len(dtype_map)} columns"
+        f"Reading {file_path} with engine={engine}, dtypes={len(dtype_map)} columns",
     )
 
     # Read with stable dtypes (PyArrow removed)
     try:
-        df = pd.read_csv(
+        df = _read_csv_typed(
             file_path_obj,
             dtype=dtype_map,
             engine=engine,
@@ -296,7 +336,7 @@ def read_csv_stable(
         )
     except Exception as e:
         logger.warning(f"Engine {engine} failed, falling back to c engine: {e}")
-        df = pd.read_csv(
+        df = _read_csv_typed(
             file_path_obj,
             dtype=dtype_map,
             engine="c",
@@ -306,7 +346,7 @@ def read_csv_stable(
         )
 
     logger.info(f"Loaded {len(df)} rows, {len(df.columns)} columns from {file_path}")
-    return df  # type: ignore[no-any-return]
+    return df
 
 
 def _is_pyarrow_available() -> bool:
@@ -367,7 +407,7 @@ def _has_decimal_points(data: pd.Series) -> bool:
 
     # Convert to string and check for decimal points
     str_data = data.astype(str)
-    return str_data.str.contains(r"\.").any()
+    return bool(str_data.str.contains(r"\.").any())
 
 
 def get_csv_engine_preference() -> str:
@@ -384,6 +424,7 @@ def validate_csv_file(file_path: str) -> bool:
 
     Returns:
         True if file is valid, False otherwise
+
     """
     try:
         # Try to read just the header

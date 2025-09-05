@@ -1,20 +1,20 @@
-"""
-Tests for disposition logic functionality.
+"""Tests for disposition logic functionality.
 """
 
-import unittest
-import pandas as pd
 import sys
+import unittest
 from pathlib import Path
+
+import pandas as pd
 
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.disposition import (
-    classify_disposition,
     _is_blacklisted,
     _is_suspicious_singleton,
     apply_dispositions,
+    classify_disposition,
     compute_group_metadata,
 )
 from src.normalize import normalize_dataframe
@@ -48,7 +48,7 @@ class TestDisposition(unittest.TestCase):
                     "Other/Miscellaneous",
                     "Other/Miscellaneous",
                 ],
-            }
+            },
         )
 
         # Normalize the test data
@@ -90,7 +90,7 @@ class TestDisposition(unittest.TestCase):
 
         for name in good_names:
             self.assertFalse(
-                _is_blacklisted(name), f"'{name}' should not be blacklisted"
+                _is_blacklisted(name), f"'{name}' should not be blacklisted",
             )
 
     def test_short_long_name_detection(self) -> None:
@@ -225,10 +225,10 @@ class TestDisposition(unittest.TestCase):
         # Check specific dispositions
         # Blacklisted names should be Delete
         self.assertEqual(
-            df_dispositions.iloc[2]["disposition"], "Delete"
+            df_dispositions.iloc[2]["disposition"], "Delete",
         )  # 'PNC is not sure'
         self.assertEqual(
-            df_dispositions.iloc[3]["disposition"], "Delete"
+            df_dispositions.iloc[3]["disposition"], "Delete",
         )  # '1099, no paystubs'
         self.assertEqual(df_dispositions.iloc[7]["disposition"], "Delete")  # 'N/A'
 
@@ -268,7 +268,7 @@ class TestDisposition(unittest.TestCase):
                 "weakest_edge_to_primary": [100, 95],
                 "suffix_class": ["INC", "INC"],
                 "has_multiple_names": [False, False],
-            }
+            },
         )
 
         # Create manual override file
@@ -284,7 +284,7 @@ class TestDisposition(unittest.TestCase):
                 "override": "Delete",
                 "reason": "Test override",
                 "ts": "2024-01-01T00:00:00",
-            }
+            },
         ]
 
         with open(manual_dir / "manual_dispositions.json", "w") as f:
@@ -297,7 +297,7 @@ class TestDisposition(unittest.TestCase):
             # Check that manual override was applied
             self.assertEqual(result.iloc[0]["disposition"], "Delete")
             self.assertEqual(
-                result.iloc[0]["disposition_reason"], "manual_override:Delete"
+                result.iloc[0]["disposition_reason"], "manual_override:Delete",
             )
 
             # Check that other records were processed normally
@@ -344,10 +344,10 @@ class TestDisposition(unittest.TestCase):
 
         # Test word boundaries - SHOULD match (these contain blacklisted words as standalone terms)
         self.assertTrue(
-            _is_blacklisted_improved("Temporary Solutions Inc")
+            _is_blacklisted_improved("Temporary Solutions Inc"),
         )  # contains "temporary"
         self.assertTrue(
-            _is_blacklisted_improved("Unknown Industries")
+            _is_blacklisted_improved("Unknown Industries"),
         )  # contains "unknown"
         self.assertTrue(_is_blacklisted_improved("temp staffing"))
         self.assertTrue(_is_blacklisted_improved("temporary agency"))
@@ -369,7 +369,7 @@ class TestDisposition(unittest.TestCase):
 
         # Should match manual terms
         self.assertTrue(
-            _is_blacklisted_improved("Company with test_term", manual_terms)
+            _is_blacklisted_improved("Company with test_term", manual_terms),
         )
         self.assertTrue(_is_blacklisted_improved("another_term company", manual_terms))
 
@@ -390,18 +390,18 @@ class TestDisposition(unittest.TestCase):
 
         # Check specific reasons
         self.assertEqual(
-            df_dispositions.iloc[2]["disposition_reason"], "blacklisted_name"
+            df_dispositions.iloc[2]["disposition_reason"], "blacklisted_name",
         )  # 'PNC is not sure'
         self.assertEqual(
-            df_dispositions.iloc[0]["disposition_reason"], "clean_singleton"
+            df_dispositions.iloc[0]["disposition_reason"], "clean_singleton",
         )  # Normal record
 
         # Normal names should be Keep (singletons)
         self.assertEqual(
-            df_dispositions.iloc[0]["disposition"], "Keep"
+            df_dispositions.iloc[0]["disposition"], "Keep",
         )  # '20-20 Plumbing & Heating Inc'
         self.assertEqual(
-            df_dispositions.iloc[4]["disposition"], "Keep"
+            df_dispositions.iloc[4]["disposition"], "Keep",
         )  # 'Acme Corporation'
 
     def test_suffix_mismatch_verification(self) -> None:

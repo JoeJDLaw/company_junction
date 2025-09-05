@@ -1,7 +1,9 @@
 from __future__ import annotations
-from typing import Iterable, Iterator, Optional, TypeVar, Callable
-import time
+
 import logging
+import time
+from collections.abc import Iterable, Iterator
+from typing import Callable, Optional, TypeVar
 
 T = TypeVar("T")
 

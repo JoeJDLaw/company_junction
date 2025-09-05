@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Simplified cleanup utility for test/demo artifacts.
+"""Simplified cleanup utility for test/demo artifacts.
 
 This tool safely removes test and demo artifacts using deterministic discovery.
 It operates in dry-run mode by default and requires explicit flags for actual deletion.
@@ -18,15 +17,15 @@ Usage:
 
 import argparse
 import json
-import sys
-from pathlib import Path
-from typing import Dict, List, Tuple, Any, Optional, Set
-from datetime import datetime
 import logging
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.utils.path_utils import get_processed_dir, get_interim_dir
+from src.utils.path_utils import get_interim_dir, get_processed_dir
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -36,7 +35,7 @@ logger = logging.getLogger(__name__)
 class CleanupPlan:
     """Represents a cleanup plan with candidates and reasons."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.candidates: List[Tuple[str, Dict[str, Any], str]] = (
             []
         )  # (run_id, run_data, reason)
@@ -44,7 +43,7 @@ class CleanupPlan:
         self.pinned_runs: Set[str] = set()
         self.prod_runs: Set[str] = set()
 
-    def add_candidate(self, run_id: str, run_data: Dict[str, Any], reason: str):
+    def add_candidate(self, run_id: str, run_data: Dict[str, Any], reason: str) -> None:
         """Add a run to the cleanup candidates."""
         self.candidates.append((run_id, run_data, reason))
 
@@ -68,7 +67,7 @@ class CleanupPlan:
             if not self.is_protected(run_id)
         ]
 
-    def sort_candidates(self):
+    def sort_candidates(self) -> None:
         """Sort candidates by run_id for deterministic output."""
         self.candidates.sort(key=lambda x: x[0])
 
@@ -80,14 +79,13 @@ def load_run_index() -> Dict[str, Any]:
         return {}
 
     try:
-        with open(index_path, "r") as f:
+        with open(index_path) as f:
             data = json.load(f)
             if isinstance(data, dict):
                 return data
-            else:
-                logger.warning(f"Run index is not a dict, got {type(data)}")
-                return {}
-    except (json.JSONDecodeError, IOError) as e:
+            logger.warning(f"Run index is not a dict, got {type(data)}")
+            return {}
+    except (OSError, json.JSONDecodeError) as e:
         logger.error(f"Could not load run index: {e}")
         return {}
 
@@ -101,7 +99,7 @@ def save_run_index(run_index: Dict[str, Any]) -> None:
         with open(temp_path, "w") as f:
             json.dump(run_index, f, indent=2)
         temp_path.replace(index_path)
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Could not save run index: {e}")
         if temp_path.exists():
             temp_path.unlink()
@@ -111,7 +109,8 @@ def get_latest_run_id() -> Optional[str]:
     """Get the current latest run id (prefer latest.json, fallback to symlink)."""
     # Prefer latest.json (Phase 1.27.3 empty-state support)
     try:
-        from src.utils.path_utils import read_latest_run_id  # type: ignore
+        from src.utils.path_utils import read_latest_run_id
+
         rid = read_latest_run_id()
         if rid:
             return rid
@@ -132,20 +131,17 @@ def _list_run_dirs(root: Path) -> set[str]:
     """List top-level run directories under a root, excluding known non-run dirs."""
     if not root.exists():
         return set()
-    
+
     # Import constants from pipeline_constants
     try:
         from src.utils.pipeline_constants import CLEANUP_EXCLUDE_DIRS
+
         exclude = CLEANUP_EXCLUDE_DIRS
     except ImportError:
         # Fallback if constants not available
         exclude = {"default", "index", "legacy", "test_save_run", ".DS_Store"}
-    
-    return {
-        p.name
-        for p in root.iterdir()
-        if p.is_dir() and p.name not in exclude
-    }
+
+    return {p.name for p in root.iterdir() if p.is_dir() and p.name not in exclude}
 
 
 def scan_filesystem_runs() -> set[str]:
@@ -192,11 +188,10 @@ def discover_candidates(
     older_than: Optional[int] = None,
     prod_sweep: bool = False,
     include_prod: bool = False,
-    pinned_run_ids: Set[str] = None,
+    pinned_run_ids: Set[str] | None = None,
     reconcile: bool = False,
 ) -> CleanupPlan:
-    """
-    Discover cleanup candidates using deterministic logic.
+    """Discover cleanup candidates using deterministic logic.
 
     Args:
         run_index: The run index data
@@ -208,6 +203,7 @@ def discover_candidates(
 
     Returns:
         CleanupPlan with candidates and protection info
+
     """
     plan = CleanupPlan()
 
@@ -217,9 +213,9 @@ def discover_candidates(
 
     # Load config values
     try:
-        from src.utils.config import load_config
+        from src.utils.io_utils import load_settings
 
-        config = load_config()
+        config = load_settings("config/settings.yaml")
         config_pinned = config.get("cleanup", {}).get("pinned_runs", [])
         plan.pinned_runs.update(config_pinned)
     except ImportError:
@@ -252,7 +248,7 @@ def discover_candidates(
             if run_type == "prod" and not include_prod:
                 # Prod runs excluded unless explicitly included
                 continue
-            elif run_type == "prod" and include_prod:
+            if run_type == "prod" and include_prod:
                 reason = "prod_sweep_include_prod"
             else:
                 reason = reason or "prod_sweep"
@@ -282,7 +278,9 @@ def discover_candidates(
 
         for rid in orphan_runs:
             # dummy run_data for display; delete_run_directories handles dirs
-            plan.add_candidate(rid, {"input_paths": [], "timestamp": ""}, "orphan_directory")
+            plan.add_candidate(
+                rid, {"input_paths": [], "timestamp": ""}, "orphan_directory",
+            )
         for rid in stale_index:
             plan.add_candidate(rid, run_index.get(rid, {}), "stale_index")
         plan.sort_candidates()
@@ -340,13 +338,13 @@ def update_latest_symlink() -> None:
 
 
 def execute_cleanup(
-    plan: CleanupPlan, run_index: Dict[str, Any]
+    plan: CleanupPlan, run_index: Dict[str, Any],
 ) -> Tuple[List[str], int]:
-    """
-    Execute the cleanup plan.
+    """Execute the cleanup plan.
 
     Returns:
         Tuple of (deleted_run_ids, pruned_index_count)
+
     """
     deleted_runs = []
     pruned_index_count = 0
@@ -368,14 +366,13 @@ def execute_cleanup(
                 logger.info(f"Deleted orphan directory: {run_id}")
             else:
                 logger.warning(f"Failed to delete orphan directory: {run_id}")
+        # Delete directories and remove from index
+        elif delete_run_directories(run_id):
+            del run_index[run_id]
+            deleted_runs.append(run_id)
+            logger.info(f"Deleted: {run_id}")
         else:
-            # Delete directories and remove from index
-            if delete_run_directories(run_id):
-                del run_index[run_id]
-                deleted_runs.append(run_id)
-                logger.info(f"Deleted: {run_id}")
-            else:
-                logger.warning(f"Failed to delete: {run_id}")
+            logger.warning(f"Failed to delete: {run_id}")
 
     # Update latest symlink if needed
     update_latest_symlink()
@@ -392,20 +389,18 @@ def main() -> int:
 Examples:
   # Dry-run: list test/dev runs older than 7 days
   python tools/cleanup_test_artifacts.py --types test,dev --older-than 7
-  
   # Prod sweep (keep prod + pinned)
   python tools/cleanup_test_artifacts.py --prod-sweep --dry-run
-  
   # Actually delete (requires confirmation)
   python tools/cleanup_test_artifacts.py --prod-sweep --really-delete --yes
         """,
     )
 
     parser.add_argument(
-        "--types", help="Comma-separated run types to include (test,dev,prod,benchmark)"
+        "--types", help="Comma-separated run types to include (test,dev,prod,benchmark)",
     )
     parser.add_argument(
-        "--older-than", type=int, help="Only consider runs older than N days"
+        "--older-than", type=int, help="Only consider runs older than N days",
     )
     parser.add_argument(
         "--prod-sweep",
@@ -428,7 +423,7 @@ Examples:
     )
     parser.add_argument("--yes", action="store_true", help="Skip confirmation prompts")
     parser.add_argument(
-        "--json", action="store_true", help="Print machine-readable JSON output"
+        "--json", action="store_true", help="Print machine-readable JSON output",
     )
     parser.add_argument(
         "--dry-run",
@@ -469,7 +464,7 @@ Examples:
     # Validate arguments
     if not any([types, args.older_than, args.prod_sweep]):
         logger.error(
-            "Must specify at least one filter criterion (--types, --older-than, or --prod-sweep)"
+            "Must specify at least one filter criterion (--types, --older-than, or --prod-sweep)",
         )
         return 1
 
@@ -510,7 +505,7 @@ Examples:
         if remaining < keep_min:
             logger.warning(
                 f"Aborting: would leave {remaining} runs (< keep-at-least={keep_min}). "
-                "Use --allow-empty or --keep-at-least 0 to override."
+                "Use --allow-empty or --keep-at-least 0 to override.",
             )
             return 2
 
@@ -567,7 +562,7 @@ Examples:
             run_type = detect_run_type(run_data)
             prot = " [protected]" if plan.is_protected(run_id) else ""
             print(
-                f"  {run_id} ({reason}) - {run_type} - {input_paths[0] if input_paths else 'no input'} - {age_days} days old{prot}"
+                f"  {run_id} ({reason}) - {run_type} - {input_paths[0] if input_paths else 'no input'} - {age_days} days old{prot}",
             )
 
         if deletable_candidates:
@@ -582,7 +577,7 @@ Examples:
             logger.warning("⚠️  PRODUCTION RUNS WILL BE DELETED!")
             logger.warning(f"Prod runs to delete: {prod_candidates}")
             response = input(
-                "Are you absolutely sure you want to delete PRODUCTION runs? Type 'DELETE PROD' to confirm: "
+                "Are you absolutely sure you want to delete PRODUCTION runs? Type 'DELETE PROD' to confirm: ",
             )
             if response != "DELETE PROD":
                 logger.info("Aborted - production runs require explicit confirmation")
@@ -607,8 +602,11 @@ Examples:
             if args.allow_empty:
                 logger.info("All runs deleted - entering empty state")
                 from src.utils.path_utils import write_latest_pointer
+
                 write_latest_pointer(None)  # Set latest to None
-                logger.info("Empty state established - latest.json updated, symlink removed")
+                logger.info(
+                    "Empty state established - latest.json updated, symlink removed",
+                )
             else:
                 logger.warning("All runs would be deleted but --allow-empty not set")
                 logger.warning("Consider using --allow-empty to support empty state")
@@ -628,9 +626,8 @@ Examples:
         logger.info(f"Cleanup completed: {json.dumps(summary, indent=2)}")
 
         return 0
-    else:
-        # Dry run - return exit code 2 to indicate candidates found
-        return 2
+    # Dry run - return exit code 2 to indicate candidates found
+    return 2
 
 
 if __name__ == "__main__":

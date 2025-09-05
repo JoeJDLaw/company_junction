@@ -1,5 +1,4 @@
-"""
-Test alias matching functionality.
+"""Test alias matching functionality.
 """
 
 import pandas as pd
@@ -43,7 +42,7 @@ class TestAliasMatching:
                     ["semicolon"],
                     ["parentheses"],
                 ],
-            }
+            },
         )
 
         self.df_groups = pd.DataFrame(
@@ -54,7 +53,7 @@ class TestAliasMatching:
                     "group_1",
                     "group_2",
                     "group_2",
-                ]
+                ],
             },
             index=self.df_norm.index,
         )
@@ -69,7 +68,7 @@ class TestAliasMatching:
         ]
         self.df_norm = ensure_required_columns(self.df_norm, required_columns)
         self.df_groups = ensure_required_columns(
-            self.df_groups, ["group_id", "account_id"]
+            self.df_groups, ["group_id", "account_id"],
         )
 
         self.settings = {

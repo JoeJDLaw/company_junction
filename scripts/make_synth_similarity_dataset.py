@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Deterministic synthetic dataset for Company Junction resume/interrupt tests.
+"""Deterministic synthetic dataset for Company Junction resume/interrupt tests.
 
 It creates clusters of names crafted to land in HIGH (>=92), MEDIUM (>=84,<92),
 and LOW (<84) buckets for rapidfuzz token_* ratios, plus penalty cases.
@@ -18,6 +16,7 @@ Optional but useful:
 import csv
 from datetime import date
 
+
 # Helper to make 15-char distinct Salesforce-like IDs
 def sfid(n: int) -> str:
     """Generate unique 15-char Salesforce IDs."""
@@ -28,20 +27,31 @@ def sfid(n: int) -> str:
     chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     suffix = chars[n % len(chars)] + chars[(n // len(chars)) % len(chars)]
     # Pad to exactly 15 characters
-    return (base + suffix).ljust(15, 'A')
+    return (base + suffix).ljust(15, "A")
+
 
 TODAY = date.today().isoformat()
 rows = []
 
-def add_row(idx: int, name: str, aliases=None, srcs=None, created=TODAY):
+
+def add_row(
+    idx: int,
+    name: str,
+    aliases: list[str] | None = None,
+    srcs: list[str] | None = None,
+    created: str = TODAY,
+) -> None:
     """Add a row with proper field names."""
-    rows.append({
-        "Account ID": sfid(idx),
-        "Account Name": name,
-        "Created Date": created,
-        "alias_candidates": ";".join(aliases or []),
-        "alias_sources": ";".join(srcs or []),
-    })
+    rows.append(
+        {
+            "Account ID": sfid(idx),
+            "Account Name": name,
+            "Created Date": created,
+            "alias_candidates": ";".join(aliases or []),
+            "alias_sources": ";".join(srcs or []),
+        },
+    )
+
 
 # Cluster A: HIGH similarity (>=92) - punctuation/reorder only
 A = [
@@ -111,7 +121,7 @@ with open(out_path, "w", newline="", encoding="utf-8") as f:
         f,
         fieldnames=[
             "Account ID",
-            "Account Name", 
+            "Account Name",
             "Created Date",
             "alias_candidates",
             "alias_sources",

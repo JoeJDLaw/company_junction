@@ -1,20 +1,51 @@
-"""
-Pytest configuration and shared fixtures.
+"""Pytest configuration and shared fixtures.
 
 This file provides shared fixtures and configuration for all tests.
 """
 
 import os
 import tempfile
-import pytest
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
+from typing import Any, Dict, cast
+
+import pytest
+import yaml
+
+
+def deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Deep merge two dictionaries, with override taking precedence."""
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+@pytest.fixture
+def settings_from_config():
+    """Load config/settings.yaml and allow deep-merging overrides."""
+
+    def _settings_from_config(
+        overrides: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        config_path = Path(__file__).parent.parent / "config" / "settings.yaml"
+        with open(config_path) as f:
+            base_config = yaml.safe_load(f)
+
+        if overrides is None:
+            return cast("Dict[str, Any]", base_config)
+
+        return deep_merge(base_config, overrides)
+
+    return _settings_from_config
 
 
 @pytest.fixture
 def enable_destructive_fuse() -> Generator[None, None, None]:
-    """
-    Enable destructive fuse for cache utils tests.
+    """Enable destructive fuse for cache utils tests.
 
     This fixture temporarily enables the destructive fuse that allows
     cache operations like deletion and pruning to work.
@@ -34,8 +65,7 @@ def enable_destructive_fuse() -> Generator[None, None, None]:
 
 @pytest.fixture
 def temp_workspace() -> Generator[Path, None, None]:
-    """
-    Create a temporary workspace for destructive operations.
+    """Create a temporary workspace for destructive operations.
 
     This fixture creates a temporary directory that can be used
     for testing destructive operations without affecting the main workspace.
@@ -61,10 +91,9 @@ def temp_workspace() -> Generator[Path, None, None]:
 
 @pytest.fixture
 def cache_utils_workspace(
-    enable_destructive_fuse: Generator[None, None, None], temp_workspace: Path
-) -> Path:  # noqa: F811
-    """
-    Combined fixture for cache utils tests.
+    enable_destructive_fuse: Generator[None, None, None], temp_workspace: Path,
+) -> Path:
+    """Combined fixture for cache utils tests.
 
     This fixture provides both destructive fuse and a temporary workspace
     for testing cache operations safely.

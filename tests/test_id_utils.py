@@ -1,14 +1,14 @@
-"""
-Unit tests for Salesforce ID canonicalization utilities.
+"""Unit tests for Salesforce ID canonicalization utilities.
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from src.utils.id_utils import (
     _chunk_checksum,
-    sfid15_to_18,
     normalize_sfid_series,
+    sfid15_to_18,
     validate_sfid_format,
 )
 
@@ -112,7 +112,7 @@ class TestNormalizeSfidSeries:
             [
                 "001Hs000054S8kIAAA",  # 18-char
                 "001Hs000054SAQtBBB",  # 18-char
-            ]
+            ],
         )
 
         result = normalize_sfid_series(series)
@@ -128,7 +128,7 @@ class TestNormalizeSfidSeries:
                 "001Hs000054S8kI",  # 15-char
                 "001Hs000054SAQtBBB",  # 18-char
                 "001Hs000054SDWt",  # 15-char
-            ]
+            ],
         )
 
         result = normalize_sfid_series(series)
@@ -145,7 +145,7 @@ class TestNormalizeSfidSeries:
             [
                 " 001Hs000054S8kI ",  # With whitespace
                 "001Hs000054SAQtBBB",  # Clean 18-char
-            ]
+            ],
         )
 
         result = normalize_sfid_series(series)
@@ -162,7 +162,7 @@ class TestNormalizeSfidSeries:
                 "001Hs000054S8kI",
                 np.nan,
                 "001Hs000054SAQtBBB",
-            ]
+            ],
         )
 
         result = normalize_sfid_series(series)
@@ -185,7 +185,7 @@ class TestNormalizeSfidSeries:
                 "001Hs000054S8kI",  # Valid 15-char
                 "001Hs000054S8k",  # Invalid: 14-char
                 "001Hs000054SAQtBBB",  # Valid 18-char
-            ]
+            ],
         )
 
         with pytest.raises(ValueError, match="non 15/18-char Salesforce IDs"):
@@ -198,11 +198,11 @@ class TestNormalizeSfidSeries:
                 "001Hs000054S8kI",  # Valid 15-char
                 "001Hs000054S8k-",  # Invalid: contains hyphen
                 "001Hs000054SAQtBBB",  # Valid 18-char
-            ]
+            ],
         )
 
         with pytest.raises(
-            ValueError, match="sfid15 must contain only alphanumeric characters"
+            ValueError, match="sfid15 must contain only alphanumeric characters",
         ):
             normalize_sfid_series(series)
 

@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-
 from src.utils.cli_builder import (
     build_cli_command,
     get_available_config_files,
@@ -100,7 +99,7 @@ class TestValidateCliArgs:
             mock_exists.return_value = False
 
             errors = validate_cli_args(
-                input_file="nonexistent.csv", config="settings.yaml"
+                input_file="nonexistent.csv", config="settings.yaml",
             )
             assert "input_file" in errors
             assert "does not exist" in errors["input_file"]

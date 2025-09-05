@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""
-Setup script for company_junction package.
+"""Setup script for company_junction package.
 """
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="company_junction",
@@ -28,6 +27,6 @@ setup(
             "pandas-stubs>=2.0.0",
             "types-PyYAML>=6.0.0",
             "types-streamlit>=1.25.0",
-        ]
+        ],
     },
 )

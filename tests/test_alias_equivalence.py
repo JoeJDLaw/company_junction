@@ -1,6 +1,7 @@
+"""Test alias matching equivalence between legacy and optimized paths.
 """
-Test alias matching equivalence between legacy and optimized paths.
-"""
+
+from typing import Any, Dict
 
 import pandas as pd
 import pytest
@@ -50,7 +51,7 @@ def sample_data():
                 [],
                 [],
             ],
-        }
+        },
     )
 
     df_groups = pd.DataFrame(
@@ -63,7 +64,7 @@ def sample_data():
                 "group_2",
                 "group_3",
                 "group_4",
-            ]
+            ],
         },
         index=df_norm.index,
     )
@@ -118,10 +119,10 @@ def test_alias_equivalence_optimized_vs_legacy(sample_data, settings):
 
     # Sort both DataFrames for comparison (order-insensitive)
     df_optimized_sorted = df_optimized.sort_values(
-        ["record_id", "alias_text", "match_record_id"]
+        ["record_id", "alias_text", "match_record_id"],
     ).reset_index(drop=True)
     df_legacy_sorted = df_legacy.sort_values(
-        ["record_id", "alias_text", "match_record_id"]
+        ["record_id", "alias_text", "match_record_id"],
     ).reset_index(drop=True)
 
     # Compare DataFrames
@@ -146,7 +147,7 @@ def test_alias_equivalence_edge_cases():
             "suffix_class": ["corp", "inc"],
             "alias_candidates": [[], []],
             "alias_sources": [[], []],
-        }
+        },
     )
 
     df_groups = pd.DataFrame({"group_id": ["group_1", "group_2"]}, index=df_norm.index)
@@ -162,7 +163,7 @@ def test_alias_equivalence_edge_cases():
     df_norm = ensure_required_columns(df_norm, required_columns)
     df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
 
-    settings = {
+    settings: Dict[str, Any] = {
         "similarity": {"high": 85, "max_alias_pairs": 1000},
         "parallelism": {"workers": 2, "backend": "threading", "chunk_size": 100},
         "alias": {"optimize": True, "progress_interval_s": 0.1},
@@ -187,7 +188,7 @@ def test_alias_equivalence_mismatched_sources():
             "suffix_class": ["corp", "llc"],
             "alias_candidates": [["acme llc"], ["acme corp"]],
             "alias_sources": [["semicolon"], ["parentheses"]],
-        }
+        },
     )
 
     df_groups = pd.DataFrame({"group_id": ["group_1", "group_1"]}, index=df_norm.index)
@@ -203,7 +204,7 @@ def test_alias_equivalence_mismatched_sources():
     df_norm = ensure_required_columns(df_norm, required_columns)
     df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
 
-    settings = {
+    settings: Dict[str, Any] = {
         "similarity": {"high": 85, "max_alias_pairs": 1000},
         "parallelism": {"workers": 2, "backend": "threading", "chunk_size": 100},
         "alias": {"optimize": True, "progress_interval_s": 0.1},
@@ -218,10 +219,10 @@ def test_alias_equivalence_mismatched_sources():
 
     # Results should be equivalent
     df_optimized_sorted = df_optimized.sort_values(
-        ["record_id", "alias_text", "match_record_id"]
+        ["record_id", "alias_text", "match_record_id"],
     ).reset_index(drop=True)
     df_legacy_sorted = df_legacy.sort_values(
-        ["record_id", "alias_text", "match_record_id"]
+        ["record_id", "alias_text", "match_record_id"],
     ).reset_index(drop=True)
 
     pd.testing.assert_frame_equal(
@@ -239,11 +240,11 @@ def test_alias_equivalence_sequential_fallback():
             "suffix_class": ["corp", "corp", "industries"],
             "alias_candidates": [["acme corp"], ["acme corp"], []],
             "alias_sources": [["semicolon"], ["parentheses"], []],
-        }
+        },
     )
 
     df_groups = pd.DataFrame(
-        {"group_id": ["group_1", "group_1", "group_2"]}, index=df_norm.index
+        {"group_id": ["group_1", "group_1", "group_2"]}, index=df_norm.index,
     )
 
     # Ensure required columns are present

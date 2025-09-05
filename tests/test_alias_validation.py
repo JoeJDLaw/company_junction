@@ -1,5 +1,4 @@
-"""
-Test alias validation functionality.
+"""Test alias validation functionality.
 """
 
 import pandas as pd
@@ -50,7 +49,7 @@ def sample_data():
                 [],
                 [],
             ],
-        }
+        },
     )
 
     df_groups = pd.DataFrame(
@@ -63,7 +62,7 @@ def sample_data():
                 "group_2",
                 "group_3",
                 "group_4",
-            ]
+            ],
         },
         index=df_norm.index,
     )
@@ -116,10 +115,10 @@ def test_alias_equivalence_on_fixture(sample_data, settings):
     # Both should produce the same results
     pd.testing.assert_frame_equal(
         df_optimized.sort_values(
-            ["record_id", "alias_text", "match_record_id"]
+            ["record_id", "alias_text", "match_record_id"],
         ).reset_index(drop=True),
         df_legacy.sort_values(
-            ["record_id", "alias_text", "match_record_id"]
+            ["record_id", "alias_text", "match_record_id"],
         ).reset_index(drop=True),
         check_dtype=False,
     )
@@ -136,10 +135,10 @@ def test_alias_determinism_on_fixture(sample_data, settings):
     # Results should be identical
     pd.testing.assert_frame_equal(
         df_run1.sort_values(["record_id", "alias_text", "match_record_id"]).reset_index(
-            drop=True
+            drop=True,
         ),
         df_run2.sort_values(["record_id", "alias_text", "match_record_id"]).reset_index(
-            drop=True
+            drop=True,
         ),
         check_dtype=False,
     )
@@ -153,7 +152,7 @@ def test_edge_case_mismatched_sources():
             "suffix_class": ["corp", "inc"],
             "alias_candidates": [["acme corp"], ["beta inc", "beta industries"]],
             "alias_sources": [["semicolon"], ["semicolon"]],  # Mismatched length
-        }
+        },
     )
 
     df_groups = pd.DataFrame({"group_id": ["group_1", "group_2"]}, index=df_norm.index)
@@ -182,7 +181,7 @@ def test_edge_case_mismatched_sources():
 
 
 @pytest.mark.skip(
-    reason="TODO: Phase 1.26.1 - Temporarily skipped for QA efficiency, will re-enable after Phase 1.25.1"
+    reason="TODO: Phase 1.26.1 - Temporarily skipped for QA efficiency, will re-enable after Phase 1.25.1",
 )
 @pytest.mark.parametrize(
     "num_records",
@@ -193,7 +192,6 @@ def test_edge_case_mismatched_sources():
 )
 def test_large_bucket_warning(num_records):
     """Test that large first-token buckets trigger warnings."""
-
     # Create data with many records sharing the same first token
     records = []
     for i in range(num_records):  # Exceeds the 10k warning threshold
@@ -203,12 +201,12 @@ def test_large_bucket_warning(num_records):
                 "suffix_class": "corp",
                 "alias_candidates": [f"test company {i} corporation"],
                 "alias_sources": ["semicolon"],
-            }
+            },
         )
 
     df_norm = pd.DataFrame(records)
     df_groups = pd.DataFrame(
-        {"group_id": [f"group_{i}" for i in range(num_records)]}, index=df_norm.index
+        {"group_id": [f"group_{i}" for i in range(num_records)]}, index=df_norm.index,
     )
 
     # Ensure required columns are present

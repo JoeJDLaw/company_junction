@@ -4,6 +4,7 @@ import ast
 import os
 from pathlib import Path
 from typing import Set, Union
+
 import pytest
 
 
@@ -37,7 +38,7 @@ def find_destructive_functions() -> Set[str]:
             if file.endswith(".py"):
                 file_path = Path(root) / file
                 try:
-                    with open(file_path, "r") as f:
+                    with open(file_path) as f:
                         content = f.read()
 
                     # Parse AST to find function calls
@@ -53,7 +54,7 @@ def find_destructive_functions() -> Set[str]:
                                     # Check if this call is gated by a fuse
                                     if not is_gated_by_fuse(node, content):
                                         found_functions.add(
-                                            f"{file_path}:{node.lineno}:{func_name}"
+                                            f"{file_path}:{node.lineno}:{func_name}",
                                         )
                             elif isinstance(node.func, ast.Attribute):
                                 if isinstance(node.func.value, ast.Name):
@@ -67,7 +68,7 @@ def find_destructive_functions() -> Set[str]:
                                         # Check if this call is gated by a fuse
                                         if not is_gated_by_fuse(node, content):
                                             found_functions.add(
-                                                f"{file_path}:{node.lineno}:{full_name}"
+                                                f"{file_path}:{node.lineno}:{full_name}",
                                             )
 
                 except (SyntaxError, UnicodeDecodeError):
@@ -147,7 +148,7 @@ def find_direct_run_index_writes() -> Set[str]:
             if file.endswith(".py"):
                 file_path = Path(root) / file
                 try:
-                    with open(file_path, "r") as f:
+                    with open(file_path) as f:
                         content = f.read()
 
                     # Parse AST to find del statements
@@ -163,7 +164,7 @@ def find_direct_run_index_writes() -> Set[str]:
                                         # Check if this deletion is gated by a fuse
                                         if not is_gated_by_fuse(node, content):
                                             found_writes.add(
-                                                f"{file_path}:{node.lineno}:del run_index[...]"
+                                                f"{file_path}:{node.lineno}:del run_index[...]",
                                             )
 
                 except (SyntaxError, UnicodeDecodeError):
@@ -180,7 +181,7 @@ def check_maintenance_ui_copy() -> bool:
         return False
 
     try:
-        with open(maintenance_file, "r") as f:
+        with open(maintenance_file) as f:
             content = f.read()
 
         expected_copy = (
@@ -188,7 +189,7 @@ def check_maintenance_ui_copy() -> bool:
         )
         return expected_copy in content
 
-    except (IOError, UnicodeDecodeError):
+    except (OSError, UnicodeDecodeError):
         return False
 
 
@@ -200,13 +201,13 @@ def check_sidebar_placement() -> bool:
         return False
 
     try:
-        with open(maintenance_file, "r") as f:
+        with open(maintenance_file) as f:
             content = f.read()
 
         # Should use st.sidebar.subheader
         return "st.sidebar.subheader" in content
 
-    except (IOError, UnicodeDecodeError):
+    except (OSError, UnicodeDecodeError):
         return False
 
 
@@ -273,7 +274,7 @@ class TestReadOnlySafety:
         for config_file in config_files:
             if Path(config_file).exists():
                 try:
-                    with open(config_file, "r") as f:
+                    with open(config_file) as f:
                         content = f.read()
 
                     # Look for enabled destructive fuses
@@ -288,7 +289,7 @@ class TestReadOnlySafety:
                     ):
                         pytest.fail(f"Found enabled destructive fuse in {config_file}")
 
-                except (IOError, UnicodeDecodeError):
+                except (OSError, UnicodeDecodeError):
                     continue
 
     def test_no_destructive_ui_buttons(self) -> None:
@@ -304,7 +305,7 @@ class TestReadOnlySafety:
         for ui_file in ui_files:
             if Path(ui_file).exists():
                 try:
-                    with open(ui_file, "r") as f:
+                    with open(ui_file) as f:
                         content = f.read()
 
                     lines = content.split("\n")
@@ -326,8 +327,8 @@ class TestReadOnlySafety:
                                 pytest.fail(
                                     f"Found potentially destructive UI element in {ui_file}:{i}:\n"
                                     f"{line.strip()}\n"
-                                    f"All destructive actions must be gated behind Phase-1 fuses."
+                                    f"All destructive actions must be gated behind Phase-1 fuses.",
                                 )
 
-                except (IOError, UnicodeDecodeError):
+                except (OSError, UnicodeDecodeError):
                     continue

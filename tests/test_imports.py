@@ -1,5 +1,4 @@
-"""
-Test that all modules can be imported successfully.
+"""Test that all modules can be imported successfully.
 
 This test ensures that all modules in the project can be imported without errors,
 which helps catch import issues early.
@@ -25,7 +24,7 @@ def test_absolute_imports() -> None:
         "src.utils.state_utils",
         "src.utils.validation_utils",
         "src.utils.fragment_utils",  # Phase 1.18.3 addition
-        "src.utils.ui_helpers",
+        # "src.utils.ui_helpers",  # Deprecated - moved to deprecated/ folder
         "src.alias_matching",
         "src.cleaning",
         "src.disposition",
@@ -87,7 +86,7 @@ def test_utils_imports() -> None:
         "src.utils.state_utils",
         "src.utils.validation_utils",
         "src.utils.fragment_utils",  # Phase 1.18.3 addition
-        "src.utils.ui_helpers",
+        # "src.utils.ui_helpers",  # Deprecated - moved to deprecated/ folder
     ]
 
     for module_name in utils_modules:

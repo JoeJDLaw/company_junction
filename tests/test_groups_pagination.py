@@ -1,22 +1,24 @@
-"""
-Tests for groups pagination functionality (Phase 1.17.5).
+"""Tests for groups pagination functionality (Phase 1.17.5).
 
 This module tests the PyArrow-based pagination helpers and ensures
 stable sorting, proper cache key generation, and correct pagination limits.
 """
 
-import pyarrow as pa
-import tempfile
 import os
-from typing import Dict
+import tempfile
+from typing import Any, Dict, List
 
-from src.utils.ui_helpers import (
-    build_sort_expression,
-    get_groups_page_pyarrow,
-    build_cache_key,
-    apply_filters_pyarrow,
-    compute_group_stats_pyarrow,
-)
+import pyarrow as pa
+
+from src.utils.cache_keys import build_cache_key
+
+# Import from current modules where functions have been moved
+from src.utils.filtering import apply_filters_pyarrow, build_sort_expression
+from src.utils.group_pagination import get_groups_page_pyarrow
+from src.utils.group_stats import compute_group_stats
+
+# TODO: compute_group_stats was in deprecated ui_helpers module and may need to be reimplemented
+# from src.utils.ui_helpers import compute_group_stats
 
 
 class TestSortExpression:
@@ -118,10 +120,10 @@ class TestCacheKeyGeneration:
 class TestGroupStatsComputation:
     """Test group statistics computation."""
 
-    def test_compute_group_stats_pyarrow_basic(self) -> None:
+    def test_compute_group_stats_basic(self) -> None:
         """Test basic group stats computation."""
         # Create test data
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": ["group1", "group1", "group2", "group2", "group2"],
             "account_name": [
                 "Company A",
@@ -135,10 +137,11 @@ class TestGroupStatsComputation:
         }
 
         table = pa.Table.from_pydict(data)
-        stats_table = compute_group_stats_pyarrow(table)
+        df = table.to_pandas()
+        stats_table = compute_group_stats(df)
 
-        # Convert to pandas for easier testing
-        stats_df = stats_table.to_pandas()
+        # stats_table is already a pandas DataFrame
+        stats_df = stats_table
 
         assert len(stats_df) == 2  # Two groups
         assert "group1" in stats_df["group_id"].values
@@ -155,9 +158,9 @@ class TestGroupStatsComputation:
         assert group1_stats["max_score"] == 95.0
         assert group2_stats["max_score"] == 92.0
 
-    def test_compute_group_stats_pyarrow_primary_names(self) -> None:
+    def test_compute_group_stats_primary_names(self) -> None:
         """Test primary name extraction."""
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": ["group1", "group1"],
             "account_name": ["Primary Company", "Secondary Company"],
             "is_primary": [True, False],
@@ -165,15 +168,16 @@ class TestGroupStatsComputation:
         }
 
         table = pa.Table.from_pydict(data)
-        stats_table = compute_group_stats_pyarrow(table)
-        stats_df = stats_table.to_pandas()
+        df = table.to_pandas()
+        stats_table = compute_group_stats(df)
+        stats_df = stats_table
 
         group1_stats = stats_df[stats_df["group_id"] == "group1"].iloc[0]
         assert group1_stats["primary_name"] == "Primary Company"
 
-    def test_compute_group_stats_pyarrow_no_primary(self) -> None:
+    def test_compute_group_stats_no_primary(self) -> None:
         """Test handling when no primary record exists."""
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": ["group1", "group1"],
             "account_name": ["Company A", "Company B"],
             "is_primary": [False, False],
@@ -181,8 +185,9 @@ class TestGroupStatsComputation:
         }
 
         table = pa.Table.from_pydict(data)
-        stats_table = compute_group_stats_pyarrow(table)
-        stats_df = stats_table.to_pandas()
+        df = table.to_pandas()
+        stats_table = compute_group_stats(df)
+        stats_df = stats_table
 
         group1_stats = stats_df[stats_df["group_id"] == "group1"].iloc[0]
         assert group1_stats["primary_name"] == "Company A"  # First record
@@ -193,7 +198,7 @@ class TestFilterApplication:
 
     def test_apply_filters_pyarrow_disposition(self) -> None:
         """Test disposition filtering."""
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": ["group1", "group2", "group3"],
             "disposition": ["Keep", "Update", "Delete"],
             "weakest_edge_to_primary": [95.0, 85.0, 75.0],
@@ -210,7 +215,7 @@ class TestFilterApplication:
 
     def test_apply_filters_pyarrow_edge_strength(self) -> None:
         """Test edge strength filtering."""
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": ["group1", "group2", "group3"],
             "weakest_edge_to_primary": [95.0, 85.0, 75.0],
         }
@@ -226,13 +231,13 @@ class TestFilterApplication:
 
     def test_apply_filters_pyarrow_no_filters(self) -> None:
         """Test that no filters returns original table."""
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": ["group1", "group2"],
             "weakest_edge_to_primary": [95.0, 85.0],
         }
 
         table = pa.Table.from_pydict(data)
-        filters = {}
+        filters: Dict[str, Any] = {}
 
         filtered_table = apply_filters_pyarrow(table, filters)
         assert filtered_table.num_rows == table.num_rows
@@ -246,7 +251,7 @@ class TestPaginationLimits:
         # Create temporary parquet file with empty data
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create empty parquet file
-            empty_data = {
+            empty_data: Dict[str, list] = {
                 "group_id": [],
                 "account_name": [],
                 "is_primary": [],
@@ -262,25 +267,29 @@ class TestPaginationLimits:
                 return {"review_ready_parquet": parquet_path}
 
             # Patch the function
-            import src.utils.ui_helpers
+            import src.utils.artifact_management
 
-            original_get_artifact_paths = src.utils.ui_helpers.get_artifact_paths
-            src.utils.ui_helpers.get_artifact_paths = mock_get_artifact_paths
+            original_get_artifact_paths = (
+                src.utils.artifact_management.get_artifact_paths
+            )
+            src.utils.artifact_management.get_artifact_paths = mock_get_artifact_paths
 
             try:
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 1, 500, {}
+                    "test_run", "Group Size (Desc)", 1, 500, {},
                 )
 
                 assert page_groups == []
                 assert total_count == 0
             finally:
-                src.utils.ui_helpers.get_artifact_paths = original_get_artifact_paths
+                src.utils.artifact_management.get_artifact_paths = (
+                    original_get_artifact_paths
+                )
 
     def test_pagination_limits_page_bounds(self) -> None:
         """Test pagination with page bounds."""
         # Create test data with known number of groups
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": [f"group{i}" for i in range(10)],
             "account_name": [f"Company {i}" for i in range(10)],
             "is_primary": [True] + [False] * 9,
@@ -296,15 +305,17 @@ class TestPaginationLimits:
             def mock_get_artifact_paths(run_id: str) -> Dict[str, str]:
                 return {"review_ready_parquet": parquet_path}
 
-            import src.utils.ui_helpers
+            import src.utils.artifact_management
 
-            original_get_artifact_paths = src.utils.ui_helpers.get_artifact_paths
-            src.utils.ui_helpers.get_artifact_paths = mock_get_artifact_paths
+            original_get_artifact_paths = (
+                src.utils.artifact_management.get_artifact_paths
+            )
+            src.utils.artifact_management.get_artifact_paths = mock_get_artifact_paths
 
             try:
                 # Test first page
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 1, 5, {}
+                    "test_run", "Group Size (Desc)", 1, 5, {},
                 )
 
                 assert len(page_groups) == 5
@@ -312,7 +323,7 @@ class TestPaginationLimits:
 
                 # Test second page
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 2, 5, {}
+                    "test_run", "Group Size (Desc)", 2, 5, {},
                 )
 
                 assert len(page_groups) == 5
@@ -320,13 +331,15 @@ class TestPaginationLimits:
 
                 # Test page beyond bounds
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 3, 5, {}
+                    "test_run", "Group Size (Desc)", 3, 5, {},
                 )
 
                 assert page_groups == []
                 assert total_count == 10
             finally:
-                src.utils.ui_helpers.get_artifact_paths = original_get_artifact_paths
+                src.utils.artifact_management.get_artifact_paths = (
+                    original_get_artifact_paths
+                )
 
 
 class TestSortingStability:
@@ -335,7 +348,7 @@ class TestSortingStability:
     def test_sorting_stability_group_id_tiebreaker(self) -> None:
         """Test that group_id tiebreaker ensures stable sorting."""
         # Create test data with same values but different group_ids
-        data = {
+        data: Dict[str, List[Any]] = {
             "group_id": [
                 "group_b",
                 "group_b",
@@ -365,15 +378,17 @@ class TestSortingStability:
             def mock_get_artifact_paths(run_id: str) -> Dict[str, str]:
                 return {"review_ready_parquet": parquet_path}
 
-            import src.utils.ui_helpers
+            import src.utils.artifact_management
 
-            original_get_artifact_paths = src.utils.ui_helpers.get_artifact_paths
-            src.utils.ui_helpers.get_artifact_paths = mock_get_artifact_paths
+            original_get_artifact_paths = (
+                src.utils.artifact_management.get_artifact_paths
+            )
+            src.utils.artifact_management.get_artifact_paths = mock_get_artifact_paths
 
             try:
                 # Test ascending sort - should be stable by group_id
                 page_groups, _ = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Asc)", 1, 10, {}
+                    "test_run", "Group Size (Asc)", 1, 10, {},
                 )
 
                 # Should be sorted by group_id (ascending) as tiebreaker
@@ -382,14 +397,16 @@ class TestSortingStability:
 
                 # Test descending sort - should still be stable by group_id
                 page_groups, _ = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 1, 10, {}
+                    "test_run", "Group Size (Desc)", 1, 10, {},
                 )
 
                 # Should still be sorted by group_id (ascending) as tiebreaker
                 group_ids = [group["group_id"] for group in page_groups]
                 assert group_ids == ["group_a", "group_b", "group_c"]
             finally:
-                src.utils.ui_helpers.get_artifact_paths = original_get_artifact_paths
+                src.utils.artifact_management.get_artifact_paths = (
+                    original_get_artifact_paths
+                )
 
 
 class TestCacheKeyInvalidation:

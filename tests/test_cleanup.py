@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
-"""
-Tests for the simplified cleanup tool.
+"""Tests for the simplified cleanup tool.
 
 Tests deterministic discovery, type filtering, age filtering, prod-sweep mode,
 pinned run protection, latest symlink protection, and JSON output.
 """
 
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-import pytest
 import sys
+from pathlib import Path
+from typing import Any, Dict
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tools.cleanup_test_artifacts import (
     CleanupPlan,
-    discover_candidates,
-    get_run_age_days,
     detect_run_type,
+    discover_candidates,
     get_latest_run_id,
+    get_run_age_days,
 )
 
 
@@ -128,13 +129,13 @@ class TestRunTypeDetection:
         assert detect_run_type(run_data) == "dev"
 
         # No input paths
-        run_data = {}
-        assert detect_run_type(run_data) == "dev"
+        empty_run_data: Dict[str, Any] = {}
+        assert detect_run_type(empty_run_data) == "dev"
 
     def test_detect_run_type_edge_cases(self):
         """Test edge cases in run type detection."""
         # Empty input paths
-        run_data = {"input_paths": []}
+        run_data: Dict[str, Any] = {"input_paths": []}
         assert detect_run_type(run_data) == "dev"
 
         # Non-string input paths
@@ -161,7 +162,7 @@ class TestAgeCalculation:
     def test_get_run_age_days_invalid(self):
         """Test age calculation with invalid timestamps."""
         # No timestamp
-        run_data = {}
+        run_data: Dict[str, Any] = {}
         age = get_run_age_days(run_data)
         assert age == 999
 
@@ -408,7 +409,7 @@ class TestIntegration:
         assert plan.is_protected("test_recent")  # Latest
         assert plan.is_protected("dev_recent")  # Pinned
         assert not plan.is_protected(
-            "prod_run"
+            "prod_run",
         )  # prod_run is detected as "dev" type, not protected
         assert not plan.is_protected("test_old")  # Not protected
 

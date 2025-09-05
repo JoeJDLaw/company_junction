@@ -1,6 +1,6 @@
 """Tests for run maintenance UI confirmation logic."""
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 import pytest
 

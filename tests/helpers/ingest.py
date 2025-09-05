@@ -1,18 +1,18 @@
-"""
-Test helper utilities for data ingestion and normalization.
+"""Test helper utilities for data ingestion and normalization.
 
 This module provides utilities to normalize test data to match the expected
 internal schema used by the pipeline.
 """
 
-import pandas as pd
 from typing import Dict
-from src.utils.schema_utils import GROUP_ID, ACCOUNT_ID, ACCOUNT_NAME, DISPOSITION
+
+import pandas as pd
+
+from src.utils.schema_utils import ACCOUNT_ID, ACCOUNT_NAME, DISPOSITION, GROUP_ID
 
 
 def canonicalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize CSV-style column names to canonical internal names.
+    """Normalize CSV-style column names to canonical internal names.
 
     Maps common CSV column variations to the internal schema expected by
     the pipeline components.
@@ -22,6 +22,7 @@ def canonicalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     Returns:
         DataFrame with canonical column names
+
     """
     # Column mapping from CSV-style to canonical internal names
     column_mapping = {
@@ -89,8 +90,7 @@ def canonicalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.DataFrame:
-    """
-    Ensure DataFrame has required columns, adding defaults if missing.
+    """Ensure DataFrame has required columns, adding defaults if missing.
 
     Args:
         df: DataFrame to check
@@ -98,6 +98,7 @@ def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.Data
 
     Returns:
         DataFrame with all required columns present
+
     """
     df_ensured = df.copy()
 
@@ -110,13 +111,11 @@ def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.Data
                 df_ensured[col] = [f"group_{i}" for i in range(len(df_ensured))]
             elif col == "name_core":
                 df_ensured[col] = df_ensured.get(
-                    ACCOUNT_NAME, ["test_name"] * len(df_ensured)
+                    ACCOUNT_NAME, ["test_name"] * len(df_ensured),
                 )
             elif col == "suffix_class":
                 df_ensured[col] = ["corp"] * len(df_ensured)
-            elif col == "alias_candidates":
-                df_ensured[col] = [[] for _ in range(len(df_ensured))]
-            elif col == "alias_sources":
+            elif col == "alias_candidates" or col == "alias_sources":
                 df_ensured[col] = [[] for _ in range(len(df_ensured))]
             else:
                 df_ensured[col] = None
@@ -125,10 +124,9 @@ def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.Data
 
 
 def create_test_fixture_data(
-    base_data: Dict[str, list], required_columns: list = None
+    base_data: Dict[str, list], required_columns: list | None = None,
 ) -> pd.DataFrame:
-    """
-    Create a test fixture DataFrame with canonical column names.
+    """Create a test fixture DataFrame with canonical column names.
 
     Args:
         base_data: Dictionary of column data
@@ -136,6 +134,7 @@ def create_test_fixture_data(
 
     Returns:
         DataFrame with canonical column names and required columns
+
     """
     df = pd.DataFrame(base_data)
     df = canonicalize_columns(df)

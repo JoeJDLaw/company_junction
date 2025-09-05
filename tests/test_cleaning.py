@@ -1,5 +1,4 @@
-"""
-Unit tests for the cleaning module.
+"""Unit tests for the cleaning module.
 
 This module tests:
 - Data loading functionality
@@ -8,19 +7,20 @@ This module tests:
 - Data validation
 """
 
-import unittest
-import pandas as pd
-import tempfile
 import os
 import sys
+import tempfile
+import unittest
 from pathlib import Path
+
+import pandas as pd
 
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.cleaning import load_salesforce_data, validate_required_columns
-from src.utils.io_utils import load_settings
 from src.normalize import normalize_dataframe
+from src.utils.io_utils import load_settings
 
 
 class TestCleaning(unittest.TestCase):
@@ -49,13 +49,13 @@ class TestCleaning(unittest.TestCase):
                     "2021-01-03",
                     "2021-01-04",
                 ],
-            }
+            },
         )
 
     def test_load_salesforce_data_csv(self) -> None:
         """Test loading CSV data."""
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False
+            mode="w", suffix=".csv", delete=False,
         ) as tmp_file:
             self.sample_data.to_csv(tmp_file.name, index=False)
             tmp_path = tmp_file.name
@@ -112,7 +112,7 @@ class TestCleaning(unittest.TestCase):
                 "Account ID": range(10),
                 "Relationship": ["Customer"] * 10,
                 "Created Date": ["2023-01-01"] * 10,
-            }
+            },
         )
 
         # Run the pipeline up to filtering
@@ -144,7 +144,7 @@ class TestCleaning(unittest.TestCase):
             .apply(
                 lambda x: not any(
                     re.match(pattern, x) for pattern in problematic_patterns
-                )
+                ),
             )
         )
         df_norm = df_norm[mask].copy()
@@ -172,10 +172,13 @@ class TestCleaning(unittest.TestCase):
 
     def test_performance_logging_context_manager(self) -> None:
         """Test that performance logging context manager works."""
-        from src.utils.perf_utils import log_perf
+        import logging
         import time
 
-        with log_perf("test_operation"):
+        from src.utils.perf_utils import time_stage
+
+        logger = logging.getLogger(__name__)
+        with time_stage("test_operation", logger):
             time.sleep(0.01)  # Small delay to ensure timing is captured
 
         # If we get here without error, the context manager worked

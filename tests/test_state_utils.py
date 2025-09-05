@@ -1,34 +1,34 @@
-"""
-Tests for src.utils.state_utils module.
+"""Tests for src.utils.state_utils module.
 
 This module tests the session state utilities for Phase 1.18.1 refactor.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from src.utils.state_utils import (
-    PageState,
+    AliasesState,
     BackendState,
+    CacheState,
     DetailsState,
     ExplainState,
-    AliasesState,
     FiltersState,
-    CacheState,
-    get_page_state,
-    set_page_state,
-    get_backend_state,
-    set_backend_state,
-    get_details_state,
-    set_details_state,
-    get_explain_state,
-    set_explain_state,
-    get_aliases_state,
-    set_aliases_state,
-    get_filters_state,
-    set_filters_state,
-    get_cache_state,
-    set_cache_state,
-    migrate_legacy_keys,
+    PageState,
     clear_legacy_keys,
+    get_aliases_state,
+    get_backend_state,
+    get_cache_state,
+    get_details_state,
+    get_explain_state,
+    get_filters_state,
+    get_page_state,
+    migrate_legacy_keys,
+    set_aliases_state,
+    set_backend_state,
+    set_cache_state,
+    set_details_state,
+    set_explain_state,
+    set_filters_state,
+    set_page_state,
 )
 
 

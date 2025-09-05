@@ -1,12 +1,11 @@
-"""
-Session state utilities for Phase 1.18.1 refactor.
+"""Session state utilities for Phase 1.18.1 refactor.
 
 This module provides typed helpers for managing namespaced session state keys
 without importing Streamlit directly. It accepts dict-like objects for flexibility.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -29,13 +28,13 @@ class DetailsState:
     """Group details state."""
 
     requested: Dict[Tuple[str, str], bool] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # (run_id, group_id) -> bool
     loaded: Dict[Tuple[str, str], bool] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # (run_id, group_id) -> bool
     data: Dict[Tuple[str, str], Dict[str, Any]] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # (run_id, group_id) -> data
 
 
@@ -44,10 +43,10 @@ class ExplainState:
     """Explain metadata state."""
 
     requested: Dict[Tuple[str, str], bool] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # (run_id, group_id) -> bool
     data: Dict[Tuple[str, str], Any] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # (run_id, group_id) -> data
 
 
@@ -56,10 +55,10 @@ class AliasesState:
     """Alias cross-references state."""
 
     requested: Dict[Tuple[str, str], bool] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # (run_id, group_id) -> bool
     data: Dict[Tuple[str, str], List[Dict[str, Any]]] = field(
-        default_factory=dict
+        default_factory=dict,
     )  # (run_id, group_id) -> data
 
 
@@ -80,7 +79,7 @@ class CacheState:
 def get_page_state(state: Any) -> PageState:
     """Get page state from session state."""
     return PageState(
-        number=state.get("cj.page.number", 1), size=state.get("cj.page.size", 50)
+        number=state.get("cj.page.number", 1), size=state.get("cj.page.size", 50),
     )
 
 
@@ -155,7 +154,7 @@ def set_filters_state(state: Any, filters_state: FiltersState) -> None:
 def get_cache_state(state: Any) -> CacheState:
     """Get cache state from session state."""
     return CacheState(
-        clear_requested_for_run_id=state.get("cj.cache.clear_requested_for_run_id")
+        clear_requested_for_run_id=state.get("cj.cache.clear_requested_for_run_id"),
     )
 
 

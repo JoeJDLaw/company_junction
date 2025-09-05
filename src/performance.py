@@ -1,20 +1,23 @@
-"""
-Performance monitoring and summary generation for the pipeline.
+"""Performance monitoring and summary generation for the pipeline.
 
 Provides functions to track timing, memory usage, and generate
 comprehensive performance summaries for pipeline runs.
 """
 
 import json
-import tracemalloc
-from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
-import pandas as pd
 import logging
 import subprocess
+import tracemalloc
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, List, Optional
+
+import pandas as pd
 
 try:
-    from src.utils.hash_utils import stable_schema_hash
+    from src.utils.hash_utils import stable_schema_hash as _stable_schema_hash
+
+    HashFunc = Callable[[Dict[str, Any]], str]
+    stable_schema_hash: Optional[HashFunc] = _stable_schema_hash
 except ImportError:
     stable_schema_hash = None
 
@@ -35,7 +38,7 @@ class PerformanceTracker:
     def start_run(self, config_dict: Dict[str, Any]) -> None:
         """Start tracking performance for a pipeline run."""
         self.start_time = datetime.now(timezone.utc)
-        if stable_schema_hash:
+        if stable_schema_hash is not None:
             self.config_hash = stable_schema_hash(config_dict)
         else:
             self.config_hash = "unknown"
@@ -59,7 +62,7 @@ class PerformanceTracker:
         """Get current git commit hash."""
         try:
             result = subprocess.run(
-                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
             )
             return result.stdout.strip()[:8]  # Return first 8 chars
         except (subprocess.CalledProcessError, FileNotFoundError):
@@ -72,8 +75,7 @@ class PerformanceTracker:
         group_stats: Dict[str, Any],
         block_stats: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """
-        Generate comprehensive performance summary.
+        """Generate comprehensive performance summary.
 
         Args:
             dataset_stats: Dict with 'rows_in', 'rows_cleaned'
@@ -83,6 +85,7 @@ class PerformanceTracker:
 
         Returns:
             Performance summary dict matching the required schema
+
         """
         if not self.start_time or not self.end_time:
             raise ValueError("Performance tracking not started/ended")
@@ -107,7 +110,7 @@ class PerformanceTracker:
             "groups": {
                 "count": group_stats.get("count", 0),
                 "size_histogram": group_stats.get(
-                    "size_histogram", {"1": 0, "2": 0, "3": 0, "4_plus": 0}
+                    "size_histogram", {"1": 0, "2": 0, "3": 0, "4_plus": 0},
                 ),
                 "max_group_size": group_stats.get("max_group_size", 0),
             },
@@ -129,14 +132,14 @@ class PerformanceTracker:
 
 
 def save_performance_summary(
-    summary: Dict[str, Any], output_path: str = "data/processed/perf_summary.json"
+    summary: Dict[str, Any], output_path: str = "data/processed/perf_summary.json",
 ) -> None:
-    """
-    Save performance summary to JSON file.
+    """Save performance summary to JSON file.
 
     Args:
         summary: Performance summary dict
         output_path: Output file path
+
     """
     try:
         with open(output_path, "w") as f:
@@ -148,14 +151,14 @@ def save_performance_summary(
 
 
 def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
-    """
-    Compute group size histogram from groups dataframe.
+    """Compute group size histogram from groups dataframe.
 
     Args:
         groups_df: DataFrame with group information
 
     Returns:
         Dict with size histogram
+
     """
     if groups_df.empty:
         return {"1": 0, "2": 0, "3": 0, "4_plus": 0}
@@ -184,10 +187,9 @@ def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
 
 
 def compute_block_top_tokens(
-    blocks_df: pd.DataFrame, top_n: int = 10
+    blocks_df: pd.DataFrame, top_n: int = 10,
 ) -> List[Dict[str, Any]]:
-    """
-    Compute top tokens from blocking statistics.
+    """Compute top tokens from blocking statistics.
 
     Args:
         blocks_df: DataFrame with block information
@@ -195,6 +197,7 @@ def compute_block_top_tokens(
 
     Returns:
         List of token statistics
+
     """
     if blocks_df.empty:
         return []

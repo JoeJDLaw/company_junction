@@ -1,5 +1,4 @@
-"""
-Manual data management for Phase 1.7.
+"""Manual data management for Phase 1.7.
 
 This module handles manual overrides and blacklist management
 with JSON persistence and audit trails.
@@ -8,8 +7,10 @@ with JSON persistence and audit trails.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 import streamlit as st
+
 from src.utils.schema_utils import ACCOUNT_ID, ACCOUNT_NAME
 
 
@@ -29,13 +30,12 @@ def load_manual_dispositions() -> List[Dict[str, Any]]:
         return []
 
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             data = json.load(f)
             if isinstance(data, list):
                 return data
-            else:
-                st.error("Invalid manual dispositions format")
-                return []
+            st.error("Invalid manual dispositions format")
+            return []
     except Exception as e:
         st.error(f"Error loading manual dispositions: {e}")
         return []
@@ -97,14 +97,13 @@ def load_manual_blacklist() -> List[str]:
         return []
 
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             data = json.load(f)
             terms = data.get("terms", [])
             if isinstance(terms, list):
                 return terms
-            else:
-                st.error("Invalid blacklist format")
-                return []
+            st.error("Invalid blacklist format")
+            return []
     except Exception as e:
         st.error(f"Error loading manual blacklist: {e}")
         return []

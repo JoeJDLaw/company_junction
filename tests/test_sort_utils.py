@@ -1,13 +1,12 @@
-"""
-Tests for src.utils.sort_utils module.
+"""Tests for src.utils.sort_utils module.
 
 This module tests the sort utilities for Phase 1.18.1 refactor.
 """
 
 from src.utils.sort_utils import (
+    build_order_by_clause,
     build_stable_sort_key,
     coalesce_primary_name,
-    build_order_by_clause,
     validate_sort_key,
 )
 

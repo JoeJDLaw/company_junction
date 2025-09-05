@@ -1,24 +1,23 @@
-"""
-Tests for schema resolver functionality.
+"""Tests for schema resolver functionality.
 
 Tests the dynamic schema resolution with CLI → template → synonym → heuristic fallback.
 """
 
-import pytest
 import pandas as pd
+import pytest
 
 from src.utils.schema_utils import (
-    resolve_schema,
-    save_schema_mapping,
-    load_schema_mapping,
     _apply_cli_overrides,
-    _match_filename_template,
-    _match_synonyms,
     _apply_heuristics,
     _find_best_similarity_match,
-    _find_id_columns,
     _find_date_columns,
+    _find_id_columns,
+    _match_filename_template,
+    _match_synonyms,
     _validate_required_columns,
+    load_schema_mapping,
+    resolve_schema,
+    save_schema_mapping,
 )
 
 
@@ -33,7 +32,7 @@ class TestSchemaResolver:
                 "Account ID": ["001", "002"],
                 "Created Date": ["2023-01-01", "2023-01-02"],
                 "Relationship": ["Customer", "Partner"],
-            }
+            },
         )
 
         self.settings = {
@@ -52,9 +51,9 @@ class TestSchemaResolver:
                             "account_id": ["Account ID"],
                             "created_date": ["Created Date"],
                         },
-                    }
+                    },
                 ],
-            }
+            },
         }
 
     def test_resolve_schema_cli_overrides(self):
@@ -67,11 +66,11 @@ class TestSchemaResolver:
                 "Company": ["Company A", "Company B"],
                 "Account ID": ["001", "002"],
                 "Created Date": ["2023-01-01", "2023-01-02"],
-            }
+            },
         )
 
         mapping = resolve_schema(
-            df_with_company, self.settings, cli_overrides=cli_overrides
+            df_with_company, self.settings, cli_overrides=cli_overrides,
         )
 
         assert mapping["account_name"] == "Company"
@@ -81,7 +80,7 @@ class TestSchemaResolver:
     def test_resolve_schema_template_matching(self):
         """Test filename template matching."""
         mapping = resolve_schema(
-            self.sample_df, self.settings, input_filename="company_junction_test.csv"
+            self.sample_df, self.settings, input_filename="company_junction_test.csv",
         )
 
         assert mapping["account_name"] == "Account Name"
@@ -96,7 +95,7 @@ class TestSchemaResolver:
                 "Company": ["Company A", "Company B"],
                 "ID": ["001", "002"],
                 "Create Date": ["2023-01-01", "2023-01-02"],
-            }
+            },
         )
 
         mapping = resolve_schema(df_alt, self.settings)
@@ -113,7 +112,7 @@ class TestSchemaResolver:
                 "Business Name": ["Company A", "Company B"],
                 "Identifier": ["001", "002"],
                 "Start Date": ["2023-01-01", "2023-01-02"],
-            }
+            },
         )
 
         mapping = resolve_schema(df_unknown, self.settings)
@@ -132,11 +131,11 @@ class TestSchemaResolver:
             {
                 "ID": ["001", "002"],
                 "Date": ["2023-01-01", "2023-01-02"],
-            }
+            },
         )
 
         with pytest.raises(
-            ValueError, match="Required 'account_name' column not found"
+            ValueError, match="Required 'account_name' column not found",
         ):
             resolve_schema(df_no_name, self.settings)
 
@@ -146,7 +145,7 @@ class TestSchemaResolver:
             {
                 "ACCOUNT NAME": ["Company A", "Company B"],
                 "account id": ["001", "002"],
-            }
+            },
         )
 
         mapping = resolve_schema(df_mixed_case, self.settings)
@@ -163,7 +162,7 @@ class TestSchemaResolver:
             {
                 "Company": ["Company A", "Company B"],
                 "ID": ["001", "002"],
-            }
+            },
         )
 
         mapping = _apply_cli_overrides(df_with_overrides, cli_overrides)
@@ -183,7 +182,7 @@ class TestSchemaResolver:
     def test_match_filename_template(self):
         """Test filename template matching."""
         mapping = _match_filename_template(
-            self.sample_df, "company_junction_test.csv", self.settings
+            self.sample_df, "company_junction_test.csv", self.settings,
         )
 
         assert mapping is not None
@@ -193,7 +192,7 @@ class TestSchemaResolver:
     def test_match_filename_template_no_match(self):
         """Test filename template with no match."""
         mapping = _match_filename_template(
-            self.sample_df, "other_file.csv", self.settings
+            self.sample_df, "other_file.csv", self.settings,
         )
 
         assert mapping is None
@@ -217,7 +216,7 @@ class TestSchemaResolver:
 
     def test_build_mapping_from_aliases(self):
         """Test building mapping from aliases configuration."""
-        aliases = {
+        _aliases = {
             "account_name": ["Company", "Account Name"],
             "account_id": ["ID", "Account ID"],
         }
@@ -235,7 +234,7 @@ class TestSchemaResolver:
                 "Business Name": ["Company A", "Company B"],
                 "Identifier": ["001", "002"],
                 "Start Date": ["2023-01-01", "2023-01-02"],
-            }
+            },
         )
 
         mapping = _apply_heuristics(df_heuristic, self.settings)
@@ -253,7 +252,7 @@ class TestSchemaResolver:
         target_terms = ["name", "company"]
 
         best_match = _find_best_similarity_match(
-            available_columns, target_terms, threshold=80
+            available_columns, target_terms, threshold=80,
         )
 
         assert best_match in available_columns
@@ -265,7 +264,7 @@ class TestSchemaResolver:
                 "ID": ["001", "002"],
                 "Account ID": ["003", "004"],
                 "Name": ["A", "B"],
-            }
+            },
         )
 
         id_columns = _find_id_columns(df_with_ids, ["ID", "Account ID", "Name"])
@@ -284,11 +283,11 @@ class TestSchemaResolver:
                 "Created Date": ["2023-01-01", "2023-01-02"],
                 "Start Date": ["2023-01-01", "2023-01-02"],
                 "Name": ["A", "B"],
-            }
+            },
         )
 
         date_columns = _find_date_columns(
-            df_with_dates, ["Created Date", "Start Date", "Name"]
+            df_with_dates, ["Created Date", "Start Date", "Name"],
         )
 
         assert "Created Date" in date_columns
@@ -354,7 +353,7 @@ class TestSchemaResolver:
                 "Company": ["A", "B"],
                 "ID": ["001", "002"],
                 "Date": ["2023-01-01", "2023-01-02"],
-            }
+            },
         )
 
         # Run multiple times

@@ -1,144 +1,202 @@
+"""Tests for similarity scoring fixes and enhanced normalization.
+
+These tests verify that the enhanced normalization correctly handles
+retail brand variants like "99 Cents Only Stores" vs "99 Cents Store".
 """
-Test file to verify the similarity fix works correctly.
-Tests the canonical scorer and ensures bulk and parallel paths produce identical results.
-"""
+
+import sys
+from pathlib import Path
 
 import pytest
-import pandas as pd
-from src.similarity import compute_score_components, _compute_similarity_scores_bulk, _compute_similarity_scores_parallel
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from src.normalize import (
+    enhance_name_core,
+    get_enhanced_tokens_for_jaccard,
+    normalize_name,
+)
+from src.similarity.scoring import compute_score_components
 
 
-def test_compute_score_components_golden():
-    """Test the canonical scorer with known input/output pairs."""
-    
-    # Test case 1: Identical names
-    result1 = compute_score_components(
-        "apple inc", "apple inc", "INC", "INC", 
-        {"num_style_mismatch": 5, "suffix_mismatch": 25}
-    )
-    
-    assert result1["score"] == 100
-    assert result1["ratio_name"] == 100
-    assert result1["ratio_set"] == 100
-    assert result1["jaccard"] == 1.0
-    assert result1["num_style_match"] is True
-    assert result1["suffix_match"] is True
-    assert result1["base_score"] == 100.0
-    
-    # Test case 2: Similar names with penalties
-    result2 = compute_score_components(
-        "apple inc", "apple corp", "INC", "CORP", 
-        {"num_style_mismatch": 5, "suffix_mismatch": 25}
-    )
-    
-    assert result2["score"] < 100  # Should be penalized
-    assert result2["suffix_match"] is False
-    assert result2["base_score"] < 100.0
-    
-    # Test case 3: Numeric style mismatch penalty
-    result3 = compute_score_components(
-        "company 123 456", "company 789 012", "NONE", "NONE",
-        {"num_style_mismatch": 5, "suffix_mismatch": 25}
-    )
-    
-    # Should have numeric style penalty applied (different numeric patterns)
-    assert result3["num_style_match"] is False
-    assert result3["base_score"] < result3["ratio_name"] * 0.45 + result3["ratio_set"] * 0.35 + result3["jaccard"] * 20.0
-    
-    # Test case 4: Punctuation mismatch penalty (when enabled)
-    result4 = compute_score_components(
-        "company, inc", "company inc", "INC", "INC",
-        {"num_style_mismatch": 5, "suffix_mismatch": 25, "punctuation_mismatch": 3},
-        punctuation_mismatch=True
-    )
-    
-    # Should have punctuation penalty applied
-    assert result4["punctuation_mismatch"] is True
-    assert result4["base_score"] < result4["ratio_name"] * 0.45 + result4["ratio_set"] * 0.35 + result4["jaccard"] * 20.0
+class TestSimilarityFix:
+    """Test cases for similarity scoring fixes."""
 
+    def test_99_cents_grouping_with_matching_suffixes(self):
+        """Test that 99 Cents variants group when suffixes match."""
+        name_a = "99 Cents Only Stores LLC"
+        name_b = "99 Cents Store LLC"
 
-def test_bulk_survivors_never_exceed_input():
-    """Regression test: ensure bulk survivors count never exceeds input pairs."""
-    
-    # Create test data
-    df = pd.DataFrame({
-        "name_core": ["apple inc", "apple corp", "microsoft", "google"],
-        "suffix_class": ["INC", "CORP", "NONE", "NONE"],
-        "account_id": ["001", "002", "003", "004"]
-    })
-    
-    # Test with different gate cutoffs
-    candidate_pairs = [(0, 1), (2, 3)]  # 2 pairs
-    
-    penalties = {"num_style_mismatch": 5, "suffix_mismatch": 25}
-    
-    # Test bulk scoring
-    results = _compute_similarity_scores_bulk(
-        df, candidate_pairs, penalties, gate_cutoff=72
-    )
-    
-    # Critical assertion: survivors should never exceed input pairs
-    assert len(results) <= len(candidate_pairs), f"Survivors ({len(results)}) exceeded input pairs ({len(candidate_pairs)})"
-    
-    # Log the actual counts for debugging
-    print(f"Input pairs: {len(candidate_pairs)}")
-    print(f"Survivors: {len(results)}")
-    print(f"Survival rate: {len(results)/len(candidate_pairs)*100:.1f}%")
+        # Normalize names
+        norm_a = normalize_name(name_a)
+        norm_b = normalize_name(name_b)
 
+        # Test enhanced normalization
+        enhanced_a, weak_a = enhance_name_core(norm_a.name_core)
+        enhanced_b, weak_b = enhance_name_core(norm_b.name_core)
 
-def test_bulk_and_parallel_equivalence():
-    """Test that bulk and parallel paths produce identical scores for the same pairs."""
-    
-    # Create test data
-    df = pd.DataFrame({
-        "name_core": ["apple inc", "apple corp", "microsoft", "google"],
-        "suffix_class": ["INC", "CORP", "NONE", "NONE"],
-        "account_id": ["001", "002", "003", "004"]
-    })
-    
-    candidate_pairs = [(0, 1), (2, 3)]
-    penalties = {"num_style_mismatch": 5, "suffix_mismatch": 25}
-    
-    # Test bulk scoring (applies gate cutoff)
-    bulk_results = _compute_similarity_scores_bulk(
-        df, candidate_pairs, penalties, gate_cutoff=72
-    )
-    
-    # Test parallel scoring (scores all pairs, no gate)
-    parallel_results = _compute_similarity_scores_parallel(
-        df, candidate_pairs, penalties, parallel_executor=None
-    )
-    
-    # Bulk applies gate, parallel scores all - so parallel should have more results
-    assert len(parallel_results) >= len(bulk_results), f"Parallel should score all pairs: {len(parallel_results)} vs bulk survivors: {len(bulk_results)}"
-    
-    # For pairs that passed the gate in bulk, find corresponding scores in parallel
-    # and verify they're identical
-    for bulk_result in bulk_results:
-        # Find matching pair in parallel results
-        matching_parallel = None
-        for parallel_result in parallel_results:
-            if (parallel_result["id_a"] == bulk_result["id_a"] and 
-                parallel_result["id_b"] == bulk_result["id_b"]):
-                matching_parallel = parallel_result
-                break
-        
-        assert matching_parallel is not None, f"Could not find matching pair for {bulk_result['id_a']} - {bulk_result['id_b']}"
-        
-        # Scores should be identical
-        assert bulk_result["score"] == matching_parallel["score"], f"Score mismatch: {bulk_result['score']} vs {matching_parallel['score']}"
-        assert bulk_result["ratio_name"] == matching_parallel["ratio_name"]
-        assert bulk_result["ratio_set"] == matching_parallel["ratio_set"]
-        assert bulk_result["jaccard"] == matching_parallel["jaccard"]
-        assert bulk_result["num_style_match"] == matching_parallel["num_style_match"]
-        assert bulk_result["suffix_match"] == matching_parallel["suffix_match"]
-    
-    print(f"✅ Equivalence test passed: {len(bulk_results)} bulk survivors match {len(parallel_results)} parallel results")
+        # Verify enhancements
+        assert enhanced_a == "99 cents only store"  # stores -> store
+        assert enhanced_b == "99 cents store"
+        assert weak_a == {"only"}  # "only" is weak token
+        assert weak_b == set()
+
+        # Test Jaccard tokens (excluding weak tokens)
+        tokens_a = get_enhanced_tokens_for_jaccard(norm_a.name_core)
+        tokens_b = get_enhanced_tokens_for_jaccard(norm_b.name_core)
+
+        assert tokens_a == {"99", "cents", "store"}
+        assert tokens_b == {"99", "cents", "store"}
+        assert tokens_a == tokens_b  # Perfect Jaccard match
+
+        # Test scoring
+        result = compute_score_components(
+            norm_a.name_core,
+            norm_b.name_core,
+            norm_a.suffix_class,
+            norm_b.suffix_class,
+            {"num_style_mismatch": 5, "suffix_mismatch": 25, "punctuation_mismatch": 3},
+        )
+
+        # Should score >= 84 (medium threshold) due to enhanced normalization
+        assert result["score"] >= 84, f"Score {result['score']} should be >= 84"
+        assert result["jaccard"] == 1.0, "Jaccard should be 1.0 (perfect match)"
+
+    def test_99_cents_grouping_with_different_suffixes(self):
+        """Test that 99 Cents variants still group with different suffixes if score is high enough."""
+        name_a = "99 Cents Only Stores LLC"
+        name_b = "99 Cents Store Inc"
+
+        # Normalize names
+        norm_a = normalize_name(name_a)
+        norm_b = normalize_name(name_b)
+
+        # Test scoring with suffix mismatch penalty
+        result = compute_score_components(
+            norm_a.name_core,
+            norm_b.name_core,
+            norm_a.suffix_class,
+            norm_b.suffix_class,
+            {"num_style_mismatch": 5, "suffix_mismatch": 25, "punctuation_mismatch": 3},
+        )
+
+        # Should still score reasonably high despite suffix penalty
+        assert result["score"] >= 65, f"Score {result['score']} should be >= 65"
+        assert result["jaccard"] == 1.0, "Jaccard should be 1.0 (perfect match)"
+
+    def test_7_eleven_variants_remain_high(self):
+        """Test that 7-Eleven variants maintain high scores."""
+        name_a = "7-Eleven Store Inc"
+        name_b = "7 Eleven Inc"
+
+        # Normalize names
+        norm_a = normalize_name(name_a)
+        norm_b = normalize_name(name_b)
+
+        # Test scoring
+        result = compute_score_components(
+            norm_a.name_core,
+            norm_b.name_core,
+            norm_a.suffix_class,
+            norm_b.suffix_class,
+            {"num_style_mismatch": 5, "suffix_mismatch": 25, "punctuation_mismatch": 3},
+        )
+
+        # Should maintain reasonable score for 7-Eleven variants with matching suffixes
+        assert result["score"] >= 80, f"Score {result['score']} should be >= 80"
+
+    def test_enhanced_normalization_features(self):
+        """Test individual enhanced normalization features."""
+        # Test plural to singular mapping
+        enhanced, weak = enhance_name_core("test stores services")
+        assert enhanced == "test store service"
+
+        # Test canonical retail terms
+        enhanced, weak = enhance_name_core("test shop shops")
+        assert enhanced == "test store store"
+
+        # Test weak token detection
+        enhanced, weak = enhance_name_core("test only the and")
+        assert weak == {"only", "the", "and"}
+
+        # Test Jaccard token filtering
+        tokens = get_enhanced_tokens_for_jaccard("test only the and")
+        assert tokens == {"test"}  # Only non-weak tokens
+
+    def test_soft_ban_denylist_still_yields_candidates(self):
+        """Test that denylist tokens still generate candidates (throttled, not hard-banned)."""
+        # Test that the configuration is properly set up for soft-ban
+
+        # Test that denylist tokens are configured
+        from src.normalize import load_normalization_settings
+
+        settings = load_normalization_settings()
+
+        # Should have denylist tokens configured
+        assert "weak_tokens" in settings
+        assert "only" in settings["weak_tokens"]
+
+        # Should have plural mapping configured
+        assert "plural_singular_map" in settings
+        assert settings["plural_singular_map"]["stores"] == "store"
+
+        # Test that soft-ban is the only strategy (no legacy)
+        import yaml
+
+        with open("config/settings.yaml") as f:
+            config = yaml.safe_load(f)
+
+        # Should not have legacy performance settings
+        assert "performance" not in config.get("similarity", {})
+
+        # Should have soft-ban blocking settings
+        blocking = config.get("similarity", {}).get("blocking", {})
+        assert "allowlist_tokens" in blocking
+        assert "denylist_tokens" in blocking
+        assert "soft_ban" in blocking
+
+    def test_configuration_keys_exist(self):
+        """Test that all required configuration keys exist."""
+        from src.normalize import load_normalization_settings
+
+        settings = load_normalization_settings()
+
+        required_keys = [
+            "weak_tokens",
+            "plural_singular_map",
+            "canonical_retail_terms",
+            "enable_plural_normalization",
+            "enable_weak_token_filtering",
+            "enable_canonical_retail_terms",
+        ]
+
+        for key in required_keys:
+            assert key in settings, f"Required config key '{key}' not found"
+
+    def test_edge_cases(self):
+        """Test edge cases for enhanced normalization."""
+        # Empty string
+        enhanced, weak = enhance_name_core("")
+        assert enhanced == ""
+        assert weak == set()
+
+        # Single token
+        enhanced, weak = enhance_name_core("test")
+        assert enhanced == "test"
+        assert weak == set()
+
+        # All weak tokens
+        enhanced, weak = enhance_name_core("only the and")
+        assert enhanced == "only the and"
+        assert weak == {"only", "the", "and"}
+
+        # Mixed case
+        enhanced, weak = enhance_name_core("Test Stores Only")
+        assert enhanced == "test store only"
+        assert weak == {"only"}
 
 
 if __name__ == "__main__":
-    # Run tests
-    test_compute_score_components_golden()
-    test_bulk_survivors_never_exceed_input()
-    test_bulk_and_parallel_equivalence()
-    print("✅ All tests passed!")
+    pytest.main([__file__])

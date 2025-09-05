@@ -1,15 +1,17 @@
-"""
-UI session state management for ui_helpers refactor.
+"""UI session state management for ui_helpers refactor.
 
 This module provides a session state adapter with dict fallback for tests.
 """
 
-from typing import Any, Optional, Dict
+from typing import Any, Dict
+
 # TODO: Import from opt_deps when implemented
 # from .opt_deps import STREAMLIT
 
+
 class SessionState:
     """Session state adapter with dict fallback for tests."""
+
     def __init__(self, use_streamlit: bool = True):
         # TODO: Implement actual streamlit detection
         self._use_streamlit = use_streamlit  # and STREAMLIT is not None
@@ -20,6 +22,7 @@ class SessionState:
         if self._use_streamlit:
             try:
                 import streamlit as st
+
                 return st.session_state.get(key, default)
             except ImportError:
                 pass
@@ -30,6 +33,7 @@ class SessionState:
         if self._use_streamlit:
             try:
                 import streamlit as st
+
                 st.session_state[key] = value
                 return
             except ImportError:
@@ -44,7 +48,8 @@ class SessionState:
     def get_backend_choice(self, run_id: str) -> str:
         """Get backend choice for a specific run."""
         key = f"groups.backend:{run_id}"
-        return self.get(key, "pyarrow")  # Default to pyarrow if not set
+        return str(self.get(key, "pyarrow"))  # Default to pyarrow if not set
+
 
 # Global instance - configurable for tests
 session = SessionState()

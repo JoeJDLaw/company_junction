@@ -1,49 +1,55 @@
-"""
-Group statistics utilities for ui_helpers refactor.
+"""Group statistics utilities for ui_helpers refactor.
 
 This module handles statistical computations for groups.
 """
 
-from typing import Union, Any, Dict
+from typing import Any
+
 import pandas as pd
+
+from .logging_utils import get_logger
 from .opt_deps import DUCKDB
 from .schema_utils import (
-    GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, 
-    IS_PRIMARY, ACCOUNT_NAME, WEAKEST_EDGE_TO_PRIMARY
+    ACCOUNT_NAME,
+    GROUP_ID,
+    GROUP_SIZE,
+    IS_PRIMARY,
+    MAX_SCORE,
+    PRIMARY_NAME,
+    WEAKEST_EDGE_TO_PRIMARY,
 )
-from .logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 def compute_group_stats(
-    table: Union[pd.DataFrame, "pyarrow.Table"],
-    backend: str = "auto"
+    table: pd.DataFrame | Any, backend: str = "auto",
 ) -> pd.DataFrame:
-    """
-    Compute group statistics for sorting with backend selection.
-    
+    """Compute group statistics for sorting with backend selection.
+
     Args:
         table: DataFrame or PyArrow table with group data
         backend: Backend to use ("auto", "duckdb", or "pandas")
-        
+
     Returns:
         DataFrame with group statistics
+
     """
     if backend == "duckdb" or (backend == "auto" and DUCKDB is not None):
         return compute_group_stats_duckdb(table)
-    else:
-        # Use pandas fallback
-        return compute_group_stats_duckdb(table)  # This will fall back to pandas
+    # Use pandas fallback
+    return compute_group_stats_duckdb(table)  # This will fall back to pandas
 
-def compute_group_stats_duckdb(table) -> pd.DataFrame:
-    """
-    Compute group statistics for sorting using DuckDB.
+
+def compute_group_stats_duckdb(table: pd.DataFrame) -> pd.DataFrame:
+    """Compute group statistics for sorting using DuckDB.
 
     Args:
         table: DataFrame or PyArrow table with group data
 
     Returns:
         DataFrame with group statistics
+
     """
     # Check if DuckDB is available
     if DUCKDB is None:
@@ -52,8 +58,8 @@ def compute_group_stats_duckdb(table) -> pd.DataFrame:
     else:
         try:
             # Convert to pandas if needed
-            if hasattr(table, 'to_pandas'):
-                df = table.to_pandas()
+            if hasattr(table, "to_pandas"):
+                df = table.to_pandas()  # type: ignore[operator]
             else:
                 df = table
 
@@ -64,18 +70,40 @@ def compute_group_stats_duckdb(table) -> pd.DataFrame:
             conn.register("groups_df", df)
 
             # Execute aggregation query - using schema constants (safe, not user input)
-            query = """
+            query = (
+                """
             SELECT 
-                """ + GROUP_ID + """ as group_id,
-                COUNT(*) as """ + GROUP_SIZE + """,
-                MAX(CASE WHEN """ + WEAKEST_EDGE_TO_PRIMARY + """ IS NOT NULL THEN """ + WEAKEST_EDGE_TO_PRIMARY + """ ELSE 0.0 END) as """ + MAX_SCORE + """,
-                FIRST(CASE WHEN """ + IS_PRIMARY + """ THEN """ + ACCOUNT_NAME + """ ELSE NULL END) as """ + PRIMARY_NAME + """
+                """
+                + GROUP_ID
+                + """ as group_id,
+                COUNT(*) as """
+                + GROUP_SIZE
+                + """,
+                MAX(CASE WHEN """
+                + WEAKEST_EDGE_TO_PRIMARY
+                + """ IS NOT NULL THEN """
+                + WEAKEST_EDGE_TO_PRIMARY
+                + """ ELSE 0.0 END) as """
+                + MAX_SCORE
+                + """,
+                FIRST(CASE WHEN """
+                + IS_PRIMARY
+                + """ THEN """
+                + ACCOUNT_NAME
+                + """ ELSE NULL END) as """
+                + PRIMARY_NAME
+                + """
             FROM groups_df 
-            GROUP BY """ + GROUP_ID + """
-            ORDER BY """ + GROUP_ID + """
+            GROUP BY """
+                + GROUP_ID
+                + """
+            ORDER BY """
+                + GROUP_ID
+                + """
             """
+            )
 
-            result = conn.execute(query).df()
+            result: pd.DataFrame = conn.execute(query).df()
             conn.close()
 
             return result
@@ -83,13 +111,13 @@ def compute_group_stats_duckdb(table) -> pd.DataFrame:
         except Exception as e:
             logger.warning(f"DuckDB execution failed: {e}, falling back to pandas")
             # Fall through to pandas implementation below
-    
+
     # Fallback to pandas if DuckDB not available
     logger.warning("DuckDB not available, falling back to pandas for group stats")
 
     # Convert to pandas if needed
-    if hasattr(table, 'to_pandas'):
-        df = table.to_pandas()
+    if hasattr(table, "to_pandas"):
+        df = table.to_pandas()  # type: ignore[operator]
     else:
         df = table
 
@@ -122,23 +150,25 @@ def compute_group_stats_duckdb(table) -> pd.DataFrame:
                 GROUP_SIZE: group_size,
                 MAX_SCORE: max_score,
                 PRIMARY_NAME: primary_name or "",
-            }
+            },
         )
 
     return pd.DataFrame(stats_data)
 
+
 def _get_parquet_fingerprint(file_path: str) -> str:
-    """
-    Get a fingerprint for a parquet file based on mtime and size.
+    """Get a fingerprint for a parquet file based on mtime and size.
 
     Args:
         file_path: Path to the parquet file
 
     Returns:
         Fingerprint string
+
     """
     try:
         import os
+
         stat = os.stat(file_path)
         fingerprint = f"{stat.st_mtime}_{stat.st_size}"
         return fingerprint

@@ -1,27 +1,28 @@
-"""
-Simplified controls component demonstrating the new unified state management.
+"""Simplified controls component demonstrating the new unified state management.
 
 This is a demonstration of how the controls component would look with the
 simplified session state management approach.
 """
 
-import streamlit as st
 from typing import Any, Dict
 
-from src.utils.simple_state import (
-    get_app_state, set_app_state, 
-    get_backend_for_run, set_backend_for_run,
-    reset_page_to_one, update_page_size
-)
-from src.utils.sort_utils import validate_sort_key
+import streamlit as st
+
 from src.utils.cache_keys import build_cache_key
+from src.utils.simple_state import (
+    get_app_state,
+    get_backend_for_run,
+    reset_page_to_one,
+    set_app_state,
+    set_backend_for_run,
+    update_page_size,
+)
 
 
 def render_controls_simplified(
-    selected_run_id: str, settings: Dict[str, Any], filters: Dict[str, Any]
+    selected_run_id: str, settings: Dict[str, Any], filters: Dict[str, Any],
 ) -> tuple[Dict[str, Any], str, int, int, int]:
-    """
-    Render pagination and filter controls using simplified state management.
+    """Render pagination and filter controls using simplified state management.
 
     Args:
         selected_run_id: The selected run ID
@@ -30,12 +31,17 @@ def render_controls_simplified(
 
     Returns:
         Tuple of (updated_filters, sort_by, page, page_size, similarity_threshold)
+
     """
     # Get unified application state
     app_state = get_app_state(st.session_state)
 
     # Force DuckDB backend when flag is enabled
-    prefer_duck = settings.get("ui_perf", {}).get("groups", {}).get("duckdb_prefer_over_pyarrow", False)
+    prefer_duck = (
+        settings.get("ui_perf", {})
+        .get("groups", {})
+        .get("duckdb_prefer_over_pyarrow", False)
+    )
     if prefer_duck:
         set_backend_for_run(app_state, selected_run_id, "duckdb")
 
@@ -68,14 +74,14 @@ def render_controls_simplified(
 
     # Similarity threshold controls
     st.sidebar.write("**Similarity Threshold**")
-    
+
     # Get default threshold from settings
     default_threshold = settings.get("ui", {}).get("similarity_threshold_default", 100)
-    
+
     # Use app state for threshold persistence
     similarity_key = f"similarity_threshold_{selected_run_id}"
     current_threshold = app_state.similarity_threshold
-    
+
     # Threshold slider
     threshold = st.sidebar.slider(
         "Min Edge Strength",
@@ -86,29 +92,29 @@ def render_controls_simplified(
         format="%.0f%%",
         help="Minimum edge strength for displaying groups. Higher values show only stronger matches.",
     )
-    
+
     # Check if threshold changed
     if threshold != current_threshold:
         app_state.similarity_threshold = threshold
         st.session_state[similarity_key] = threshold
-        
+
         # Add threshold to filters for export parity
         filters["similarity_threshold"] = threshold
-        
+
         # Reset to page 1 when threshold changes
         reset_page_to_one(app_state)
-        
+
         # Force refresh to apply new threshold
         st.rerun()
 
     # Pagination controls
     page_size_options = settings.get("ui", {}).get(
-        "page_size_options", [50, 100, 200, 500]
+        "page_size_options", [50, 100, 200, 500],
     )
     default_page_size = settings.get("ui", {}).get("page_size_default", 50)
 
     page_size = st.sidebar.selectbox(
-        "Page Size", page_size_options, index=page_size_options.index(default_page_size)
+        "Page Size", page_size_options, index=page_size_options.index(default_page_size),
     )
 
     # Update page size if changed
@@ -118,7 +124,7 @@ def render_controls_simplified(
     # Check if filters changed to reset page
     backend = get_backend_for_run(app_state, selected_run_id)
     current_filters_key = build_cache_key(
-        selected_run_id, sort_by, 1, page_size, filters, backend
+        selected_run_id, sort_by, 1, page_size, filters, backend,
     )
 
     if app_state.filter_signature != current_filters_key:
@@ -130,7 +136,7 @@ def render_controls_simplified(
 
     # Get similarity threshold for return
     similarity_threshold = filters.get("similarity_threshold", int(default_threshold))
-    
+
     return filters, sort_by, app_state.page_number, page_size, similarity_threshold
 
 

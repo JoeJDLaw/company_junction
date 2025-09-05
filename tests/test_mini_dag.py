@@ -1,9 +1,9 @@
-"""
-Tests for MiniDAG smart auto-resume functionality.
+"""Tests for MiniDAG smart auto-resume functionality.
 """
 
 import tempfile
 from pathlib import Path
+
 from src.utils.mini_dag import MiniDAG
 
 
@@ -217,7 +217,7 @@ def test_invariance_resume() -> None:
         # Create minimal test data
         input_file.write_text("account_id,account_name\n001,Test Company")
         config_file.write_text(
-            "similarity:\n  high_threshold: 90\n  medium_threshold: 80"
+            "similarity:\n  high_threshold: 90\n  medium_threshold: 80",
         )
         output_dir.mkdir()
         interim_dir.mkdir()
@@ -318,10 +318,10 @@ def test_actual_invariance() -> None:
 
         # Create minimal test data
         input_file.write_text(
-            "account_id,account_name\n001,Test Company\n002,Another Company"
+            "account_id,account_name\n001,Test Company\n002,Another Company",
         )
         config_file.write_text(
-            "similarity:\n  high_threshold: 90\n  medium_threshold: 80"
+            "similarity:\n  high_threshold: 90\n  medium_threshold: 80",
         )
         output_dir.mkdir()
         interim_dir.mkdir()

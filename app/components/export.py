@@ -1,11 +1,11 @@
-"""
-Export component for Phase 1.18.1 refactor.
+"""Export component for Phase 1.18.1 refactor.
 
 This module handles data export functionality.
 """
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
+
 from src.utils.schema_utils import to_display
 
 
@@ -15,14 +15,18 @@ def render_export(filtered_df: pd.DataFrame, similarity_threshold: int = 100) ->
 
     # Phase 1.35.2: Export parity with similarity threshold
     if similarity_threshold < 100:
-        st.info(f"📊 **Export Parity**: CSV will contain only groups with edge strength ≥ {similarity_threshold}% (same as current view)")
+        st.info(
+            f"📊 **Export Parity**: CSV will contain only groups with edge strength ≥ {similarity_threshold}% (same as current view)",
+        )
     else:
-        st.info("📊 **Export Parity**: CSV will contain all groups (exact matches only)")
+        st.info(
+            "📊 **Export Parity**: CSV will contain all groups (exact matches only)",
+        )
 
     if st.button("Export Filtered Data", key="export_filtered_data"):
         # Apply display labels for user-friendly CSV export
         df_display = to_display(filtered_df)
-        
+
         # Convert DataFrame to CSV
         csv = df_display.to_csv(index=False)
 

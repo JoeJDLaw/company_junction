@@ -1,5 +1,4 @@
-"""
-Centralized dtype mapping for memory-efficient data processing.
+"""Centralized dtype mapping for memory-efficient data processing.
 
 This module provides consistent dtype definitions across the pipeline
 to minimize memory usage and ensure data type consistency.
@@ -109,14 +108,14 @@ INTERMEDIATE_COLUMNS_TO_DROP = {
 
 
 def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
-    """
-    Get dtype mapping for specific pipeline schema.
+    """Get dtype mapping for specific pipeline schema.
 
     Args:
         schema_name: Name of the schema (e.g., 'accounts', 'pairs', 'groups')
 
     Returns:
         Dict mapping column names to dtypes
+
     """
     if schema_name == "accounts":
         return {
@@ -136,7 +135,7 @@ def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
                 "relationship_rank",
             }
         }
-    elif schema_name == "pairs":
+    if schema_name == "pairs":
         return {
             k: v
             for k, v in DTYPES.items()
@@ -150,7 +149,7 @@ def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
                 "block_size",
             }
         }
-    elif schema_name == "groups":
+    if schema_name == "groups":
         return {
             k: v
             for k, v in DTYPES.items()
@@ -165,12 +164,11 @@ def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
                 "group_size",
                 "group_rank",
                 "group_join_reason",
-                "weakest_edge_to_primary",
                 "shared_tokens_count",
                 "survivorship_reason",
             }
         }
-    elif schema_name == "review_ready":
+    if schema_name == "review_ready":
         return {
             k: v
             for k, v in DTYPES.items()
@@ -196,5 +194,4 @@ def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
                 "survivorship_reason",
             }
         }
-    else:
-        return DTYPES.copy()
+    return DTYPES.copy()

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Check alias results for equivalence and determinism.
+"""Check alias results for equivalence and determinism.
 
 This script validates that alias matching produces consistent and equivalent results
 across different runs and optimization settings.
@@ -26,6 +25,7 @@ def load_sorted_alias_matches(path: Path) -> pd.DataFrame:
 
     Returns:
         Sorted DataFrame with consistent column order
+
     """
     try:
         df = pd.read_parquet(path)
@@ -81,6 +81,7 @@ def compute_checksum(df: pd.DataFrame) -> str:
 
     Returns:
         SHA256 hash string
+
     """
     # Convert DataFrame to string representation for hashing
     df_str = df.to_string(index=False)
@@ -96,6 +97,7 @@ def check_equivalence(path_a: Path, path_b: Path) -> bool:
 
     Returns:
         True if equivalent, False otherwise
+
     """
     logger.info(f"Checking equivalence between {path_a} and {path_b}")
 
@@ -135,6 +137,7 @@ def check_determinism(path_a: Path, path_b: Path) -> bool:
 
     Returns:
         True if identical checksums, False otherwise
+
     """
     logger.info(f"Checking determinism between {path_a} and {path_b}")
 
@@ -150,15 +153,14 @@ def check_determinism(path_a: Path, path_b: Path) -> bool:
     if checksum_a == checksum_b:
         logger.info("✅ Results are deterministic (identical checksums)")
         return True
-    else:
-        logger.error("❌ Results are NOT deterministic (different checksums)")
-        return False
+    logger.error("❌ Results are NOT deterministic (different checksums)")
+    return False
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Check alias results for equivalence and determinism"
+        description="Check alias results for equivalence and determinism",
     )
     parser.add_argument(
         "--mode",

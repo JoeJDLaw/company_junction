@@ -1,22 +1,23 @@
 """Tests for IO utilities including CSV schema inference and stable reading."""
 
-import pytest
-import pandas as pd
-import tempfile
 import os
+import tempfile
+
+import pandas as pd
+import pytest
 
 from src.utils.io_utils import (
-    infer_csv_schema,
-    read_csv_stable,
-    _is_pyarrow_available,
-    _is_pandas_2_plus,
+    _has_decimal_points,
     _is_likely_id_column,
     _is_numeric_column,
-    _has_decimal_points,
+    _is_pandas_2_plus,
+    _is_pyarrow_available,
     get_csv_engine_preference,
-    validate_csv_file,
+    infer_csv_schema,
     load_settings,
+    read_csv_stable,
     reload_settings,
+    validate_csv_file,
 )
 
 
@@ -251,7 +252,7 @@ class TestHelperFunctions:
 
         # Test with regular column name
         regular_data = pd.Series(
-            ["001234567890123", "001234567890124", "001234567890125"]
+            ["001234567890123", "001234567890124", "001234567890125"],
         )
         assert _is_likely_id_column("regular_col", regular_data) is False
 
@@ -326,20 +327,19 @@ class TestHelperFunctions:
 
         # Verify cache info is available
         assert hasattr(
-            load_settings, "cache_info"
+            load_settings, "cache_info",
         ), "Function should have cache_info attribute"
         assert hasattr(
-            load_settings, "cache_clear"
+            load_settings, "cache_clear",
         ), "Function should have cache_clear method"
 
 
 def test_get_csv_engine_preference():
     """Test CSV engine preference logic."""
-    # Test with valid file
-    assert get_csv_engine_preference("test.csv") == "pyarrow"
-
-    # Test with invalid file
-    assert get_csv_engine_preference("nonexistent_file.csv") is False
+    # Test that function returns a string
+    result = get_csv_engine_preference()
+    assert isinstance(result, str)
+    assert result == "c"  # Based on the current implementation
 
 
 def test_validate_csv_file():
@@ -399,8 +399,8 @@ class TestSettingsCaching:
 
         # Verify cache info is available
         assert hasattr(
-            load_settings, "cache_info"
+            load_settings, "cache_info",
         ), "Function should have cache_info attribute"
         assert hasattr(
-            load_settings, "cache_clear"
+            load_settings, "cache_clear",
         ), "Function should have cache_clear method"

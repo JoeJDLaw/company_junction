@@ -1,5 +1,4 @@
-"""
-Tests for parallel execution functionality.
+"""Tests for parallel execution functionality.
 
 This module tests:
 - Determinism of parallel execution
@@ -8,17 +7,18 @@ This module tests:
 - Resource monitoring
 """
 
+from typing import Any, Dict, List
+
 import pytest
-from typing import List, Dict, Any
 
 from src.utils.parallel_utils import (
     create_parallel_executor,
     ensure_deterministic_order,
 )
 from src.utils.resource_monitor import (
-    get_system_info,
     calculate_optimal_workers,
     estimate_memory_per_worker,
+    get_system_info,
 )
 
 
@@ -33,7 +33,7 @@ def test_parallel_executor_initialization() -> None:
 
     # Test with custom settings
     executor = create_parallel_executor(
-        workers=2, backend="threading", chunk_size=500, disable_parallel=True
+        workers=2, backend="threading", chunk_size=500, disable_parallel=True,
     )
     assert executor.workers == 1  # Should be 1 when disabled
     assert executor.backend == "sequential"
@@ -110,7 +110,7 @@ def test_backend_comparison() -> None:
     # Test threading backend
     executor_thread = create_parallel_executor(backend="threading", workers=2)
     results_thread = executor_thread.execute(
-        test_function, test_items, "test_threading"
+        test_function, test_items, "test_threading",
     )
 
     # Test sequential execution
@@ -136,7 +136,7 @@ def test_chunked_execution() -> None:
     # If parallel execution is available, test chunked execution
     if executor.backend != "sequential":
         results = executor.execute_chunked(
-            test_function, test_items, operation_name="test_chunked"
+            test_function, test_items, operation_name="test_chunked",
         )
 
         # Should have processed all items
@@ -149,7 +149,7 @@ def test_chunked_execution() -> None:
     else:
         # If sequential, test that it still works
         results = executor.execute_chunked(
-            test_function, test_items, operation_name="test_chunked"
+            test_function, test_items, operation_name="test_chunked",
         )
         assert len(results) == 100
 

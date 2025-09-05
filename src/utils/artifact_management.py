@@ -1,22 +1,23 @@
-"""
-Artifact management utilities for ui_helpers refactor.
+"""Artifact management utilities for ui_helpers refactor.
 
 This module handles core path helpers for artifacts.
 """
 
 import os
 from typing import Dict
+
 from src.utils.path_utils import get_artifact_path, get_interim_dir, get_processed_dir
 
+
 def get_artifact_paths(run_id: str) -> Dict[str, str]:
-    """
-    Get artifact paths for a run.
+    """Get artifact paths for a run.
 
     Args:
         run_id: The run ID
 
     Returns:
         Dictionary of artifact paths
+
     """
     # Check if run exists in interim or processed
     interim_dir = get_interim_dir(run_id)
@@ -47,6 +48,6 @@ def get_artifact_paths(run_id: str) -> Dict[str, str]:
         "block_top_tokens": f"{base_dir}/block_top_tokens.csv",
         "group_stats_parquet": str(get_artifact_path(run_id, "group_stats.parquet")),
         "group_details_parquet": str(
-            get_artifact_path(run_id, "group_details.parquet")
+            get_artifact_path(run_id, "group_details.parquet"),
         ),
     }

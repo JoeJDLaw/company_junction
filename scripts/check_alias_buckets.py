@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""
-Analyze block sizes and validate that block cap doesn't cause recall loss.
+"""Analyze block sizes and validate that block cap doesn't cause recall loss.
 """
 
 import argparse
 import logging
-import pandas as pd
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List, Tuple
+
+import pandas as pd
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,7 +46,6 @@ def compare_alias_matches(
     block_stats_path: str,
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Compare alias matches between legacy and optimized paths."""
-
     # Load alias matches
     legacy_df = load_parquet_safe(legacy_path)
     optimized_df = load_parquet_safe(optimized_path)
@@ -94,7 +93,7 @@ def compare_alias_matches(
                     "id_b": row["id_b"],
                     "score": row["score"],
                     "status": "missing_in_optimized",
-                }
+                },
             )
 
     if only_in_optimized:
@@ -109,22 +108,22 @@ def compare_alias_matches(
                     "id_b": row["id_b"],
                     "score": row["score"],
                     "status": "only_in_optimized",
-                }
+                },
             )
 
     return summary, diff_report
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Analyze block sizes and validate recall"
+        description="Analyze block sizes and validate recall",
     )
     parser.add_argument("--legacy", required=True, help="Path to legacy alias matches")
     parser.add_argument(
-        "--optimized", required=True, help="Path to optimized alias matches"
+        "--optimized", required=True, help="Path to optimized alias matches",
     )
     parser.add_argument(
-        "--block-stats", required=True, help="Path to block statistics CSV"
+        "--block-stats", required=True, help="Path to block statistics CSV",
     )
     parser.add_argument("--output", help="Path to write detailed diff report")
     args = parser.parse_args()

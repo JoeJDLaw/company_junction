@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""
-Test to validate that all Phase headers in CHANGELOG.md contain valid YYYY-MM-DD dates.
+"""Test to validate that all Phase headers in CHANGELOG.md contain valid YYYY-MM-DD dates.
 """
 
 import re
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import List, Tuple
 
 
 def extract_phase_headers(changelog_content: str) -> List[Tuple[str, str, str]]:
-    """
-    Extract all Phase headers and their dates from CHANGELOG.md content.
+    """Extract all Phase headers and their dates from CHANGELOG.md content.
 
     Returns:
         List of tuples: (phase_number, date_string, full_header_line)
+
     """
     # Pattern to match Phase headers with dates
     pattern = r"## \[Phase(\d+\.\d+(?:[a-z])?)[^\]]*\] - (\d{4}-\d{2}-\d{2})"
@@ -34,14 +33,14 @@ def extract_phase_headers(changelog_content: str) -> List[Tuple[str, str, str]]:
 
 
 def validate_date_format(date_string: str) -> bool:
-    """
-    Validate that a date string is in YYYY-MM-DD format and is a valid date.
+    """Validate that a date string is in YYYY-MM-DD format and is a valid date.
 
     Args:
         date_string: Date string to validate
 
     Returns:
         True if valid, False otherwise
+
     """
     try:
         # Check format with regex first
@@ -63,7 +62,7 @@ def test_changelog_date_format() -> None:
     assert changelog_path.exists(), "CHANGELOG.md not found"
 
     # Read the changelog content
-    with open(changelog_path, "r", encoding="utf-8") as f:
+    with open(changelog_path, encoding="utf-8") as f:
         content = f.read()
 
     # Extract all Phase headers
@@ -77,7 +76,7 @@ def test_changelog_date_format() -> None:
     for phase_num, date_str, header_line in headers:
         if not validate_date_format(date_str):
             invalid_dates.append(
-                {"phase": phase_num, "date": date_str, "header": header_line}
+                {"phase": phase_num, "date": date_str, "header": header_line},
             )
 
     # Report any invalid dates
@@ -96,7 +95,7 @@ def test_changelog_date_consistency() -> None:
     changelog_path = Path("CHANGELOG.md")
 
     # Read the changelog content
-    with open(changelog_path, "r", encoding="utf-8") as f:
+    with open(changelog_path, encoding="utf-8") as f:
         content = f.read()
 
     # Extract all Phase headers
@@ -138,7 +137,7 @@ def test_changelog_date_consistency() -> None:
                 assert False, error_msg
 
     print(
-        "✅ All Phase headers are in correct chronological order within their major.minor groups"
+        "✅ All Phase headers are in correct chronological order within their major.minor groups",
     )
 
 
@@ -147,7 +146,7 @@ def test_phase_number_format() -> None:
     changelog_path = Path("CHANGELOG.md")
 
     # Read the changelog content
-    with open(changelog_path, "r", encoding="utf-8") as f:
+    with open(changelog_path, encoding="utf-8") as f:
         content = f.read()
 
     # Extract all Phase headers

@@ -1,5 +1,4 @@
-"""
-Pipeline constants for the company junction deduplication pipeline.
+"""Pipeline constants for the company junction deduplication pipeline.
 
 This module provides standardized file naming and stage definitions to ensure
 consistency between pipeline stages and mini-DAG resume logic.
@@ -12,7 +11,7 @@ from typing import Dict, List, Literal
 # Pipeline stage names in execution order
 PIPELINE_STAGES = [
     "normalization",
-    "filtering", 
+    "filtering",
     "candidate_generation",
     "grouping",
     "survivorship",
@@ -36,7 +35,7 @@ STAGE_INTERMEDIATE_FILES: Dict[str, List[str]] = {
     ],
     "grouping": [
         "accounts_filtered.parquet",
-        "candidate_pairs.parquet", 
+        "candidate_pairs.parquet",
         "groups.parquet",
     ],
     "survivorship": [
@@ -73,7 +72,7 @@ STAGE_INTERMEDIATE_FILES: Dict[str, List[str]] = {
 # Final output files in processed directory
 PROCESSED_OUTPUT_FILES = [
     "review_ready.parquet",
-    "review_ready.csv", 
+    "review_ready.csv",
     "group_stats.parquet",
     "group_details.parquet",
     "review_meta.json",
@@ -89,12 +88,12 @@ StageStatus = Literal["pending", "running", "completed", "failed", "interrupted"
 # Resume decision codes for enhanced logging
 ResumeDecision = Literal[
     "NO_PREVIOUS_RUN",
-    "NEXT_STAGE_READY", 
+    "NEXT_STAGE_READY",
     "NEXT_STAGE_MISSING",
     "FINAL_STAGE",
     "INVALID_STAGE_ORDER",
     "MISSING_FILES",
-    "STATE_INCONSISTENT"
+    "STATE_INCONSISTENT",
 ]
 
 # Cleanup and reconciliation constants
@@ -102,9 +101,5 @@ CLEANUP_EXCLUDE_DIRS = {"default", "index", "legacy", "test_save_run", ".DS_Stor
 
 # Cleanup reason codes
 CleanupReason = Literal[
-    "type_filter",
-    "age_filter", 
-    "prod_sweep",
-    "orphan_directory",
-    "stale_index"
+    "type_filter", "age_filter", "prod_sweep", "orphan_directory", "stale_index",
 ]

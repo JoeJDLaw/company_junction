@@ -1,5 +1,4 @@
-"""
-End-to-end test for Phase 1.16 run ID scoping and determinism.
+"""End-to-end test for Phase 1.16 run ID scoping and determinism.
 
 This test verifies that:
 1. Sequential and parallel runs produce identical outputs
@@ -39,7 +38,7 @@ def get_directory_hashes(directory: str) -> Dict[str, str]:
 
 
 def run_pipeline_test(
-    input_file: str, workers: int, no_resume: bool = True
+    input_file: str, workers: int, no_resume: bool = True,
 ) -> Dict[str, Any]:
     """Run pipeline and return run ID and output hashes."""
     cmd = [
@@ -63,7 +62,7 @@ def run_pipeline_test(
 
     # Run the pipeline
     result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=Path.cwd(), env=os.environ.copy()
+        cmd, check=False, capture_output=True, text=True, cwd=Path.cwd(), env=os.environ.copy(),
     )
 
     if result.returncode != 0:
@@ -124,7 +123,7 @@ def test_e2e_determinism() -> None:
 
     # Check that both runs produced the same files
     assert set(sequential_hashes.keys()) == set(
-        parallel_hashes.keys()
+        parallel_hashes.keys(),
     ), "Sequential and parallel runs should produce the same files"
 
     # Check that all files have identical content (excluding timestamp-dependent files)
@@ -146,7 +145,7 @@ def test_e2e_determinism() -> None:
             # Check functional equivalence for grouping-derived files
             if filename.endswith(".parquet"):
                 seq_df = pd.read_parquet(
-                    f"{sequential_result['output_dir']}/{filename}"
+                    f"{sequential_result['output_dir']}/{filename}",
                 )
                 par_df = pd.read_parquet(f"{parallel_result['output_dir']}/{filename}")
             elif filename.endswith(".csv"):
@@ -166,7 +165,7 @@ def test_e2e_determinism() -> None:
                     seq_groups == par_groups
                 ), f"Number of groups differs for {filename}: {seq_groups} vs {par_groups}"
                 print(
-                    f"✅ Functional equivalence verified for {filename}: {seq_groups} groups, {seq_df.shape[0]} records"
+                    f"✅ Functional equivalence verified for {filename}: {seq_groups} groups, {seq_df.shape[0]} records",
                 )
             continue
         assert (
@@ -190,25 +189,25 @@ def test_run_id_scoping() -> None:
     # Check that output directory is run-scoped
     expected_output_dir = f"data/processed/{run_id}"
     assert os.path.exists(
-        expected_output_dir
+        expected_output_dir,
     ), f"Run-scoped output directory not found: {expected_output_dir}"
 
     # Check that interim directory is run-scoped
     expected_interim_dir = f"data/interim/{run_id}"
     assert os.path.exists(
-        expected_interim_dir
+        expected_interim_dir,
     ), f"Run-scoped interim directory not found: {expected_interim_dir}"
 
     # Check that MiniDAG state is run-scoped
     expected_state_file = f"data/interim/{run_id}/pipeline_state.json"
     assert os.path.exists(
-        expected_state_file
+        expected_state_file,
     ), f"Run-scoped state file not found: {expected_state_file}"
 
     # Check that block statistics are run-scoped
     expected_block_stats = f"data/interim/{run_id}/block_top_tokens.csv"
     assert os.path.exists(
-        expected_block_stats
+        expected_block_stats,
     ), f"Run-scoped block statistics not found: {expected_block_stats}"
 
     print(f"✅ Run ID scoping test passed: all outputs under {run_id}")
@@ -270,7 +269,7 @@ def test_latest_pointer() -> None:
         if os.path.exists(latest_json):
             import json
 
-            with open(latest_json, "r") as f:
+            with open(latest_json) as f:
                 data = json.load(f)
             assert (
                 data.get("run_id") == run_id

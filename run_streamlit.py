@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
-"""
-Wrapper script to run Streamlit with better interrupt handling.
+"""Wrapper script to run Streamlit with better interrupt handling.
 """
 
-import sys
+import logging
 import signal
 import subprocess
-import logging
+import sys
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def signal_handler(signum, frame):
+def signal_handler(signum: int, frame: object) -> None:
     """Handle interrupt signals gracefully."""
     logger.info(f"Received signal {signum}, shutting down gracefully...")
     sys.exit(0)
 
 
-def main():
+def main() -> None:
     """Run Streamlit with enhanced error handling."""
     # Register signal handlers
     signal.signal(signal.SIGINT, signal_handler)
@@ -34,11 +33,12 @@ def main():
         else:
             # Try to use virtual environment Python
             import os
+
             venv_python = os.path.join(os.getcwd(), ".venv", "bin", "python")
             if os.path.exists(venv_python):
                 python_executable = venv_python
                 logger.info(f"Using virtual environment Python: {python_executable}")
-        
+
         cmd = [python_executable, "-m", "streamlit", "run", "app/main.py"]
         logger.info("Starting Streamlit app...")
         logger.info(f"Command: {' '.join(cmd)}")

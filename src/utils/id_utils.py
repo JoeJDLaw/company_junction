@@ -1,14 +1,14 @@
-"""
-Salesforce ID canonicalization utilities.
+"""Salesforce ID canonicalization utilities.
 
 This module provides functions to convert Salesforce 15-character IDs to their
 18-character canonical form using Salesforce's standard algorithm.
 """
 
-import re
-import pandas as pd
 import logging
+import re
 from typing import Any
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,7 @@ _BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"
 
 
 def _chunk_checksum(chunk: str) -> str:
-    """
-    Calculate checksum for a 5-character chunk of a Salesforce ID.
+    """Calculate checksum for a 5-character chunk of a Salesforce ID.
 
     Args:
         chunk: 5-character string from the 15-char ID
@@ -28,6 +27,7 @@ def _chunk_checksum(chunk: str) -> str:
 
     Raises:
         ValueError: If chunk is not exactly 5 characters
+
     """
     if len(chunk) != 5:
         raise ValueError(f"Chunk must be exactly 5 characters, got {len(chunk)}")
@@ -41,8 +41,7 @@ def _chunk_checksum(chunk: str) -> str:
 
 
 def sfid15_to_18(sfid15: str) -> str:
-    """
-    Convert a 15-character Salesforce ID to its 18-character canonical form.
+    """Convert a 15-character Salesforce ID to its 18-character canonical form.
 
     Args:
         sfid15: 15-character Salesforce ID (case-sensitive)
@@ -53,6 +52,7 @@ def sfid15_to_18(sfid15: str) -> str:
     Raises:
         TypeError: If input is not a string
         ValueError: If input is not exactly 15 alphanumeric characters
+
     """
     if not isinstance(sfid15, str):
         raise TypeError(f"sfid15 must be a string, got {type(sfid15)}")
@@ -70,8 +70,7 @@ def sfid15_to_18(sfid15: str) -> str:
 
 
 def normalize_sfid_series(series: pd.Series) -> pd.Series:
-    """
-    Normalize a pandas Series of Salesforce IDs to canonical 18-character form.
+    """Normalize a pandas Series of Salesforce IDs to canonical 18-character form.
 
     Args:
         series: Pandas Series containing Salesforce IDs
@@ -81,6 +80,7 @@ def normalize_sfid_series(series: pd.Series) -> pd.Series:
 
     Raises:
         ValueError: If any ID is not 15 or 18 characters, or contains invalid characters
+
     """
     if series.empty:
         return series
@@ -105,7 +105,7 @@ def normalize_sfid_series(series: pd.Series) -> pd.Series:
     # Convert 15-char IDs to 18-char
     if is15.any():
         logger.info(
-            f"Converting {is15.sum()} 15-character IDs to 18-character canonical form"
+            f"Converting {is15.sum()} 15-character IDs to 18-character canonical form",
         )
         out.loc[non_empty & is15] = s_filtered[is15].map(sfid15_to_18)
 
@@ -118,21 +118,21 @@ def normalize_sfid_series(series: pd.Series) -> pd.Series:
     if bad_count > 0:
         sample = s_filtered[~(is15 | is18)].head(5).tolist()
         raise ValueError(
-            f"Found {bad_count} non 15/18-char Salesforce IDs. " f"Sample: {sample}"
+            f"Found {bad_count} non 15/18-char Salesforce IDs. Sample: {sample}",
         )
 
     return out
 
 
 def validate_sfid_format(sfid: str | Any) -> bool:
-    """
-    Validate that a string is a valid Salesforce ID format.
+    """Validate that a string is a valid Salesforce ID format.
 
     Args:
         sfid: String to validate
 
     Returns:
         True if valid 15 or 18 character Salesforce ID, False otherwise
+
     """
     if not isinstance(sfid, str):
         return False

@@ -1,12 +1,13 @@
-"""
-Tests for fragment utilities.
+"""Tests for fragment utilities.
 
 Tests the fragment API detection and unified decorator functionality.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from src.utils.fragment_utils import fragment, _USE_STABLE_FRAGMENT
+
+from src.utils.fragment_utils import _USE_STABLE_FRAGMENT, fragment
 
 
 def test_fragment_decorator_availability():
@@ -26,6 +27,7 @@ def test_stable_fragment_detection():
     """Test that stable fragment is detected for Streamlit >= 1.29."""
     # Re-import to get the mocked version
     import importlib
+
     import src.utils.fragment_utils
 
     importlib.reload(src.utils.fragment_utils)
@@ -45,6 +47,7 @@ def test_experimental_fragment_detection():
 
             # Re-import to get the mocked version
             import importlib
+
             import src.utils.fragment_utils
 
             importlib.reload(src.utils.fragment_utils)

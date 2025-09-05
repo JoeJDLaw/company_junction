@@ -1,5 +1,4 @@
-"""
-Alias matching functionality for Phase 1.5.
+"""Alias matching functionality for Phase 1.5.
 
 This module handles the extraction and matching of alias candidates
 across records without merging groups.
@@ -9,11 +8,11 @@ import logging
 import time
 from collections import defaultdict
 from itertools import zip_longest
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from rapidfuzz import process, fuzz
+from rapidfuzz import fuzz, process
 
 from src.utils.parallel_utils import ParallelExecutor
 
@@ -33,6 +32,7 @@ def _build_first_token_bucket(
         - Dictionary mapping first token to array of row indices
         - Dictionary mapping original indices to new contiguous indices
         - Dictionary mapping new contiguous indices back to original indices
+
     """
     bucket = defaultdict(list)
 
@@ -62,7 +62,7 @@ def _build_first_token_bucket(
     return bucket_arrays, index_map, reverse_map
 
 
-def _records_with_aliases(df_norm: pd.DataFrame) -> List[int]:
+def _records_with_aliases(df_norm: pd.DataFrame) -> List[Any]:
     """Get sorted list of record indices that have non-empty alias candidates.
 
     Args:
@@ -70,11 +70,12 @@ def _records_with_aliases(df_norm: pd.DataFrame) -> List[int]:
 
     Returns:
         Sorted list of record indices with aliases
+
     """
     records_with_aliases = []
 
     for idx, record in df_norm.iterrows():
-        alias_candidates = record.get("alias_candidates", [])
+        alias_candidates: List[str] = record.get("alias_candidates", [])
 
         # Handle numpy arrays properly
         if hasattr(alias_candidates, "size"):
@@ -116,10 +117,11 @@ def _process_one_record_optimized(
 
     Returns:
         List of match dictionaries
+
     """
     record = df_norm.loc[record_id]
-    alias_candidates = record.get("alias_candidates", [])
-    alias_sources = record.get("alias_sources", [])
+    alias_candidates: List[str] = list(record.get("alias_candidates", []))
+    alias_sources: List[str] = list(record.get("alias_sources", []))
 
     # Map record_id to new index space
     record_idx = index_map[record_id]
@@ -142,7 +144,7 @@ def _process_one_record_optimized(
     if len(alias_candidates) != len(alias_sources):
         logger.warning(
             f"Record {record_id}: alias_candidates length ({len(alias_candidates)}) "
-            f"!= alias_sources length ({len(alias_sources)})"
+            f"!= alias_sources length ({len(alias_sources)})",
         )
 
     # Normalize aliases
@@ -152,7 +154,7 @@ def _process_one_record_optimized(
         if normalized:
             normalized_aliases.append(normalized)
 
-    matches = []
+    matches: List[Dict[str, Any]] = []
     record_suffix = suffix_class.loc[record_id]
 
     # Process each alias
@@ -176,11 +178,11 @@ def _process_one_record_optimized(
 
         if debug:
             logger.info(
-                f"[DEBUG]   First token '{first_token}': {len(candidate_indices)} candidates"
+                f"[DEBUG]   First token '{first_token}': {len(candidate_indices)} candidates",
             )
             logger.info(f"[DEBUG]   Record index mapping: {record_id} → {record_idx}")
             logger.info(
-                f"[DEBUG]   Candidate indices (mapped): {candidate_indices[:5]}..."
+                f"[DEBUG]   Candidate indices (mapped): {candidate_indices[:5]}...",
             )
 
         # Apply suffix and self-match filters using mapped indices
@@ -189,16 +191,16 @@ def _process_one_record_optimized(
         )
         if debug:
             logger.info(
-                f"[DEBUG]   Suffix class '{record_suffix}': {mask.sum()} matches"
+                f"[DEBUG]   Suffix class '{record_suffix}': {mask.sum()} matches",
             )
             logger.info(
-                f"[DEBUG]   Candidates before suffix filter: {candidate_indices.size}"
+                f"[DEBUG]   Candidates before suffix filter: {candidate_indices.size}",
             )
 
         candidate_indices = candidate_indices[mask]
         if debug:
             logger.info(
-                f"[DEBUG]   Candidates after suffix filter: {candidate_indices.size}"
+                f"[DEBUG]   Candidates after suffix filter: {candidate_indices.size}",
             )
 
         if candidate_indices.size == 0:
@@ -222,7 +224,7 @@ def _process_one_record_optimized(
         if debug:
             logger.info(f"[DEBUG]   Scoring {len(candidate_names)} candidates")
             logger.info(
-                f"[DEBUG]   Got {len(results)} matches above threshold {high_threshold}"
+                f"[DEBUG]   Got {len(results)} matches above threshold {high_threshold}",
             )
 
             # Convert results to match dictionaries
@@ -233,16 +235,16 @@ def _process_one_record_optimized(
 
             if debug:
                 logger.info(
-                    f"[DEBUG]   Match: {candidate_name} (score={score}, idx={mapped_idx}→{original_idx})"
+                    f"[DEBUG]   Match: {candidate_name} (score={score}, idx={mapped_idx}→{original_idx})",
                 )
                 logger.info(
-                    f"[DEBUG]   Index mapping: result_idx={result_idx}, mapped_idx={mapped_idx}, original_idx={original_idx}"
+                    f"[DEBUG]   Index mapping: result_idx={result_idx}, mapped_idx={mapped_idx}, original_idx={original_idx}",
                 )
                 logger.info(
-                    f"[DEBUG]   reverse_map[mapped_idx]={reverse_map[mapped_idx]}"
+                    f"[DEBUG]   reverse_map[mapped_idx]={reverse_map[mapped_idx]}",
                 )
                 logger.info(
-                    f"[DEBUG]   df_groups.index[mapped_idx]={df_groups.index[mapped_idx]}"
+                    f"[DEBUG]   df_groups.index[mapped_idx]={df_groups.index[mapped_idx]}",
                 )
 
             # Get group ID with fallback for missing indices
@@ -253,12 +255,12 @@ def _process_one_record_optimized(
 
             if debug:
                 logger.info(
-                    f"[DEBUG]   Group ID: {match_group_id} for record {original_idx}"
+                    f"[DEBUG]   Group ID: {match_group_id} for record {original_idx}",
                 )
                 logger.info(f"[DEBUG]   Candidate name: {candidate_name}")
                 logger.info(f"[DEBUG]   Original name: {name_core.loc[original_idx]}")
                 logger.info(
-                    f"[DEBUG]   Group ID lookup: mask={mask.sum()}, id={match_group_id}"
+                    f"[DEBUG]   Group ID lookup: mask={mask.sum()}, id={match_group_id}",
                 )
 
             # Check if this is a valid match
@@ -272,7 +274,7 @@ def _process_one_record_optimized(
                         "match_group_id": match_group_id,  # Use group ID from df_groups
                         "score": score,
                         "suffix_match": True,  # Already filtered by suffix
-                    }
+                    },
                 )
 
     return matches
@@ -284,8 +286,7 @@ def compute_alias_matches(
     settings: Dict[str, Any],
     parallel_executor: Optional[ParallelExecutor] = None,
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-    """
-    Compute alias matches across records.
+    """Compute alias matches across records.
 
     Args:
         df_norm: DataFrame with normalized data and alias candidates
@@ -294,6 +295,7 @@ def compute_alias_matches(
 
     Returns:
         Tuple of (DataFrame with alias matches, performance stats)
+
     """
     start_time = time.time()
     logger.info("Computing alias matches")
@@ -331,7 +333,7 @@ def compute_alias_matches(
     # Enhanced logging for debugging
     logger.info(
         f"Alias optimization config: optimize={optimize}, workers={workers}, "
-        f"progress_interval={progress_interval}s"
+        f"progress_interval={progress_interval}s",
     )
 
     # Performance counters
@@ -340,8 +342,14 @@ def compute_alias_matches(
     accepted_matches = 0
 
     # Check if we can actually use parallel execution
-    can_parallel = optimize and workers and workers > 1 and parallel_executor and parallel_executor.should_use_parallel(len(df_norm))
-    
+    can_parallel = (
+        optimize
+        and workers
+        and workers > 1
+        and parallel_executor
+        and parallel_executor.should_use_parallel(len(df_norm))
+    )
+
     if can_parallel:
         # Optimized path with parallelization
         logger.info(f"✅ Using optimized alias matching with {workers} workers")
@@ -356,6 +364,9 @@ def compute_alias_matches(
         else:
             reason = "input size below parallel threshold"
         logger.info(f"Using sequential alias matching: {reason}")
+
+    # Initialize alias_matches list
+    alias_matches: List[Dict[str, Any]] = []
 
     if can_parallel:
         # Optimized path with parallelization already logged above
@@ -374,7 +385,7 @@ def compute_alias_matches(
         for token, indices in bucket.items():
             if len(indices) > 10000:
                 logger.warning(
-                    f"Large first-token bucket for '{token}': {len(indices)} records"
+                    f"Large first-token bucket for '{token}': {len(indices)} records",
                 )
 
         # Get records with aliases
@@ -383,17 +394,16 @@ def compute_alias_matches(
 
         if total_records == 0:
             logger.info("No records with aliases found")
-            alias_matches = []
         else:
             logger.info(
-                f"Processing {total_records} records with aliases using {workers} workers"
+                f"Processing {total_records} records with aliases using {workers} workers",
             )
 
             # Progress tracking
-            last_progress_time = time.time()
-            processed_count = 0
+            _last_progress_time = time.time()
+            _processed_count = 0
 
-            def process_one_record(record_id: int) -> List[Dict[str, Any]]:
+            def process_one_record(record_id: Any) -> List[Dict[str, Any]]:
                 return _process_one_record_optimized(
                     record_id,
                     df_norm,
@@ -410,10 +420,10 @@ def compute_alias_matches(
 
             # Use ParallelExecutor for consistent parallelism with similarity module
             if parallel_executor and parallel_executor.should_use_parallel(
-                len(records_with_aliases)
+                len(records_with_aliases),
             ):
                 logger.info(
-                    f"Using ParallelExecutor for alias matching with {parallel_executor.workers} workers"
+                    f"Using ParallelExecutor for alias matching with {parallel_executor.workers} workers",
                 )
 
                 # Process all records using execute_chunked for optimal parallel processing
@@ -429,7 +439,6 @@ def compute_alias_matches(
                 # Sequential processing already logged above
 
                 # Sequential processing with progress tracking
-                alias_matches = []
                 for i, record_id in enumerate(records_with_aliases):
                     chunk_results = process_one_record(record_id)
                     alias_matches.extend(chunk_results)
@@ -441,7 +450,7 @@ def compute_alias_matches(
                         logger.info(
                             f"Alias progress: {i + 1}/{total_records} "
                             f"({(i + 1)/total_records*100:.1f}%) "
-                            f"rate: {rate:.1f} rec/s ETA: {eta:.1f}s"
+                            f"rate: {rate:.1f} rec/s ETA: {eta:.1f}s",
                         )
 
             # Sort matches by record IDs first, then alias text and group ID
@@ -451,18 +460,17 @@ def compute_alias_matches(
                     x["match_record_id"],
                     x["alias_text"],
                     x["match_group_id"],
-                )
+                ),
             )
 
     else:
         # Legacy sequential path
         logger.info("Using legacy sequential alias matching")
-        alias_matches = []
 
         # Process each record with aliases
         for idx, record in df_norm.iterrows():
-            alias_candidates = record.get("alias_candidates", [])
-            alias_sources = record.get("alias_sources", [])
+            alias_candidates: List[str] = record.get("alias_candidates", [])
+            alias_sources: List[str] = record.get("alias_sources", [])
 
             # Handle numpy arrays properly
             if hasattr(alias_candidates, "size"):
@@ -489,13 +497,13 @@ def compute_alias_matches(
                         df_groups,
                         high_threshold,
                         debug=idx in debug_records,
-                    )
+                    ),
                 )
 
     # Limit results if too many
     if len(alias_matches) > max_alias_pairs:
         logger.warning(
-            f"Limiting alias matches to {max_alias_pairs} (found {len(alias_matches)})"
+            f"Limiting alias matches to {max_alias_pairs} (found {len(alias_matches)})",
         )
         capped_blocks = 1
         alias_matches = alias_matches[:max_alias_pairs]
@@ -509,7 +517,7 @@ def compute_alias_matches(
                 x["match_record_id"],
                 x["alias_text"],
                 x["match_group_id"],
-            )
+            ),
         )
         df_matches = pd.DataFrame(alias_matches)
         accepted_matches = len(df_matches)
@@ -523,7 +531,7 @@ def compute_alias_matches(
                 "match_group_id",
                 "score",
                 "suffix_match",
-            ]
+            ],
         )
 
     # Calculate performance stats
@@ -542,14 +550,14 @@ def compute_alias_matches(
 
 
 def _normalize_alias(alias: str) -> str:
-    """
-    Normalize an alias using the same rules as name_core.
+    """Normalize an alias using the same rules as name_core.
 
     Args:
         alias: Raw alias string
 
     Returns:
         Normalized alias
+
     """
     if not alias:
         return ""
@@ -594,8 +602,7 @@ def _score_alias_against_records(
     high_threshold: int,
     debug: bool = False,
 ) -> List[Dict[str, Any]]:
-    """
-    Score an alias against all other records' name_core.
+    """Score an alias against all other records' name_core.
 
     Args:
         record: Source record
@@ -608,8 +615,9 @@ def _score_alias_against_records(
 
     Returns:
         List of match dictionaries
+
     """
-    matches = []
+    matches: List[Dict[str, Any]] = []
     record_id = record.name
 
     if debug:
@@ -671,7 +679,7 @@ def _score_alias_against_records(
 
             if debug:
                 logger.info(
-                    f"[DEBUG-LEGACY]   Match: {other_name_core} (score={score})"
+                    f"[DEBUG-LEGACY]   Match: {other_name_core} (score={score})",
                 )
 
             matches.append(
@@ -683,7 +691,7 @@ def _score_alias_against_records(
                     "match_group_id": match_group_id,
                     "score": score,
                     "suffix_match": suffix_match,
-                }
+                },
             )
 
     if debug:
@@ -696,10 +704,9 @@ def _score_alias_against_records(
 
 
 def create_alias_cross_refs(
-    df_norm: pd.DataFrame, df_alias_matches: pd.DataFrame
+    df_norm: pd.DataFrame, df_alias_matches: pd.DataFrame,
 ) -> pd.DataFrame:
-    """
-    Create alias cross-references for each record.
+    """Create alias cross-references for each record.
 
     Args:
         df_norm: DataFrame with normalized data
@@ -707,6 +714,7 @@ def create_alias_cross_refs(
 
     Returns:
         DataFrame with alias_cross_refs column added
+
     """
     if df_alias_matches.empty:
         df_norm["alias_cross_refs"] = [[] for _ in range(len(df_norm))]
@@ -725,7 +733,7 @@ def create_alias_cross_refs(
                 "group_id": match["match_group_id"],
                 "score": match["score"],
                 "source": match["alias_source"],
-            }
+            },
         )
 
     # Add cross_refs to DataFrame
@@ -736,12 +744,12 @@ def create_alias_cross_refs(
 
 
 def save_alias_matches(df_alias_matches: pd.DataFrame, output_path: str) -> None:
-    """
-    Save alias matches DataFrame to parquet file.
+    """Save alias matches DataFrame to parquet file.
 
     Args:
         df_alias_matches: DataFrame with alias matches
         output_path: Output file path
+
     """
     # Sanitize to parquet-friendly columns only
     sanitized_columns = [
@@ -777,14 +785,14 @@ def save_alias_matches(df_alias_matches: pd.DataFrame, output_path: str) -> None
 
 
 def load_alias_matches(input_path: str) -> pd.DataFrame:
-    """
-    Load alias matches DataFrame from parquet file.
+    """Load alias matches DataFrame from parquet file.
 
     Args:
         input_path: Input file path
 
     Returns:
         DataFrame with alias matches
+
     """
     try:
         df_alias_matches = pd.read_parquet(input_path)

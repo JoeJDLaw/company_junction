@@ -1,5 +1,4 @@
-"""
-CI safety test to prevent hardcoded values from creeping back into the codebase.
+"""CI safety test to prevent hardcoded values from creeping back into the codebase.
 
 This test scans Python files for hardcoded paths, artifact names, and other values
 that should be configurable or use helper functions.
@@ -9,7 +8,6 @@ import ast
 import re
 from pathlib import Path
 from typing import List
-
 
 # Only scan these code roots for hardcoded values
 CODE_ROOTS = ["src/", "app/", "tools/", "scripts/"]
@@ -79,7 +77,7 @@ def is_excluded_file(file_path: Path) -> bool:
 def extract_string_literals(file_path: Path) -> List[tuple]:
     """Extract string literals from Python file, excluding comments and docstrings."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         # Parse AST to identify string literals
@@ -101,7 +99,7 @@ def extract_string_literals(file_path: Path) -> List[tuple]:
 
 def check_file_for_hardcoded_values(file_path: Path) -> List[dict]:
     """Check a single file for hardcoded values."""
-    violations = []
+    violations: list = []
 
     if is_excluded_file(file_path):
         return violations
@@ -116,10 +114,15 @@ def check_file_for_hardcoded_values(file_path: Path) -> List[dict]:
                 continue
 
             # Check pattern
-            if re.search(pattern_info["pattern"], value):
+            pattern = pattern_info["pattern"]
+            if (
+                isinstance(value, str)
+                and isinstance(pattern, str)
+                and re.search(pattern, value)
+            ):
                 # Get context (few lines around the match)
                 try:
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, encoding="utf-8") as f:
                         lines = f.readlines()
                         start = max(0, line_no - 2)
                         end = min(len(lines), line_no + 1)
@@ -135,7 +138,7 @@ def check_file_for_hardcoded_values(file_path: Path) -> List[dict]:
                         "match": value,
                         "description": pattern_info["description"],
                         "context": context,
-                    }
+                    },
                 )
 
     return violations
@@ -144,7 +147,7 @@ def check_file_for_hardcoded_values(file_path: Path) -> List[dict]:
 def find_python_files() -> List[Path]:
     """Find all Python files in the project."""
     project_root = Path(__file__).parent.parent
-    python_files = []
+    python_files: List[Path] = []
 
     for root in CODE_ROOTS:
         root_path = project_root / root.rstrip("/")
@@ -176,17 +179,17 @@ def test_no_hardcoded_literals():
 
         raise AssertionError(
             f"Found {len(all_violations)} hardcoded values that violate Phase 1.25.1 guardrails:"
-            + "".join(violation_messages)
+            + "".join(violation_messages),
         )
 
 
 def test_path_utils_functions_exist():
     """Test that path utility functions exist and work."""
     from src.utils.path_utils import (
-        get_config_path,
-        get_processed_dir,
-        get_interim_dir,
         get_artifact_path,
+        get_config_path,
+        get_interim_dir,
+        get_processed_dir,
     )
 
     # Test basic functionality
@@ -210,10 +213,10 @@ def test_path_utils_functions_exist():
 def test_schema_utils_constants_exist():
     """Test that schema utility constants exist."""
     from src.utils.schema_utils import (
-        GROUP_ID,
         ACCOUNT_ID,
         ACCOUNT_NAME,
         DISPOSITION,
+        GROUP_ID,
         get_canonical_columns,
     )
 
@@ -231,11 +234,12 @@ def test_schema_utils_constants_exist():
 
 def test_config_structure():
     """Test that config/settings.yaml contains expected structure."""
-    from src.utils.path_utils import get_config_path
     import yaml
 
+    from src.utils.path_utils import get_config_path
+
     config_path = get_config_path()
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     # Check for required sections

@@ -1,12 +1,12 @@
-"""
-Tests for schema application functionality.
+"""Tests for schema application functionality.
 
 This module tests the new helper functions for applying canonical column renames.
 """
 
-import pytest
 import pandas as pd
-from src.utils.schema_utils import invert_mapping, apply_canonical_rename
+import pytest
+
+from src.utils.schema_utils import apply_canonical_rename, invert_mapping
 
 
 def test_invert_mapping():
@@ -37,7 +37,7 @@ def test_apply_canonical_rename_success():
             "Account ID": ["001", "002", "003"],
             "Account Name": ["Company A", "Company B", "Company C"],
             "Created Date": ["2023-01-01", "2023-01-02", "2023-01-03"],
-        }
+        },
     )
 
     # Schema mapping from canonical to actual
@@ -73,7 +73,7 @@ def test_apply_canonical_rename_missing_required_column():
             "Account ID": ["001", "002"],
             "Created Date": ["2023-01-01", "2023-01-02"],
             # Missing "Account Name" column
-        }
+        },
     )
 
     # Schema mapping missing account_name
@@ -100,7 +100,7 @@ def test_apply_canonical_rename_partial_mapping():
             "Account Name": ["Company A", "Company B"],
             "Created Date": ["2023-01-01", "2023-01-02"],
             "Extra Column": ["extra1", "extra2"],  # Extra column not in mapping
-        }
+        },
     )
 
     # Schema mapping for only some columns

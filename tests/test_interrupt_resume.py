@@ -1,16 +1,18 @@
 """Tests for interrupt and resume functionality."""
 
-import pandas as pd
-import tempfile
-import os
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
-from src.utils.mini_dag import MiniDAG
+import pandas as pd
+
 from src.utils.cache_utils import update_run_status
+from src.utils.mini_dag import MiniDAG
 
 
 class TestMiniDAGInterruptHandling:
@@ -33,7 +35,7 @@ class TestMiniDAGInterruptHandling:
             assert dag.get_status("test_stage") == "interrupted"
 
             # Check metadata
-            with open(temp_path, "r") as f:
+            with open(temp_path) as f:
                 data = json.load(f)
 
             assert data["metadata"]["status"] == "interrupted"
@@ -134,7 +136,7 @@ parallelism:
   backend: "threading"
   chunk_size: 1000
   small_input_threshold: 1000
-"""
+""",
                 )
 
             # Test that we can run a small pipeline
@@ -155,7 +157,7 @@ parallelism:
             ]
 
             # Run the pipeline (should complete quickly with small data)
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=30)
 
             # Should complete successfully
             assert result.returncode == 0, f"Pipeline failed: {result.stderr}"
@@ -173,7 +175,7 @@ parallelism:
             # Note: Pipeline always creates run-scoped subdirectories under the default data/processed location
             expected_output_dir = f"data/processed/{run_id}"
             assert os.path.exists(
-                expected_output_dir
+                expected_output_dir,
             ), f"Run-scoped output directory not found: {expected_output_dir}"
 
             output_files = os.listdir(expected_output_dir)
@@ -188,7 +190,7 @@ parallelism:
                 shutil.rmtree(temp_dir)
 
     @patch("signal.signal")
-    def test_keyboard_interrupt_handling(self, mock_signal) -> None:  # noqa: F811
+    def test_keyboard_interrupt_handling(self, mock_signal: Any) -> None:
         """Test that KeyboardInterrupt is handled gracefully."""
         # This test verifies that the interrupt handling is in place
         # We can't easily test actual Ctrl+C in unit tests, but we can verify
@@ -230,7 +232,7 @@ class TestRunStatusInterrupted:
             update_run_status("test_run_id", "interrupted")
 
             # Verify the status was updated
-            with open(temp_path, "r") as f:
+            with open(temp_path) as f:
                 _ = json.load(f)  # Load to verify valid JSON
 
             # Note: update_run_status might not use the temp file we created
@@ -301,7 +303,7 @@ class TestInterruptSafety:
             dag.mark_interrupted("test_stage")
 
             # Verify the file is valid JSON
-            with open(temp_path, "r") as f:
+            with open(temp_path) as f:
                 data = json.load(f)
 
             # Verify the structure is correct

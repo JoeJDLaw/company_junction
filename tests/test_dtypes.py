@@ -1,23 +1,23 @@
-"""
-Tests for dtype validation and memory optimization functionality.
+"""Tests for dtype validation and memory optimization functionality.
 """
 
-import pytest
-import pandas as pd
 import sys
 from pathlib import Path
+
+import pandas as pd
+import pytest
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
+from src.dtypes_map import ALLOWED_OBJECT_COLUMNS, DTYPES, INTERMEDIATE_COLUMNS_TO_DROP
 from src.utils.dtypes import (
     apply_dtypes,
     assert_no_unexpected_object_columns,
     drop_intermediate_columns,
-    optimize_dataframe_memory,
     get_dtypes_for_schema,
+    optimize_dataframe_memory,
 )
-from src.dtypes_map import DTYPES, ALLOWED_OBJECT_COLUMNS, INTERMEDIATE_COLUMNS_TO_DROP
 
 
 class TestDtypeApplication:
@@ -30,7 +30,7 @@ class TestDtypeApplication:
                 "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],
                 "score": [95.5, 87.2],
-            }
+            },
         )
 
         schema = {"account_id": "string", "name_core": "string", "score": "float32"}
@@ -47,7 +47,7 @@ class TestDtypeApplication:
             {
                 "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],
-            }
+            },
         )
 
         schema = {
@@ -84,7 +84,7 @@ class TestObjectColumnValidation:
                 "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],  # Allowed object column
                 "score": [95.5, 87.2],
-            }
+            },
         )
 
         # Should not raise exception
@@ -97,7 +97,7 @@ class TestObjectColumnValidation:
                 "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "unexpected_col": ["value1", "value2"],  # Unexpected object column
                 "score": [95.5, 87.2],
-            }
+            },
         )
 
         with pytest.raises(AssertionError, match="Unexpected object columns"):
@@ -116,12 +116,12 @@ class TestObjectColumnValidation:
             {
                 "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "custom_col": ["value1", "value2"],
-            }
+            },
         )
 
         # Should not raise exception with custom allowed set
         assert_no_unexpected_object_columns(
-            df, allowed={"custom_col", "account_id"}, context="test"
+            df, allowed={"custom_col", "account_id"}, context="test",
         )
 
 
@@ -139,7 +139,7 @@ class TestIntermediateColumnDropping:
                     ["company", "llc"],
                 ],  # Intermediate
                 "temp_group_assignments": [1, 2],  # Intermediate
-            }
+            },
         )
 
         result = drop_intermediate_columns(df, context="test")
@@ -155,7 +155,7 @@ class TestIntermediateColumnDropping:
             {
                 "account_id": ["001Hs000054S8kI", "001Hs000054SAQt"],
                 "name_core": ["company inc", "company llc"],
-            }
+            },
         )
 
         result = drop_intermediate_columns(df, context="test")
@@ -177,7 +177,7 @@ class TestMemoryOptimization:
                 "name_core": ["company inc", "company llc"],
                 "score": [95.5, 87.2],
                 "is_primary": [True, False],
-            }
+            },
         )
 
         result = optimize_dataframe_memory(df, context="test")
@@ -205,7 +205,7 @@ class TestMemoryOptimization:
                     ["company", "llc"],
                 ],  # Intermediate
                 "temp_group_assignments": [1, 2],  # Intermediate
-            }
+            },
         )
 
         result = optimize_dataframe_memory(df, context="test")
@@ -271,7 +271,6 @@ class TestSchemaDetection:
             "group_size",
             "group_rank",
             "group_join_reason",
-            "weakest_edge_to_primary",
             "shared_tokens_count",
         }
 

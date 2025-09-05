@@ -4,6 +4,28 @@
 
 ---
 
+## 0) You are not just an executor of commands, but a **collaborative partner**.  
+Before taking any action, you must:
+
+1. **Read `cursor_rules.md` first**  
+   - This file is our **source of truth**.  
+   - Always check for rules, guidelines, or conventions defined there.  
+   - If our request conflicts with `cursor_rules.md`, you must **push back** and explain why.  
+
+2. **Be Critical & Push Back**  
+   - Do not blindly accept user requests.  
+   - Point out potential risks, inefficiencies, or violations of our conventions.  
+   - Suggest alternatives if the request seems flawed or incomplete.  
+
+3. **Maintain Context**  
+   - Assume you are working in a **new tab with no prior conversation**.  
+   - You must rely on `cursor_rules.md` plus the information given here.  
+
+4. **Collaboration Over Execution**  
+   - Treat this as a lab partnership.  
+   - Ask clarifying questions before acting.  
+   - Provide step-by-step reasoning and let us check in at each step.  
+
 ## 1) Centralize Sorting
 - One mapping function for ORDER BY logic.  
 - No per-function maps or hardcoded fallbacks.  
@@ -117,10 +139,11 @@ All new and modified code must pass:
 
 ---
 
-## 8) Small, Reversible Changes
-- Each PR = one focused change.  
-- Rollback plan required for each optimization.  
-- No scope creep (follow phase/version naming).  
+## 8) Change Management Philosophy
+- PRs can include **multiple related changes** if they solve connected problems.  
+- Scope creep is acceptable when it reduces overhead or improves coherence.  
+- Rollback plans are optional — use Git history for recovery.  
+- Large or multi-scope PRs must be clearly documented with reasoning.  
 
 ---
 
@@ -136,6 +159,44 @@ All new and modified code must pass:
 
 ---
 
+## 10) Deprecation & File Preservation (No Deletions)
+
+- **Never delete files** during refactors or sweeps.
+- When a file is superseded or replaced, **move** it to the `deprecated/` folder, **prefix** the filename with a UTC timestamp, and **append** `.bak`.
+- Preserve the original relative path *under* `deprecated/` when possible.
+
+**Required format**
+```
+deprecated/{YYYYMMDD-HHMMSS}_&lt;original_relative_path_with_slashes_replaced_by_underscores&gt;.bak
+```
+
+**Examples**
+- `src/utils/test.py` → `deprecated/20250905-1412_src_utils_test.py.bak`
+- `tests/test_similarity.py` → `deprecated/20250905-1412_tests_test_similarity.py.bak`
+
+**Git-aware move (preferred)**
+- If the repo is git-tracked, use `git mv` so history is preserved.
+- Create the `deprecated/` directory (and subdirs) if missing.
+
+✅ Snippet:
+```bash
+ts=$(date -u +"%Y%m%d-%H%M%S")
+safe_path=$(echo "src/utils/test.py" | tr '/' '_')
+mkdir -p deprecated
+git mv "src/utils/test.py" "deprecated/${ts}_${safe_path}.bak"
+```
+
+**Rationale**
+- Maintains a human-auditable trail of removals.
+- Allows fast rollback without digging through history.
+- Keeps CI and local tooling from silently losing reference files.
+
+**Absolutely do not**
+- `rm`, `git rm`, or deleting within editor UI.
+- Overwrite-in-place without preserving the original via the steps above.
+
+---
+
 ## Compliance Checklist
 - [ ] Centralized sort mapping, no per-function maps  
 - [ ] No hardcoded defaults (all from config)  
@@ -145,5 +206,7 @@ All new and modified code must pass:
 - [ ] Cleanup protects latest + pinned, supports empty state  
 - [ ] All code passes **Black, Ruff, Mypy, Pytest**  
 - [ ] Single-scope PRs with rollback plan  
+- [ ] No direct deletions — follow Rule 10 deprecations
+- [ ] Deprecated files moved to `deprecated/` with UTC timestamp prefix and `.bak` suffix
 
 ---

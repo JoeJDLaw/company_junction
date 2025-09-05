@@ -1,10 +1,10 @@
+"""Test alias progress logging functionality.
 """
-Test alias progress logging functionality.
-"""
+
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
-from unittest.mock import patch
 
 from src.alias_matching import compute_alias_matches
 from tests.helpers.ingest import ensure_required_columns
@@ -51,7 +51,7 @@ def sample_data():
                 [],
                 [],
             ],
-        }
+        },
     )
 
     df_groups = pd.DataFrame(
@@ -64,7 +64,7 @@ def sample_data():
                 "group_2",
                 "group_3",
                 "group_4",
-            ]
+            ],
         },
         index=df_norm.index,
     )

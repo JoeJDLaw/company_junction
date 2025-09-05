@@ -1,5 +1,4 @@
-"""
-Tests for resource monitoring functionality.
+"""Tests for resource monitoring functionality.
 
 This module tests:
 - System information gathering
@@ -9,17 +8,18 @@ This module tests:
 - Resource guardrails
 """
 
-import pytest
 import os
 from typing import Any
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from src.utils.resource_monitor import (
-    get_system_info,
-    estimate_memory_per_worker,
     calculate_optimal_workers,
     check_disk_space,
+    estimate_memory_per_worker,
     get_memory_usage,
+    get_system_info,
     log_resource_summary,
     monitor_parallel_execution,
 )
@@ -67,7 +67,7 @@ def test_estimate_memory_per_worker() -> None:
 @patch("src.utils.resource_monitor.psutil.virtual_memory")
 @patch("src.utils.resource_monitor.psutil.Process")
 def test_calculate_optimal_workers_mock(
-    mock_process: Any, mock_virtual_memory: Any
+    mock_process: Any, mock_virtual_memory: Any,
 ) -> None:
     """Test worker calculation with mocked psutil."""
     # Mock memory info
@@ -246,7 +246,7 @@ def test_error_handling() -> None:
 
     # Test memory estimation with exceptions
     with patch(
-        "src.utils.resource_monitor.psutil.Process", side_effect=Exception("Test error")
+        "src.utils.resource_monitor.psutil.Process", side_effect=Exception("Test error"),
     ):
         with patch("src.utils.resource_monitor.PSUTIL_AVAILABLE", True):
             memory = estimate_memory_per_worker()
@@ -257,7 +257,7 @@ def test_memory_percentage_calculation() -> None:
     """Test memory percentage calculation."""
     with patch("src.utils.resource_monitor.PSUTIL_AVAILABLE", True):
         with patch(
-            "src.utils.resource_monitor.psutil.virtual_memory"
+            "src.utils.resource_monitor.psutil.virtual_memory",
         ) as mock_virtual_memory:
             # Mock 50% memory usage
             mock_memory = MagicMock()

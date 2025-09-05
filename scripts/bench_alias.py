@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Benchmark alias matching performance between legacy and optimized paths.
+"""Benchmark alias matching performance between legacy and optimized paths.
 
 This script runs the alias stage multiple times with different optimization settings
 to measure performance improvements.
@@ -13,7 +12,6 @@ import time
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-
 from src.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -24,7 +22,7 @@ def run_pipeline_with_settings(
     config_path: Path,
     optimize: bool,
     workers: int = 4,
-    output_dir: Path = None,
+    output_dir: Path | None = None,
 ) -> Tuple[float, Dict]:
     """Run pipeline with specific alias optimization settings.
 
@@ -37,6 +35,7 @@ def run_pipeline_with_settings(
 
     Returns:
         Tuple of (elapsed_time, stats_dict)
+
     """
     if output_dir is None:
         # Create unique output directory
@@ -48,7 +47,7 @@ def run_pipeline_with_settings(
     # Create temporary config with specific alias settings
     import yaml
 
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     # Set alias optimization
@@ -95,7 +94,7 @@ def run_pipeline_with_settings(
     try:
         result = subprocess.run(
             cmd,
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout
             cwd=Path.cwd(),
@@ -132,6 +131,7 @@ def parse_alias_stats(log_output: str) -> Dict:
 
     Returns:
         Dictionary with parsed stats
+
     """
     stats = {}
 
@@ -146,7 +146,7 @@ def parse_alias_stats(log_output: str) -> Dict:
                     if part == "Generated":
                         stats["pairs_generated"] = int(parts[i + 1])
                     elif part == "in" and i + 2 < len(parts):
-                        stats["elapsed_time"] = float(parts[i + 1].rstrip("s"))
+                        stats["elapsed_time"] = int(float(parts[i + 1].rstrip("s")))
                 break
             except (ValueError, IndexError):
                 continue
@@ -159,6 +159,7 @@ def print_benchmark_results(results: List[Tuple[str, float, Dict]]) -> None:
 
     Args:
         results: List of (name, elapsed_time, stats) tuples
+
     """
     logger.info("=" * 80)
     logger.info("ALIAS MATCHING BENCHMARK RESULTS")
@@ -201,17 +202,17 @@ def print_benchmark_results(results: List[Tuple[str, float, Dict]]) -> None:
                 logger.info("  ⚠️  Minimal performance improvement")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Benchmark alias matching performance")
     parser.add_argument(
-        "--input", type=Path, required=True, help="Path to input CSV file"
+        "--input", type=Path, required=True, help="Path to input CSV file",
     )
     parser.add_argument(
-        "--config", type=Path, required=True, help="Path to config YAML file"
+        "--config", type=Path, required=True, help="Path to config YAML file",
     )
     parser.add_argument(
-        "--workers", type=int, default=4, help="Number of parallel workers (default: 4)"
+        "--workers", type=int, default=4, help="Number of parallel workers (default: 4)",
     )
     parser.add_argument(
         "--runs",
@@ -243,7 +244,7 @@ def main():
     for i in range(args.runs):
         logger.info(f"Run {i+1}/{args.runs}: Legacy alias matching")
         elapsed_time, stats = run_pipeline_with_settings(
-            args.input, args.config, optimize=False, workers=args.workers
+            args.input, args.config, optimize=False, workers=args.workers,
         )
         results.append(("Legacy (optimize=false)", elapsed_time, stats))
 
@@ -251,7 +252,7 @@ def main():
     for i in range(args.runs):
         logger.info(f"Run {i+1}/{args.runs}: Optimized alias matching")
         elapsed_time, stats = run_pipeline_with_settings(
-            args.input, args.config, optimize=True, workers=args.workers
+            args.input, args.config, optimize=True, workers=args.workers,
         )
         results.append(("Optimized (optimize=true)", elapsed_time, stats))
 

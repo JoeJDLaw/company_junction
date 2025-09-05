@@ -1,16 +1,15 @@
-"""
-Logging utilities for the company junction pipeline.
+"""Logging utilities for the company junction pipeline.
 """
 
 import logging
 
 
 def setup_logging(level: str = "INFO") -> None:
-    """
-    Configure logging for the pipeline.
+    """Configure logging for the pipeline.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR)
+
     """
     logging.basicConfig(
         level=getattr(logging, level.upper()),
@@ -20,13 +19,13 @@ def setup_logging(level: str = "INFO") -> None:
 
 
 def get_logger(name: str) -> logging.Logger:
-    """
-    Get a logger instance for the specified module.
+    """Get a logger instance for the specified module.
 
     Args:
         name: Logger name (typically __name__)
 
     Returns:
         Configured logger instance
+
     """
     return logging.getLogger(name)
