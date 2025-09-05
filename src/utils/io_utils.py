@@ -200,17 +200,17 @@ def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> Dict[str, str]
 
     # Read sample with low_memory=False to avoid dtype warnings during inference
     try:
-        # Try pyarrow first for better performance
+        # Use c engine for consistent performance (PyArrow removed)
         sample_df = pd.read_csv(
             file_path_obj,
             nrows=sample_rows,
             low_memory=False,
-            engine="pyarrow" if _is_pyarrow_available() else "python",
+            engine="c",
             na_values=["", "NA", "NaN", "null", "None"],
             keep_default_na=True,
         )
     except Exception as e:
-        logger.warning(f"Pyarrow/python engine failed, falling back to c engine: {e}")
+        logger.warning(f"CSV reading failed, using c engine: {e}")
         sample_df = pd.read_csv(
             file_path_obj,
             nrows=sample_rows,
@@ -272,12 +272,9 @@ def read_csv_stable(
     if not file_path_obj.exists():
         raise FileNotFoundError(f"CSV file not found: {file_path}")
 
-    # Determine engine
+    # Determine engine (PyArrow removed)
     if engine is None or engine == "auto":
-        if _is_pyarrow_available():
-            engine = "pyarrow"
-        else:
-            engine = "c"
+        engine = "c"
 
     # Infer schema if not provided
     if dtype_map is None:
@@ -287,27 +284,16 @@ def read_csv_stable(
         f"Reading {file_path} with engine={engine}, dtypes={len(dtype_map)} columns"
     )
 
-    # Read with stable dtypes
+    # Read with stable dtypes (PyArrow removed)
     try:
-        if engine == "pyarrow":
-            kwargs = {
-                "dtype": dtype_map,
-                "engine": "pyarrow",
-                "na_values": ["", "NA", "NaN", "null", "None"],
-                "keep_default_na": True,
-            }
-            if _is_pandas_2_plus():
-                kwargs["dtype_backend"] = "pyarrow"
-            df = pd.read_csv(file_path_obj, **kwargs)
-        else:
-            df = pd.read_csv(
-                file_path_obj,
-                dtype=dtype_map,
-                engine=engine,
-                low_memory=False,
-                na_values=["", "NA", "NaN", "null", "None"],
-                keep_default_na=True,
-            )
+        df = pd.read_csv(
+            file_path_obj,
+            dtype=dtype_map,
+            engine=engine,
+            low_memory=False,
+            na_values=["", "NA", "NaN", "null", "None"],
+            keep_default_na=True,
+        )
     except Exception as e:
         logger.warning(f"Engine {engine} failed, falling back to c engine: {e}")
         df = pd.read_csv(
@@ -386,10 +372,8 @@ def _has_decimal_points(data: pd.Series) -> bool:
 
 def get_csv_engine_preference() -> str:
     """Get the preferred CSV engine based on available libraries."""
-    if _is_pyarrow_available():
-        return "pyarrow"
-    else:
-        return "c"
+    # PyArrow removed, using c engine for consistency
+    return "c"
 
 
 def validate_csv_file(file_path: str) -> bool:

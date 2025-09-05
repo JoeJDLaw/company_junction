@@ -1,0 +1,52 @@
+"""
+Artifact management utilities for ui_helpers refactor.
+
+This module handles core path helpers for artifacts.
+"""
+
+import os
+from typing import Dict
+from src.utils.path_utils import get_artifact_path, get_interim_dir, get_processed_dir
+
+def get_artifact_paths(run_id: str) -> Dict[str, str]:
+    """
+    Get artifact paths for a run.
+
+    Args:
+        run_id: The run ID
+
+    Returns:
+        Dictionary of artifact paths
+    """
+    # Check if run exists in interim or processed
+    interim_dir = get_interim_dir(run_id)
+    processed_dir = get_processed_dir(run_id)
+
+    # Determine which directory exists and use that
+    if os.path.exists(processed_dir):
+        base_dir = str(processed_dir)
+        interim_format = "parquet"
+    elif os.path.exists(interim_dir):
+        base_dir = str(interim_dir)
+        interim_format = "parquet"
+    else:
+        # Fallback to processed directory
+        base_dir = str(processed_dir)
+        interim_format = "parquet"
+
+    return {
+        "review_ready_csv": f"{base_dir}/review_ready.csv",
+        "review_ready_parquet": f"{base_dir}/review_ready.parquet",
+        "review_meta": f"{base_dir}/review_meta.json",
+        "pipeline_state": f"{base_dir}/pipeline_state.json",
+        "candidate_pairs": f"{base_dir}/candidate_pairs.{interim_format}",
+        "groups": f"{base_dir}/groups.{interim_format}",
+        "survivorship": f"{base_dir}/survivorship.{interim_format}",
+        "dispositions": f"{base_dir}/dispositions.{interim_format}",
+        "alias_matches": f"{base_dir}/alias_matches.{interim_format}",
+        "block_top_tokens": f"{base_dir}/block_top_tokens.csv",
+        "group_stats_parquet": str(get_artifact_path(run_id, "group_stats.parquet")),
+        "group_details_parquet": str(
+            get_artifact_path(run_id, "group_details.parquet")
+        ),
+    }

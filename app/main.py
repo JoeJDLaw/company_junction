@@ -46,7 +46,6 @@ from src.utils.state_utils import migrate_legacy_keys
 from app.components import (
     render_controls,
     render_group_list,
-    render_group_details,
     render_maintenance,
     render_export,
 )
@@ -63,12 +62,14 @@ def load_settings() -> Dict[str, Any]:
         return {}
 
 
+@st.cache_data(show_spinner=False)
 def load_review_data(run_id: str) -> Optional[pd.DataFrame]:
     """Load review-ready data from a specific run with enhanced error handling."""
     try:
         with st.spinner(f"Loading review data from run {run_id}..."):
             # Get artifact paths for the run
-            from src.utils.ui_helpers import get_artifact_paths, validate_run_artifacts
+            from src.utils.artifact_management import get_artifact_paths
+            from src.utils.run_management import validate_run_artifacts
 
             # Validate run artifacts
             validation = validate_run_artifacts(run_id)
@@ -135,6 +136,14 @@ def main():
     # Setup logging
     setup_logging()
     logger = get_logger(__name__)
+    
+    # Track missing column warnings to avoid duplicates
+    missing_msgs = set()
+    
+    def warn_once(msg: str):
+        if msg not in missing_msgs:
+            st.warning(msg)
+            missing_msgs.add(msg)
 
     # Page configuration
     st.set_page_config(
@@ -146,9 +155,7 @@ def main():
 
     # Header
     st.title("🏢 Company Junction Review")
-    st.markdown(
-        "Review and manage duplicate company groups from the deduplication pipeline."
-    )
+    st.caption("Review and manage duplicate company groups detected by the pipeline.")
 
     # Load settings
     settings = load_settings()
@@ -160,15 +167,20 @@ def main():
     st.sidebar.header("Run Selection")
 
     # Get available runs
-    from src.utils.ui_helpers import list_runs, format_run_display_name
+    from src.utils.run_management import list_runs, format_run_display_name
 
-    runs = list_runs()
+    try:
+        runs = list_runs()
+    except Exception as e:
+        st.error(f"Failed to list runs: {e}")
+        render_maintenance("list_runs_error")
+        return
 
     # Always render sidebar structure first
     logger.info("Sidebar controls rendering...")
 
     # Filter controls (always render)
-    st.sidebar.header("Filters")
+    st.sidebar.header("Export Filters")
 
     # Disposition filter
     dispositions = ["Keep", "Update", "Delete", "Verify"]
@@ -176,19 +188,16 @@ def main():
         "Disposition", dispositions, default=dispositions
     )
 
-    # Group size filter
+    # Group size filter (currently affects Export only)
     min_group_size = st.sidebar.number_input(
-        "Min Group Size", min_value=1, value=1, step=1
+        "Min Group Size (Export only)", min_value=1, value=1, step=1
     )
 
-    # Score filter
-    min_edge_strength = st.sidebar.number_input(
-        "Min Edge Strength", min_value=0.0, value=0.0, step=0.1, format="%.1f"
-    )
+    # (Similarity is controlled in controls.py; no shadow control here)
 
     # Additional filters
-    show_suffix_mismatch = st.sidebar.checkbox("Show Suffix Mismatch Only", value=False)
-    has_aliases = st.sidebar.checkbox("Has Aliases Only", value=False)
+    show_suffix_mismatch = st.sidebar.checkbox("Show Suffix Mismatch Only (Export only)", value=False)
+    has_aliases = st.sidebar.checkbox("Has Aliases Only (Export only)", value=False)
 
     # Build filters dictionary
     filters = {
@@ -196,7 +205,7 @@ def main():
         "min_group_size": min_group_size,
         "show_suffix_mismatch": show_suffix_mismatch,
         "has_aliases": has_aliases,
-        "min_edge_strength": min_edge_strength,
+        # NOTE: similarity threshold is injected below after render_controls()
     }
 
     # Handle no runs case (empty state)
@@ -267,8 +276,9 @@ def main():
         render_maintenance("invalid_run")
         return
 
-    # Render maintenance in sidebar (always render)
-    render_maintenance(selected_run_id)
+    # (Similarity is controlled in controls.py; no shadow control here)
+
+    # (Maintenance is rendered in sidebar by render_maintenance function)
 
     # Show run status for non-complete runs
     if selected_run["status"] == "running":
@@ -290,101 +300,75 @@ def main():
     # Apply filters
     filtered_df = df.copy()
 
-    if selected_dispositions:
-        filtered_df = filtered_df[
-            filtered_df["Disposition"].isin(selected_dispositions)
-        ]
+    if selected_dispositions and "disposition" in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df["disposition"].isin(selected_dispositions)]
+    elif selected_dispositions and "disposition" not in filtered_df.columns:
+        warn_once("Export filter skipped: 'disposition' column not present in this run.")
 
-    if min_group_size > 1:
+    if min_group_size > 1 and "group_id" in filtered_df.columns:
         group_sizes = filtered_df.groupby("group_id").size()
         large_groups = group_sizes[group_sizes >= min_group_size].index
         filtered_df = filtered_df[filtered_df["group_id"].isin(large_groups)]
+    elif min_group_size > 1 and "group_id" not in filtered_df.columns:
+        warn_once("Export filter skipped: 'group_id' column not present in this run.")
 
-    if min_edge_strength > 0:
-        filtered_df = filtered_df[
-            filtered_df["weakest_edge_to_primary"] >= min_edge_strength
-        ]
+    # (Similarity filter for export is applied after render_controls to keep parity)
 
-    if show_suffix_mismatch:
+    if show_suffix_mismatch and "group_id" in filtered_df.columns and "suffix_class" in filtered_df.columns:
         # Filter for groups with suffix mismatches
         group_suffixes = filtered_df.groupby("group_id")["suffix_class"].nunique()
         mismatch_groups = group_suffixes[group_suffixes > 1].index
         filtered_df = filtered_df[filtered_df["group_id"].isin(mismatch_groups)]
+    elif show_suffix_mismatch and "suffix_class" not in filtered_df.columns:
+        warn_once("Export filter skipped: 'suffix_class' column not present in this run.")
 
-    if has_aliases:
-        # Filter for groups with aliases
+    if has_aliases and "alias_cross_refs" in filtered_df.columns and "group_id" in filtered_df.columns:
         has_alias_groups = filtered_df[
-            filtered_df["alias_cross_refs"].notna()
-            & (filtered_df["alias_cross_refs"] != "")
+            filtered_df["alias_cross_refs"].notna() & (filtered_df["alias_cross_refs"] != "")
         ]["group_id"].unique()
         filtered_df = filtered_df[filtered_df["group_id"].isin(has_alias_groups)]
+    elif has_aliases and "alias_cross_refs" not in filtered_df.columns:
+        warn_once("Export filter skipped: 'alias_cross_refs' column not present in this run.")
 
-    # Render controls
-    filters, sort_by, page, page_size = render_controls(
+    # Render controls first to get similarity_threshold
+    filters, sort_by, page, page_size, similarity_threshold = render_controls(
         selected_run_id, settings, filters
     )
+    
+    # Render maintenance in sidebar
+    render_maintenance(selected_run_id)
+    
+    # Similarity filter caption is now shown in controls.py directly under the slider
+
+    # Phase 1.35.2: Apply similarity threshold filtering (export parity)
+    if similarity_threshold and similarity_threshold > 0:
+        if "weakest_edge_to_primary" in filtered_df.columns:
+            filtered_df = filtered_df[
+                filtered_df["weakest_edge_to_primary"] >= float(similarity_threshold)
+            ]
+            st.info(f"📊 Filtered to groups with Similarity ≥ {int(similarity_threshold)}%")
+        else:
+            warn_once("Similarity export filter skipped: 'weakest_edge_to_primary' column not present in this run.")
 
     # Display groups
     st.subheader("Duplicate Groups")
+    
+    # Show active disposition context
+    if selected_dispositions:
+        disposition_bullets = " • ".join(selected_dispositions)
+        st.caption(f"**Showing dispositions:** • {disposition_bullets}")
 
-    # Render group list
-    page_groups, total_groups, max_page = render_group_list(
-        selected_run_id, sort_by, page, page_size, filters
-    )
+    # Render group list with expanders
+    from app.components.group_list import render_group_list_fragment
+    render_group_list_fragment(selected_run_id, sort_by, page, page_size, filters)
 
-    # Render group details for each group
-    for group_info in page_groups:
-        group_id = group_info["group_id"]
-        group_size = group_info["group_size"]
-        primary_name = group_info["primary_name"]
+    # (Group details are rendered inside each row's expander by the group list component.)
 
-        # Extract additional fields for better decision making
-        max_score = group_info.get("max_score", 0.0)
-        disposition = group_info.get("disposition", "Unknown")
-
-        # Create a more informative expander title with key fields
-        expander_title = f"Group {group_id}: {primary_name} ({group_size} records)"
-        if max_score > 0:
-            expander_title += f" | Score: {max_score:.3f}"
-        if disposition and disposition != "Unknown":
-            expander_title += f" | {disposition}"
-
-        # Display key group information for quick review
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Group Size", group_size)
-        with col2:
-            st.metric(
-                "Account Name",
-                primary_name[:20] + "..." if len(primary_name) > 20 else primary_name,
-            )
-        with col3:
-            if max_score > 0:
-                st.metric("Max Score", f"{max_score:.3f}")
-            else:
-                st.metric("Max Score", "N/A")
-        with col4:
-            if disposition and disposition != "Unknown":
-                # Color-code dispositions for quick visual identification
-                if disposition == "Keep":
-                    st.success(f"✅ {disposition}")
-                elif disposition == "Update":
-                    st.warning(f"⚠️ {disposition}")
-                elif disposition == "Delete":
-                    st.error(f"🗑️ {disposition}")
-                elif disposition == "Verify":
-                    st.info(f"🔍 {disposition}")
-                else:
-                    st.write(f"📋 {disposition}")
-            else:
-                st.write("📋 No disposition")
-
-        render_group_details(
-            selected_run_id, group_id, group_size, primary_name, expander_title
-        )
+    # Add visual separator before export section
+    st.divider()
 
     # Render export
-    render_export(filtered_df)
+    render_export(filtered_df, similarity_threshold)
 
 
 if __name__ == "__main__":

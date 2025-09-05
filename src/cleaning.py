@@ -15,6 +15,7 @@ import sys
 import logging
 import json
 import subprocess
+import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional
 import os
@@ -25,11 +26,8 @@ from src.normalize import normalize_dataframe, excel_serial_to_datetime
 from src.similarity import pair_scores, save_candidate_pairs, get_stop_tokens
 from src.grouping import create_groups_with_edge_gating
 from src.utils.mini_dag import MiniDAG
-from src.utils.perf_utils import (
-    time_stage,
-    track_memory_peak,
-    log_performance_summary,
-)
+# Performance utilities
+from src.utils.perf_utils import time_stage, track_memory_peak
 from src.utils.cache_utils import (
     generate_run_id,
     create_cache_directories,
@@ -83,7 +81,7 @@ from src.utils.schema_utils import (
     PRIMARY_NAME,
     apply_canonical_rename,
 )
-from src.utils.perf_utils import log_perf
+# Performance logging removed - using built-in logging instead
 from src.utils.dtypes import optimize_dataframe_memory
 from src.performance import (
     PerformanceTracker,
@@ -252,9 +250,10 @@ def _create_performance_summary_enhanced(
         if run_id:
             summary["run_id"] = run_id
 
-        # Save performance summary
+        # Save performance summary to primary location
         perf_summary_path = os.path.join(output_dir, "perf_summary.json")
         save_performance_summary(summary, perf_summary_path)
+        logger.info(f"Performance summary saved to: {perf_summary_path}")
 
         # Also save a copy to the legacy location for backward compatibility
         legacy_perf_path = str(get_processed_dir("legacy") / "perf_summary.json")
@@ -264,13 +263,9 @@ def _create_performance_summary_enhanced(
             legacy_dir.mkdir(parents=True, exist_ok=True)
 
             save_performance_summary(summary, legacy_perf_path)
-            logger.info(
-                f"Performance summary also saved to legacy location: {legacy_perf_path}"
-            )
+            logger.info(f"Also saved to legacy location: {legacy_perf_path}")
         except Exception as e:
             logger.warning(f"Failed to save legacy performance summary: {e}")
-
-        logger.info(f"Enhanced performance summary written to: {perf_summary_path}")
 
     except Exception as e:
         logger.warning(f"Failed to create enhanced performance summary: {e}")
@@ -329,6 +324,64 @@ def validate_required_columns(df: pd.DataFrame) -> bool:
     return True
 
 
+def _compute_group_stats_pandas(df_primary: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute group statistics using pandas (legacy method).
+    
+    Args:
+        df_primary: DataFrame with primary records
+        
+    Returns:
+        DataFrame with group statistics
+    """
+    # Create group stats DataFrame with the exact schema specified
+    group_stats = []
+    for group_id in df_primary[GROUP_ID].unique():
+        group_data = df_primary[df_primary[GROUP_ID] == group_id]
+
+        # Get primary record (is_primary = True)
+        primary_record = group_data[group_data[IS_PRIMARY]].iloc[0]
+
+        # Calculate max_score within the group (or 0.0 if not applicable)
+        max_score = (
+            group_data[WEAKEST_EDGE_TO_PRIMARY].max()
+            if WEAKEST_EDGE_TO_PRIMARY in group_data.columns
+            else 0.0
+        )
+
+        group_stats.append(
+            {
+                GROUP_ID: group_id,
+                GROUP_SIZE: len(group_data),
+                MAX_SCORE: max_score,
+                PRIMARY_NAME: primary_record.get(ACCOUNT_NAME, ""),
+                DISPOSITION: primary_record.get(
+                    DISPOSITION, "Update"
+                ),  # Default to Update if not set yet
+            }
+        )
+
+    df_group_stats = pd.DataFrame(group_stats)
+
+    # Ensure deterministic ordering and stable dtypes
+    df_group_stats = df_group_stats.sort_values(
+        GROUP_ID, kind="mergesort"
+    ).reset_index(drop=True)
+
+    # Ensure correct dtypes with explicit casting
+    df_group_stats = df_group_stats.astype(
+        {
+            GROUP_ID: "string",
+            GROUP_SIZE: "int32",
+            MAX_SCORE: "float32",
+            PRIMARY_NAME: "string",
+            DISPOSITION: "string",  # Use string instead of category for consistency
+        }
+    )
+    
+    return df_group_stats
+
+
 def run_pipeline(
     input_path: str,
     output_dir: str,
@@ -345,6 +398,7 @@ def run_pipeline(
     run_id: Optional[str] = None,
     keep_runs: int = 10,
     col_overrides: Optional[Dict[str, str]] = None,
+    profile: bool = False,
 ) -> None:
     """
     Run the complete deduplication pipeline.
@@ -365,6 +419,7 @@ def run_pipeline(
         run_id: Custom run ID
         keep_runs: Number of runs to keep
         col_overrides: Column overrides for schema resolution
+        profile: Enable performance profiling for pipeline stages
     """
     logger.info("Starting Company Junction deduplication pipeline")
 
@@ -416,10 +471,11 @@ def run_pipeline(
     stages = [
         "normalization",
         "filtering",
+        "exact_equals",  # Phase 1.35.2: Added exact equals stage
         "candidate_generation",
         "grouping",
         "survivorship",
-        "disposition",
+        DISPOSITION,
         "alias_matching",
         "final_output",
     ]
@@ -534,7 +590,7 @@ def run_pipeline(
             if resume_from in [
                 "grouping",
                 "survivorship",
-                "disposition",
+                DISPOSITION,
                 "alias_matching",
                 "final_output",
             ]:
@@ -553,7 +609,7 @@ def run_pipeline(
             # Load groups if needed
             if resume_from in [
                 "survivorship",
-                "disposition",
+                DISPOSITION,
                 "alias_matching",
                 "final_output",
             ]:
@@ -568,7 +624,7 @@ def run_pipeline(
                     )
 
             # Load survivorship results if needed
-            if resume_from in ["disposition", "alias_matching", "final_output"]:
+            if resume_from in [DISPOSITION, "alias_matching", "final_output"]:
                 survivorship_path = str(
                     get_interim_dir(run_id) / f"survivorship.{interim_format}"
                 )
@@ -667,29 +723,27 @@ def run_pipeline(
 
             logger.info("Normalizing company names")
             name_column = ACCOUNT_NAME  # Use standardized column name
-            with log_perf("normalization"):
-                df_norm = normalize_dataframe(df, name_column)
+            # Performance tracking removed - using built-in logging instead
+            df_norm = normalize_dataframe(df, name_column)
 
-                # Add name_core_tokens column for edge-gating
-                import json
+            # Add name_core_tokens column for edge-gating
+            def create_tokens(x: Any) -> str:
+                if pd.notna(x):
+                    x_str = str(x)
+                    if x_str.strip():
+                        return json.dumps(x_str.split())
+                return "[]"
 
-                def create_tokens(x: Any) -> str:
-                    if pd.notna(x):
-                        x_str = str(x)
-                        if x_str.strip():
-                            return json.dumps(x_str.split())
-                    return "[]"
+            df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
 
-                df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
-
-                perf_tracker.record_timing(
-                    "clean_normalize", 0.0
-                )  # Will be updated by log_perf
+            perf_tracker.record_timing(
+                "clean_normalize", 0.0
+            )  # Will be updated by log_perf
 
             dag.complete("normalization")
             logger.info("[stage:end] normalization")
         elif resume_from and resume_from != "normalization":
-            logger.info("Skipping normalization stage (resuming from {resume_from})")
+            logger.info(f"Skipping normalization stage (resuming from {resume_from})")
 
         # Step 2.5: Filter out problematic records for similarity analysis
         if not resume_from or resume_from == "filtering":
@@ -699,52 +753,129 @@ def run_pipeline(
             logger.info("Filtering data for similarity analysis")
             initial_count = len(df_norm)
 
-        # Filter out records with empty or problematic name_core
-        df_norm = df_norm[df_norm["name_core"].str.strip() != ""].copy()
+            # Phase 1.35.2: Enhanced filtering with audit trail
+            filtered_out_records = []
+            reasons = {}
 
-        # Enhanced problematic patterns (case-insensitive, whole-token match)
-        problematic_patterns = [
-            r"^\d+$",  # Numeric only (e.g., "123", "999")
-            r"^[A-Za-z]$",  # Single character (e.g., "a", "x")
-            r"^(test|sample|temp|unknown|n/?a|none|tbd)$",  # Common placeholders
-            r"^1099$",  # Tax form references
-        ]
+            # Filter out records with empty or problematic name_core
+            empty_mask = df_norm["name_core"].str.strip() != ""
+            empty_count = (~empty_mask).sum()
+            if empty_count > 0:
+                reasons["empty_name_core"] = empty_count
+                filtered_out_records.extend(
+                    df_norm[~empty_mask][["account_id", "account_name"]].assign(reason="empty_name_core").to_dict("records")
+                )
+            df_norm = df_norm[empty_mask].copy()
 
-        import re
+            # Enhanced problematic patterns (case-insensitive, whole-token match)
+            problematic_patterns = [
+                r"^\d+$",  # Numeric only (e.g., "123", "999")
+                r"^[A-Za-z]$",  # Single character (e.g., "a", "x")
+                r"^(test|sample|temp|unknown|n/?a|none|tbd)$",  # Common placeholders
+                r"^1099$",  # Tax form references
+            ]
 
-        mask = (
-            df_norm["name_core"]
-            .str.lower()
-            .str.strip()
-            .apply(
-                lambda x: not any(
-                    re.match(pattern, x) for pattern in problematic_patterns
+            import re
+
+            pattern_mask = (
+                df_norm["name_core"]
+                .str.lower()
+                .str.strip()
+                .apply(
+                    lambda x: not any(
+                        re.match(pattern, x) for pattern in problematic_patterns
+                    )
                 )
             )
-        )
-        df_norm = df_norm[mask].copy()
+            pattern_count = (~pattern_mask).sum()
+            if pattern_count > 0:
+                reasons["noise_string"] = pattern_count
+                filtered_out_records.extend(
+                    df_norm[~pattern_mask][["account_id", "account_name"]].assign(reason="noise_string").to_dict("records")
+                )
+            df_norm = df_norm[pattern_mask].copy()
 
-        filtered_count = len(df_norm)
-        logger.info(
-            f"Filtered {initial_count - filtered_count} problematic records, {filtered_count} remaining"
-        )
+            # Phase 1.35.2: Write filtered-out audit artifact (no-overwrite policy)
+            if settings.get("filtering", {}).get("write_filtered_out", True) and filtered_out_records:
+                filtered_out_df = pd.DataFrame(filtered_out_records)
+                
+                # No-overwrite policy: check if file exists and create suffixed variant
+                filtered_out_path = f"{interim_dir}/accounts_filtered_out.parquet"
+                if Path(filtered_out_path).exists():
+                    # Create suffixed variant
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filtered_out_path = f"{interim_dir}/accounts_filtered_out_{timestamp}.parquet"
+                    logger.info(f"filtering | existing_file_present | fallback_path={filtered_out_path} | reason=no_overwrite_policy")
+                
+                filtered_out_df.to_parquet(filtered_out_path, index=False)
+                logger.info(f"filtering | written=accounts_filtered_out.parquet | records={len(filtered_out_records)} | path={filtered_out_path}")
 
-        if filtered_count == 0:
-            raise ValueError(
-                "No valid company names found after filtering. Check your data quality."
+            filtered_count = len(df_norm)
+            total_filtered = initial_count - filtered_count
+            
+            # Log reason breakdown with standardized format
+            logger.info(
+                f"filtering | backend=pandas | records_removed={total_filtered} | "
+                f"records_remaining={filtered_count} | reasons={reasons}"
             )
 
-        # Save filtered data
-        interim_format = settings.get("io", {}).get("interim_format", "parquet")
-        filtered_path = f"{interim_dir}/accounts_filtered.{interim_format}"
-        if interim_format == "parquet":
-            df_norm.to_parquet(filtered_path, index=False)
-        else:
-            df_norm.to_csv(filtered_path, index=False)
-        logger.info(f"Saved filtered data to {filtered_path}")
+            if filtered_count == 0:
+                raise ValueError(
+                    "No valid company names found after filtering. Check your data quality."
+                )
 
-        dag.complete("filtering")
-        logger.info("[stage:end] filtering")
+            # Save filtered data (existing logic)
+            interim_format = settings.get("io", {}).get("interim_format", "parquet")
+            filtered_path = f"{interim_dir}/accounts_filtered.{interim_format}"
+            if interim_format == "parquet":
+                df_norm.to_parquet(filtered_path, index=False)
+            else:
+                df_norm.to_csv(filtered_path, index=False)
+            logger.info(f"Saved filtered data to {filtered_path}")
+
+            dag.complete("filtering")
+            logger.info("[stage:end] filtering")
+
+        # Step 2.6: Phase 1.35.2 - Exact Equals Phase-0 (pre-normalization)
+        if not resume_from or resume_from == "exact_equals":
+            logger.info("[stage:start] exact_equals")
+            dag.start("exact_equals")
+
+            # Import exact equals utilities
+            from src.utils.exact_equals import (
+                find_exact_equals_groups,
+                write_exact_equals_artifacts,
+                create_unique_normalized
+            )
+
+            if settings.get("pipeline", {}).get("exact_equals_first_pass", {}).get("enable", True):
+                logger.info("Phase 1.35.2: Running Exact-Equals Phase-0 before normalization")
+                
+                # Find exact equals groups
+                name_column = ACCOUNT_NAME  # Use standardized column name
+                exact_raw_groups, raw_exact_map, candidate_pairs_exact_raw = find_exact_equals_groups(
+                    df_norm, settings, name_column
+                )
+                
+                # Write artifacts with no-overwrite policy
+                write_exact_equals_artifacts(
+                    exact_raw_groups, raw_exact_map, candidate_pairs_exact_raw,
+                    interim_dir, run_id, settings
+                )
+                
+                # Create unique normalized dataset (representatives + singletons only)
+                df_norm = create_unique_normalized(df_norm, raw_exact_map, settings)
+                
+                # Save unique normalized data
+                unique_path = f"{interim_dir}/unique_normalized.parquet"
+                df_norm.to_parquet(unique_path, index=False)
+                logger.info(f"exact_equals | written=unique_normalized.parquet | records={len(df_norm)} | path={unique_path}")
+                
+            else:
+                logger.info("Phase 1.35.2: Exact-Equals Phase-0 disabled in configuration")
+
+            dag.complete("exact_equals")
+            logger.info("[stage:end] exact_equals")
 
         # Step 3: Generate candidate pairs
         if not resume_from or resume_from == "candidate_generation":
@@ -752,20 +883,21 @@ def run_pipeline(
             dag.start("candidate_generation")
 
             logger.info("Generating candidate pairs")
-            with time_stage("candidate_generation", logger):
-                with track_memory_peak("candidate_generation", logger):
-                    pairs_df = pair_scores(
-                        df_norm,
-                        settings,
-                        enable_progress,
-                        parallel_executor,
-                        interim_dir,
-                    )
-                    perf_tracker.record_timing("blocking", 0.0)  # Blocking phase
-                    perf_tracker.record_timing("scoring", 0.0)  # Scoring phase
+            # Performance tracking removed - using built-in logging instead
+            # Memory tracking removed - using built-in logging instead
+            pairs_df = pair_scores(
+                df_norm,
+                settings,
+                enable_progress,
+                parallel_executor,
+                interim_dir,
+                profile,
+            )
+            perf_tracker.record_timing("blocking", 0.0)  # Blocking phase
+            perf_tracker.record_timing("scoring", 0.0)  # Scoring phase
 
         # Apply memory optimization to pairs
-        pairs_df = optimize_dataframe_memory(pairs_df, "candidate_pairs")
+        pairs_df = optimize_dataframe_memory(pairs_df, "candidate_pairs", verbose=False)
 
         # Standardize candidate pair IDs to match account IDs
         pairs_df = pairs_df.copy()
@@ -793,23 +925,19 @@ def run_pipeline(
         stop_tokens = get_stop_tokens()
         logger.info(f"Stop tokens: {stop_tokens}")
 
-        with time_stage("grouping", logger):
-            with track_memory_peak("grouping", logger):
-                logger.info("About to call create_groups_with_edge_gating")
-                df_groups = create_groups_with_edge_gating(
-                    df_norm, pairs_df, settings, stop_tokens, enable_progress
-                )
-                logger.info(
-                    f"create_groups_with_edge_gating returned: {type(df_groups)}"
-                )
-                if df_groups is not None:
-                    logger.info(f"df_groups shape: {df_groups.shape}")
-                perf_tracker.record_timing(
-                    "grouping", 0.0
-                )  # Will be updated by log_perf
+        # Performance tracking removed - using built-in logging instead
+        # Memory tracking removed - using built-in logging instead
+        logger.info("About to call create_groups_with_edge_gating")
+        df_groups = create_groups_with_edge_gating(
+            df_norm, pairs_df, settings, stop_tokens, enable_progress, profile
+        )
+        logger.info(f"create_groups_with_edge_gating returned: {type(df_groups)}")
+        if df_groups is not None:
+            logger.info(f"df_groups shape: {df_groups.shape}")
+        perf_tracker.record_timing("grouping", 0.0)  # Will be updated by log_perf
 
         # Apply memory optimization to groups
-        df_groups = optimize_dataframe_memory(df_groups, "groups")
+        df_groups = optimize_dataframe_memory(df_groups, "groups", verbose=False)
 
         # Save groups
         groups_path = f"{interim_dir}/groups.{interim_format}"
@@ -821,9 +949,7 @@ def run_pipeline(
 
         # Step 5: Select primary records
         if not resume_from or resume_from == "survivorship":
-            logger.info("[stage:start] survivorship")
             dag.start("survivorship")
-
             logger.info("Selecting primary records")
         logger.info(f"df_groups shape: {df_groups.shape}")
         logger.info(f"df_groups columns: {list(df_groups.columns)}")
@@ -832,14 +958,14 @@ def run_pipeline(
         with time_stage("survivorship", logger):
             with track_memory_peak("survivorship", logger):
                 df_primary = select_primary_records(
-                    df_groups, relationship_ranks, settings, enable_progress
+                    df_groups, relationship_ranks, settings, enable_progress, profile
                 )
                 perf_tracker.record_timing(
                     "survivorship", 0.0
                 )  # Will be updated by log_perf
 
         # Generate merge preview
-        df_primary = generate_merge_preview(df_primary)
+        df_primary = generate_merge_preview(df_primary, settings=settings)
 
         # Save survivorship results
         survivorship_path = f"{interim_dir}/survivorship.{interim_format}"
@@ -848,88 +974,255 @@ def run_pipeline(
         dag.complete("survivorship")
         logger.info("[stage:end] survivorship")
 
-        # Phase 1.22.1: Generate group stats for UI performance optimization
+        # Phase 1.35.4: Generate group stats using DuckDB engine with memoization
         try:
             logger.info("Generating group stats for UI performance optimization")
+            
+            # Check backend configuration
+            group_stats_backend = settings.get("group_stats", {}).get("backend", "duckdb")
+            
+            if group_stats_backend == "duckdb":
+                logger.info("group_stats | backend=duckdb | memoization=enabled")
+                
+                # Import DuckDB engine
+                from src.utils.duckdb_group_stats import create_duckdb_group_stats_engine
+                from src.utils.parity_validator import create_parity_validator
+                
+                # Create DuckDB engine
+                duckdb_engine = create_duckdb_group_stats_engine(settings, run_id)
+                
+                try:
+                    # Generate config digest for memoization (more robust)
+                    try:
+                        # Try to serialize settings, fallback to string representation if it fails
+                        settings_str = json.dumps(settings, sort_keys=True, default=str)
+                    except (TypeError, ValueError, RecursionError):
+                        # Fallback: use string representation of key settings
+                        key_settings = {
+                            "group_stats": settings.get("group_stats", {}),
+                            "engine": settings.get("engine", {}),
+                            "io": settings.get("io", {})
+                        }
+                        settings_str = str(key_settings)
+                    
+                    config_digest = hashlib.md5(settings_str.encode()).hexdigest()[:16]
+                    
+                    # Compute group stats using DuckDB
+                    df_group_stats, duckdb_metadata = duckdb_engine.compute_group_stats(
+                        df_primary, config_digest
+                    )
+                    
+                    # Log DuckDB performance
+                    # Safe throughput calculation
+                    tp = duckdb_metadata.get(
+                        "throughput",
+                        (duckdb_metadata.get("records", 0) / duckdb_metadata["elapsed_sec"])
+                        if duckdb_metadata.get("elapsed_sec") else 0
+                    )
 
-            # Create group stats DataFrame with the exact schema specified
-            group_stats = []
-            for group_id in df_primary[GROUP_ID].unique():
-                group_data = df_primary[df_primary[GROUP_ID] == group_id]
-
-                # Get primary record (is_primary = True)
-                primary_record = group_data[group_data[IS_PRIMARY]].iloc[0]
-
-                # Calculate max_score within the group (or 0.0 if not applicable)
-                max_score = (
-                    group_data[WEAKEST_EDGE_TO_PRIMARY].max()
-                    if WEAKEST_EDGE_TO_PRIMARY in group_data.columns
-                    else 0.0
-                )
-
-                group_stats.append(
-                    {
-                        GROUP_ID: group_id,
-                        GROUP_SIZE: len(group_data),
-                        MAX_SCORE: max_score,
-                        PRIMARY_NAME: primary_record.get(ACCOUNT_NAME, ""),
-                        DISPOSITION: primary_record.get(
-                            DISPOSITION, "Update"
-                        ),  # Default to Update if not set yet
-                    }
-                )
-
-            df_group_stats = pd.DataFrame(group_stats)
-
-            # Ensure deterministic ordering and stable dtypes
-            df_group_stats = df_group_stats.sort_values(
-                GROUP_ID, kind="mergesort"
-            ).reset_index(drop=True)
-
-            # Ensure correct dtypes with explicit casting
-            df_group_stats = df_group_stats.astype(
-                {
-                    GROUP_ID: "string",
-                    GROUP_SIZE: "int32",
-                    MAX_SCORE: "float32",
-                    PRIMARY_NAME: "string",
-                    DISPOSITION: "string",  # Use string instead of category for consistency
-                }
-            )
-
-            # Save to processed directory for UI access
-            group_stats_path = str(get_artifact_path(run_id, "group_stats.parquet"))
-            df_group_stats.to_parquet(group_stats_path, index=False)
-
-            logger.info(
-                f"Generated group stats: {len(df_group_stats)} groups, saved to {group_stats_path}"
-            )
-            logger.info(
-                f"Group stats size: {df_group_stats.memory_usage(deep=True).sum() / 1024 / 1024:.2f} MB"
-            )
+                    logger.info(
+                        "group_stats | duckdb_complete | elapsed_sec=%.3f | groups=%s | records=%s | "
+                        "throughput=%s recs/sec | memoize=%s | cache_hit=%s"
+                        % (
+                            duckdb_metadata.get("elapsed_sec", 0),
+                            duckdb_metadata.get("groups"),
+                            duckdb_metadata.get("records"),
+                            f"{tp:.0f}",
+                            duckdb_metadata.get("memoize"),
+                            duckdb_metadata.get("cache_hit"),
+                        )
+                    )
+                    
+                    # Write optimized parquet using DuckDB
+                    group_stats_path = str(get_artifact_path(run_id, "group_stats_duckdb.parquet"))
+                    parquet_metadata = duckdb_engine.write_optimized_parquet(
+                        df_group_stats, group_stats_path
+                    )
+                    
+                    # Log parquet write performance
+                    logger.info(
+                        f"group_stats | parquet_write_complete | path={group_stats_path} | "
+                        f"size_mb={parquet_metadata['size_mb']:.2f} | compression={parquet_metadata['compression']} | "
+                        f"dictionary_encoding={parquet_metadata['dictionary_encoding']}"
+                    )
+                    
+                    # Write canonical group_stats.parquet if persistence is enabled
+                    persist_artifacts = settings.get("group_stats", {}).get("persist_artifacts", True)
+                    # Check for environment variable override
+                    if os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS"):
+                        persist_artifacts = os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS").lower() == "true"
+                    
+                    if persist_artifacts:
+                        canonical_path = str(get_artifact_path(run_id, "group_stats.parquet"))
+                        df_group_stats.to_parquet(canonical_path, index=False)
+                        logger.info(f"group_stats | canonical_file_written | path={canonical_path}")
+                        
+                        # Also write the DuckDB-specific file for parity validation
+                        duckdb_specific_path = str(get_artifact_path(run_id, "group_stats_duckdb.parquet"))
+                        df_group_stats.to_parquet(duckdb_specific_path, index=False)
+                        logger.info(f"group_stats | duckdb_specific_file_written | path={duckdb_specific_path}")
+                    
+                    # Validate memoization performance
+                    
+                    # Validate memoization performance
+                    if duckdb_metadata['memoize'] and not duckdb_metadata['cache_hit']:
+                        min_cache_hit_percentage = settings.get("group_stats", {}).get("memoization", {}).get("min_cache_hit_percentage", 30)
+                        if duckdb_metadata['elapsed_sec'] > 0:
+                            # This is a cache miss, log for future reference
+                            logger.info(f"group_stats | memoization_cache_miss | key={duckdb_metadata['cache_key']}")
+                    
+                    # Run parity validation if pandas backend is available for comparison
+                    run_parity = settings.get("group_stats", {}).get("run_parity_validation", False)
+                    # Check for environment variable override
+                    if os.environ.get("CJ_GROUP_STATS_RUN_PARITY"):
+                        run_parity = os.environ.get("CJ_GROUP_STATS_RUN_PARITY").lower() == "true"
+                    
+                    if run_parity:
+                        logger.info("group_stats | running_parity_validation")
+                        
+                        # Compute pandas version for comparison
+                        df_group_stats_pandas = _compute_group_stats_pandas(df_primary)
+                        
+                        # Validate parity
+                        parity_validator = create_parity_validator()
+                        is_parity_valid, parity_report = parity_validator.validate_group_stats_parity(
+                            df_group_stats, df_group_stats_pandas, run_id
+                        )
+                        
+                        if is_parity_valid:
+                            logger.info(f"group_stats | parity_validation_passed | mismatches=0")
+                        else:
+                            logger.error(f"group_stats | parity_validation_failed | mismatches={parity_report['mismatches']}")
+                        
+                        # Save pandas version for comparison
+                        pandas_path = str(get_artifact_path(run_id, "group_stats_pandas.parquet"))
+                        df_group_stats_pandas.to_parquet(pandas_path, index=False)
+                        logger.info(f"group_stats | pandas_version_saved | path={pandas_path}")
+                        
+                        # Generate parquet size report
+                        try:
+                            from src.utils.parquet_size_reporter import create_parquet_size_reporter
+                            size_reporter = create_parquet_size_reporter()
+                            
+                            # Analyze both parquet files
+                            duckdb_size_report = size_reporter.analyze_parquet_file(group_stats_path)
+                            pandas_size_report = size_reporter.analyze_parquet_file(pandas_path)
+                            
+                            # Generate comparison report
+                            size_comparison = size_reporter.compare_parquet_files(
+                                group_stats_path, pandas_path, 
+                                run_id
+                            )
+                            
+                            logger.info(f"group_stats | size_report_generated | path={size_comparison}")
+                        except Exception as e:
+                            logger.warning(f"group_stats | size_report_failed | error={e}")
+                        
+                        # Generate benchmark report if this is a 94K run
+                        try:
+                            if len(df_primary) > 50000:  # Likely 94K dataset
+                                benchmark_report = {
+                                    "dataset_size": len(df_primary),
+                                    "backend": "duckdb",
+                                    "duckdb_timing": duckdb_metadata['elapsed_sec'],
+                                    "pandas_timing": None,  # Would need separate pandas run
+                                    "target_seconds": 50,
+                                    "target_met": duckdb_metadata['elapsed_sec'] < 50,
+                                    "memoization": {
+                                        "enabled": duckdb_metadata['memoize'],
+                                        "cache_hit": duckdb_metadata['cache_hit'],
+                                        "cache_key": duckdb_metadata['cache_key']
+                                    },
+                                    "environment": {
+                                        "duckdb_threads": settings.get("engine", {}).get("duckdb", {}).get("threads", "auto"),
+                                        "duckdb_memory": settings.get("engine", {}).get("duckdb", {}).get("memory_limit"),
+                                        "compression": "zstd",
+                                        "dictionary_encoding": True
+                                    },
+                                    "generated_at": datetime.now().isoformat()
+                                }
+                                
+                                benchmark_path = f"docs/reports/phase_1_35_4_benchmark.md"
+                                os.makedirs(os.path.dirname(benchmark_path), exist_ok=True)
+                                
+                                with open(benchmark_path, 'w') as f:
+                                    f.write(f"# Phase 1.35.4 Benchmark Report\n\n")
+                                    f.write(f"**Generated**: {benchmark_report['generated_at']}\n")
+                                    f.write(f"**Dataset Size**: {benchmark_report['dataset_size']:,} records\n")
+                                    f.write(f"**Backend**: {benchmark_report['backend']}\n\n")
+                                    f.write(f"## Performance Results\n\n")
+                                    f.write(f"- **DuckDB Runtime**: {benchmark_report['duckdb_timing']:.3f}s\n")
+                                    f.write(f"- **Target**: <{benchmark_report['target_seconds']}s\n")
+                                    f.write(f"- **Target Met**: {'✅ YES' if benchmark_report['target_met'] else '❌ NO'}\n\n")
+                                    f.write(f"## Memoization\n\n")
+                                    f.write(f"- **Enabled**: {benchmark_report['memoization']['enabled']}\n")
+                                    f.write(f"- **Cache Hit**: {benchmark_report['memoization']['cache_hit']}\n")
+                                    f.write(f"- **Cache Key**: {benchmark_report['memoization']['cache_key']}\n\n")
+                                    f.write(f"## Environment\n\n")
+                                    f.write(f"- **DuckDB Threads**: {benchmark_report['environment']['duckdb_threads']}\n")
+                                    f.write(f"- **DuckDB Memory**: {benchmark_report['environment']['duckdb_memory']}\n")
+                                    f.write(f"- **Compression**: {benchmark_report['environment']['compression']}\n")
+                                    f.write(f"- **Dictionary Encoding**: {benchmark_report['environment']['dictionary_encoding']}\n")
+                                
+                                logger.info(f"group_stats | benchmark_report_generated | path={benchmark_path}")
+                        except Exception as e:
+                            logger.warning(f"group_stats | benchmark_report_failed | error={e}")
+                    
+                finally:
+                    duckdb_engine.close()
+                    
+            else:
+                # Fallback to pandas backend
+                logger.info("group_stats | backend=pandas | memoization=disabled")
+                df_group_stats = _compute_group_stats_pandas(df_primary)
+                
+                # Save pandas-specific file if persistence is enabled
+                persist_artifacts = settings.get("group_stats", {}).get("persist_artifacts", True)
+                # Check for environment variable override
+                if os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS"):
+                    persist_artifacts = os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS").lower() == "true"
+                
+                if persist_artifacts:
+                    pandas_path = str(get_artifact_path(run_id, "group_stats_pandas.parquet"))
+                    df_group_stats.to_parquet(pandas_path, index=False)
+                    logger.info(f"group_stats | pandas_specific_file_written | path={pandas_path}")
+                
+                # Save canonical file
+                group_stats_path = str(get_artifact_path(run_id, "group_stats.parquet"))
+                df_group_stats.to_parquet(group_stats_path, index=False)
+                
+                logger.info(f"group_stats | pandas_complete | groups={len(df_group_stats)} | path={group_stats_path}")
 
         except Exception as e:
             logger.warning(f"Failed to generate group stats: {e}")
-
+            # Fallback to basic pandas implementation
+            try:
+                df_group_stats = _compute_group_stats_pandas(df_primary)
+                group_stats_path = str(get_artifact_path(run_id, "group_stats_fallback.parquet"))
+                df_group_stats.to_parquet(group_stats_path, index=False)
+                logger.info(f"group_stats | fallback_complete | groups={len(df_group_stats)} | path={group_stats_path}")
+            except Exception as fallback_e:
+                logger.error(f"Group stats fallback also failed: {fallback_e}")
+                df_group_stats = None
+    
         # Step 6: Apply dispositions
-        if not resume_from or resume_from == "disposition":
-            logger.info("[stage:start] disposition")
-            dag.start("disposition")
+        if not resume_from or resume_from == DISPOSITION:
+            dag.start(DISPOSITION)
 
             logger.info("Applying disposition classification")
-        with time_stage("disposition", logger):
-            with track_memory_peak("disposition", logger):
+        with time_stage(DISPOSITION, logger):
+            with track_memory_peak(DISPOSITION, logger):
                 df_dispositions = apply_dispositions(df_primary, settings)
                 perf_tracker.record_timing(
-                    "disposition", 0.0
+                    DISPOSITION, 0.0
                 )  # Will be updated by log_perf
 
         # Save dispositions
         dispositions_path = f"{interim_dir}/dispositions.{interim_format}"
         save_dispositions(df_dispositions, dispositions_path)
 
-        dag.complete("disposition")
-        logger.info("[stage:end] disposition")
+        dag.complete(DISPOSITION)
+        logger.info(f"[stage:end] {DISPOSITION}")
 
         # Phase 1.22.1: Update group stats with final dispositions
         try:
@@ -1011,7 +1304,7 @@ def run_pipeline(
                         "account_name": "string",
                         "suffix_class": "string",
                         "created_date": "string",  # Keep as string for now
-                        "Disposition": "string",
+                        DISPOSITION: "string",
                     }
                 )
 
@@ -1045,8 +1338,8 @@ def run_pipeline(
 
             logger.info("Computing alias matches and cross-references")
         alias_matches_path = f"{interim_dir}/alias_matches.{interim_format}"
-        with log_perf("alias_matching"):
-            result = compute_alias_matches(
+        # Performance tracking removed - using built-in logging instead
+        result = compute_alias_matches(
                 df_norm, df_groups, settings, parallel_executor
             )
 
@@ -1086,7 +1379,7 @@ def run_pipeline(
                 )
 
         # Apply memory optimization to final output
-        df_final = optimize_dataframe_memory(df_final, "review_ready")
+        df_final = optimize_dataframe_memory(df_final, "review_ready", verbose=False)
 
         review_path = os.path.join(processed_dir, "review_ready.csv")
         df_final.to_csv(review_path, index=False)
@@ -1114,7 +1407,7 @@ def run_pipeline(
             )
 
         # Print summary
-        disposition_counts = df_final["Disposition"].value_counts()
+        disposition_counts = df_final[DISPOSITION].value_counts()
         logger.info(f"Disposition summary: {disposition_counts.to_dict()}")
 
         group_count = len(df_final["group_id"].unique())
@@ -1125,7 +1418,7 @@ def run_pipeline(
         perf_tracker.record_timing("export_ui", 0.0)  # Export phase
 
         # Log performance summary
-        log_performance_summary(logger)
+        # log_performance_summary function removed - using built-in logging instead
 
         # Create audit snapshot
         _create_audit_snapshot(settings, alias_stats, processed_dir)
@@ -1239,6 +1532,11 @@ def main() -> None:
         nargs="+",
         help="Override column mapping (e.g., --col account_name='Company Name' account_id='ID')",
     )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Enable performance profiling for pipeline stages",
+    )
 
     args = parser.parse_args()
 
@@ -1279,6 +1577,7 @@ def main() -> None:
             run_id=args.run_id,
             keep_runs=args.keep_runs,
             col_overrides=col_overrides_dict,
+            profile=args.profile,
         )
     except KeyboardInterrupt:
         logger.warning("Pipeline interrupted by user (Ctrl+C)")

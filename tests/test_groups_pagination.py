@@ -195,7 +195,7 @@ class TestFilterApplication:
         """Test disposition filtering."""
         data = {
             "group_id": ["group1", "group2", "group3"],
-            "Disposition": ["Keep", "Update", "Delete"],
+            "disposition": ["Keep", "Update", "Delete"],
             "weakest_edge_to_primary": [95.0, 85.0, 75.0],
         }
 
@@ -206,7 +206,7 @@ class TestFilterApplication:
         filtered_df = filtered_table.to_pandas()
 
         assert len(filtered_df) == 2
-        assert "Delete" not in filtered_df["Disposition"].values
+        assert "Delete" not in filtered_df["disposition"].values
 
     def test_apply_filters_pyarrow_edge_strength(self) -> None:
         """Test edge strength filtering."""

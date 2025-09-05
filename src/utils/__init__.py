@@ -20,8 +20,20 @@ from .io_utils import (
     load_settings,
     load_relationship_ranks,
 )
-from .perf_utils import log_perf
-from .hash_utils import config_hash, stable_group_id, _compute_config_hash
+from .perf_utils import (
+    # to_arrow_strings,  # DEPRECATED: PyArrow backend removed
+    narrow_sort,
+    parse_name_core_tokens,
+    build_vectorized_masks,
+    apply_vectorized_disposition,
+    optimize_dataframe_memory,
+)
+from .hash_utils import (
+    stable_content_hash,
+    stable_schema_hash,
+    stable_file_hash,
+    compute_file_hash,  # Backward compatibility
+)
 from .id_utils import sfid15_to_18, normalize_sfid_series, validate_sfid_format
 
 __all__ = [
@@ -45,11 +57,17 @@ __all__ = [
     "load_settings",
     "load_relationship_ranks",
     # Performance utilities
-    "log_perf",
+    # "to_arrow_strings",  # DEPRECATED: PyArrow backend removed
+    "narrow_sort",
+    "parse_name_core_tokens",
+    "build_vectorized_masks",
+    "apply_vectorized_disposition",
+    "optimize_dataframe_memory",
     # Hash utilities
-    "config_hash",
-    "stable_group_id",
-    "_compute_config_hash",
+    "stable_content_hash",
+    "stable_schema_hash",
+    "stable_file_hash",
+    "compute_file_hash",
     # ID utilities
     "sfid15_to_18",
     "normalize_sfid_series",

@@ -139,7 +139,7 @@ def drop_intermediate_columns(
 
 
 def optimize_dataframe_memory(
-    df: pd.DataFrame, context: str = "dataframe"
+    df: pd.DataFrame, context: str = "dataframe", verbose: bool = True
 ) -> pd.DataFrame:
     """
     Apply comprehensive memory optimization to dataframe.
@@ -169,11 +169,14 @@ def optimize_dataframe_memory(
 
     final_memory = df.memory_usage(deep=True).sum() / 1024 / 1024  # MB
     memory_saved = initial_memory - final_memory
+    reduction_percent = memory_saved/initial_memory*100 if initial_memory > 0 else 0
 
-    logger.info(
-        f"Memory optimization for {context}: {initial_memory:.1f}MB → {final_memory:.1f}MB "
-        f"({memory_saved:.1f}MB saved, {memory_saved/initial_memory*100:.1f}% reduction)"
-    )
+    # Only log if verbose or if significant memory was saved
+    if verbose or memory_saved > 0.1 or reduction_percent > 1.0:
+        logger.info(
+            f"Memory optimization for {context}: {initial_memory:.1f}MB → {final_memory:.1f}MB "
+            f"({memory_saved:.1f}MB saved, {reduction_percent:.1f}% reduction)"
+        )
 
     return df
 

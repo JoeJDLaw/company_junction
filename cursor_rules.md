@@ -1,131 +1,149 @@
-# Cursor Rules for Company Junction
+# Cursor Rules — Compact, Enforceable Set
 
-## Core Principles
+> This file is the **rule-of-law**. If a rule must be broken, call it out in the PR and propose an explicit alternative.
 
-### 1. **No Hardcoded Values**
-- **Sort Options Must Be Centralized**: All sort key mappings must use a single source of truth (e.g., `get_order_by()` helper function)
-- **No Per-Function Maps**: Avoid duplicate sort key mappings in different functions
-- **Default Values From Config**: Default sorts, fallbacks, and preferences must come from configuration files, not hardcoded values
-- **Cache Keys Must Include Source**: Cache keys must include data source (stats vs review_ready) and backend information
+---
 
-### 2. **Configuration-Driven Behavior**
-- **UI Sort Defaults**: Default sort behavior must be configurable via `config/settings.yaml`
-- **Backend Selection**: Backend preferences must be configurable, not hardcoded
-- **Fallback Logic**: Error handling and fallbacks must use configuration values
-- **Performance Thresholds**: All performance thresholds must be configurable
+## 1) Centralize Sorting
+- One mapping function for ORDER BY logic.  
+- No per-function maps or hardcoded fallbacks.  
+- Unknown sort keys → log error + use `config.ui.sort.default`.  
+- Same mapping must work across backends (DuckDB, pandas).  
 
-### 3. **Unified Logging & Debugging**
-- **Distinct Path Logging**: Each backend path must have unique, unambiguous log messages
-- **Sort Key Tracking**: Every function call must log `sort_key='...' | order_by='...' | backend=...`
-- **Fallback Transparency**: Explicit logging of fallback reasons and resulting paths
-- **Cache Key Visibility**: Log cache key components including source and backend
-
-### 4. **Data Source Consistency**
-- **Parquet Fingerprinting**: Separate fingerprints for different data sources to prevent cache mixing
-- **Source-Aware Caching**: Cache keys must distinguish between stats and review_ready data
-- **Backend Consistency**: Same sort key mapping must work across all backend implementations
-- **Schema Validation**: Ensure constants resolve correctly across all data sources
-
-### 5. **Cleanup Tool Standards**
-- **Deterministic Discovery**: Use `run_index.json` as the only source of truth, no filesystem walking
-- **Configuration-Driven**: Pinned runs and protection policies must come from `config/settings.yaml`
-- **Safety First**: Always protect latest symlink and pinned runs by default
-- **Double Confirmation**: Require explicit confirmation for production run deletion
-- **Exit Code Standards**: Use standard exit codes (0=no candidates, 2=candidates found, >0=errors)
-
-## Implementation Standards
-
-### **Sort Key Mapping**
+✅ Example:
 ```python
-# ✅ CORRECT: Centralized helper function
-def get_order_by(sort_key: str) -> str:
+def get_order_by(sort_key: str, config: Dict[str, Any]) -> str:
     order_by_map = {
         "Account Name (Asc)": f"{PRIMARY_NAME} ASC",
         "Account Name (Desc)": f"{PRIMARY_NAME} DESC",
-        # ... other mappings
     }
-    # Use config default, not hardcoded fallback
-    return order_by_map.get(sort_key, config.get("ui.sort.default"))
-
-# ❌ WRONG: Per-function hardcoded maps
-def some_function():
-    if "Group Size" in sort_key:  # Hardcoded logic
-        order_by = "group_size DESC"  # Hardcoded fallback
+    return order_by_map.get(sort_key, config["ui"]["sort"]["default"])
 ```
 
-### **Cache Key Generation**
+❌ Anti-pattern:
 ```python
-# ✅ CORRECT: Include source and backend
-def build_cache_key(..., source: str, backend: str) -> str:
-    key_components = [
-        run_id, source, backend, parquet_fingerprint,
-        sort_key, page, page_size, filters_signature
-    ]
-
-# ❌ WRONG: Missing source/backend information
-def build_cache_key(...) -> str:
-    key_components = [run_id, sort_key, page, page_size]  # Missing source
+if "Group Size" in sort_key:
+    order_by = "group_size DESC"  # Hardcoded
 ```
 
-### **Configuration Structure**
+---
+
+## 2) Configuration over Constants
+- **No hardcoded defaults** for thresholds, backends, sort orders, or performance caps.  
+- All defaults read from `config/settings.yaml`.  
+- Fallbacks must also be config-driven.  
+
+✅ Example (`settings.yaml`):
 ```yaml
-# ✅ CORRECT: Configurable defaults
 ui:
   sort:
-    default: "group_size DESC"  # Configurable default
-  use_duckdb_for_groups: false  # Configurable preference
-
-# ❌ WRONG: Hardcoded in code
-DEFAULT_SORT = "group_size DESC"  # Hardcoded constant
+    default: "group_size DESC"
+parallelism:
+  backend: "loky"
+  workers: null
 ```
 
-### **Logging Standards**
+❌ Anti-pattern:
 ```python
-# ✅ CORRECT: Distinct, unambiguous messages
-logger.info(f"groups_page_from_stats_duckdb | sort_key='{sort_key}' | order_by='{order_by}' | backend=duckdb")
-logger.info(f"groups_page_duckdb | sort_key='{sort_key}' | order_by='{order_by}' | backend=duckdb")
-
-# ❌ WRONG: Ambiguous, generic messages
-logger.info(f"DuckDB query built | order_by='{order_by}'")  # Which function?
+DEFAULT_SORT = "group_size DESC"
 ```
 
-## Testing Requirements
+---
 
-### **Sort Key Mapping Tests**
-- Verify all sort keys map to correct ORDER BY clauses
-- Test unknown sort keys log errors and use config defaults
-- Ensure same mapping works across all backend implementations
+## 3) Cache Key Hygiene
+- Cache keys must always include:
+  - `source` (stats vs review_ready)  
+  - `backend`  
+- Parquet fingerprints must be source-specific.  
 
-### **Cache Key Tests**
-- Verify cache keys differ when source differs (stats vs review_ready)
-- Confirm cache keys include backend information
-- Test cache key changes when sort, filters, or page changes
+✅ Example:
+```python
+key = f"{run_id}:{source}:{backend}:{parquet_fingerprint}:{sort_key}:{page}:{page_size}"
+```
 
-### **Configuration Tests**
-- Verify default sort comes from config, not hardcoded values
-- Test fallback behavior uses configuration values
-- Ensure all performance thresholds are configurable
+❌ Missing source/backend:
+```python
+key = f"{run_id}:{sort_key}:{page}:{page_size}"
+```
 
-### **Cleanup Tool Tests**
-- Verify deterministic discovery produces same results for same inputs
-- Test type filtering, age filtering, and prod-sweep modes
-- Confirm latest symlink and pinned run protection works correctly
-- Test JSON output format and exit codes
+---
 
-### **Logging Tests**
-- Verify distinct log messages for each backend path
-- Confirm sort key and ORDER BY logging in all functions
-- Test fallback reason logging and path transparency
+## 4) Logging Contract
+- Each path logs:  
+  `prefix | sort_key='...' | order_by='...' | backend=...`  
+- Fallbacks log **reason** + chosen path.  
+- Distinct log prefixes per function/backend.  
+
+✅ Example:
+```python
+logger.info(f"groups_page_duckdb | sort_key='{sort_key}' | order_by='{order_by}' | backend=duckdb")
+```
+
+❌ Ambiguous:
+```python
+logger.info(f"DuckDB query built | order_by='{order_by}'")
+```
+
+---
+
+## 5) Determinism & Safety
+- Same inputs + run_id → identical outputs.  
+- No nondeterministic ordering.  
+- **Cleanup tools**:  
+  - Deterministic discovery via `run_index.json`  
+  - Protect latest & pinned runs by default  
+  - Support empty-state (`latest.json` with `run_id: null`)  
+
+---
+
+## 6) Test Coverage
+- **Sort Mapping**: unknown keys, cross-backend parity.  
+- **Cache Keys**: must change with source/backend differences.  
+- **Logging**: correct prefixes, includes sort_key/order_by/backend.  
+- **Cleanup**: type/age filtering, prod sweep, JSON output, exit codes.  
+- **Survivorship**: optimized flag vs baseline equivalence.  
+- **Shape guards**: ensure survivors always 1D.  
+
+---
+
+## 7) Tooling & CI Guardrails
+All new and modified code must pass:
+- **Black** for formatting  
+- **Ruff** for linting & unused imports  
+- **Mypy** for static type checking  
+- **Pytest** for all tests (unit + integration)  
+
+> CI will block merges unless all four tools pass.
+
+---
+
+## 8) Small, Reversible Changes
+- Each PR = one focused change.  
+- Rollback plan required for each optimization.  
+- No scope creep (follow phase/version naming).  
+
+---
+
+## 9) Cleanup Standards
+- Deterministic candidate discovery from `run_index.json`.  
+- Config-driven pinned runs and protections.  
+- Always protect **latest symlink** and pinned runs unless explicitly overridden.  
+- Double confirmation required for production deletions.  
+- Exit codes standardized:  
+  - `0 = no candidates`  
+  - `2 = candidates found`  
+  - `>0 = errors`  
+
+---
 
 ## Compliance Checklist
+- [ ] Centralized sort mapping, no per-function maps  
+- [ ] No hardcoded defaults (all from config)  
+- [ ] Cache keys include `source` + `backend`  
+- [ ] Logging includes sort_key/order_by/backend, with distinct prefixes  
+- [ ] Deterministic outputs for same run_id  
+- [ ] Cleanup protects latest + pinned, supports empty state  
+- [ ] All code passes **Black, Ruff, Mypy, Pytest**  
+- [ ] Single-scope PRs with rollback plan  
 
-- [ ] **No hardcoded sort key mappings** - All sorting uses centralized helper
-- [ ] **No hardcoded default values** - All defaults come from configuration
-- [ ] **No hardcoded fallback logic** - All fallbacks use config values
-- [ ] **Cache keys include source and backend** - No cache mixing between sources
-- [ ] **Distinct logging for each path** - Clear identification of backend selection
-- [ ] **Sort key tracking in all functions** - Consistent logging format
-- [ ] **Configuration-driven behavior** - No hardcoded preferences or thresholds
-- [ ] **Unified sort key mapping** - Same behavior across all backends
-- [ ] **Source-aware caching** - Separate fingerprints for different data sources
-- [ ] **Constants properly resolved** - All imports and references work correctly
+---

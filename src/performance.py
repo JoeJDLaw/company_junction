@@ -14,9 +14,9 @@ import logging
 import subprocess
 
 try:
-    from src.utils.hash_utils import _compute_config_hash
+    from src.utils.hash_utils import stable_schema_hash
 except ImportError:
-    from src.utils.hash_utils import _compute_config_hash
+    stable_schema_hash = None
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,10 @@ class PerformanceTracker:
     def start_run(self, config_dict: Dict[str, Any]) -> None:
         """Start tracking performance for a pipeline run."""
         self.start_time = datetime.now(timezone.utc)
-        self.config_hash = _compute_config_hash(config_dict)
+        if stable_schema_hash:
+            self.config_hash = stable_schema_hash(config_dict)
+        else:
+            self.config_hash = "unknown"
         tracemalloc.start()
         logger.info(f"Performance tracking started at {self.start_time.isoformat()}")
 
