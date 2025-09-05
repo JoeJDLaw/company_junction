@@ -76,3 +76,38 @@ pipeline.log.bak
 # local benchmarks
 /data/benchmarks/*.json
 .cursor/
+
+/ # -----------------------------------------------------------------------------
+# Extra ignores added 2025-09-05 (reduce noise from local artifacts/backups)
+# -----------------------------------------------------------------------------
+
+# Archive folders and transient reports
+docs/reports/_archive/
+docs/reports/mypy_latest.txt
+docs/reports/mypy_session_summary_*.md
+
+# Python coverage & profilers (expand beyond base .coverage)
+.coverage.*
+*.prof
+*.pstats
+.mprof
+
+# Editor/OS scratch
+**/.DS_Store
+.ipynb_checkpoints/
+
+# Generic backup/swap files
+*.bak
+*~
+*.swp
+*.swo
+*.orig
+*.rej
+
+# Deprecated backup blobs (safety net even if generic patterns miss)
+deprecated/**/*.bak
+
+# Deprecated backups and scratch
+deprecated/md/
+deprecated/**/*backup*
+deprecated/**/*.backup*
