@@ -32,6 +32,7 @@ def render_group_details(
     group_size: int,
     primary_name: str,
     title: str = None,
+    create_expander: bool = True,
 ) -> None:
     """
     Render group details within an expander.
@@ -56,125 +57,147 @@ def render_group_details(
         title if title else f"Group {group_id}: {primary_name} ({group_size} records)"
     )
 
-    with st.expander(expander_title):
-        # Phase 1.26.2: Auto-load details when expander is open
-        details_state.requested[details_key] = True
-        set_details_state(st.session_state, details_state)
+    # Conditionally create expander based on create_expander parameter
+    if create_expander:
+        with st.expander(expander_title):
+            _render_group_details_content(selected_run_id, group_id, group_size, primary_name, details_key, details_loaded, details_state, aliases_state)
+    else:
+        # Render content directly without expander
+        _render_group_details_content(selected_run_id, group_id, group_size, primary_name, details_key, details_loaded, details_state, aliases_state)
 
-        # Check if details were requested and load them
-        if details_state.requested.get(details_key, False) and not details_loaded:
+
+def _render_group_details_content(
+    selected_run_id: str,
+    group_id: str,
+    group_size: int,
+    primary_name: str,
+    details_key: tuple,
+    details_loaded: bool,
+    details_state: Any,
+    aliases_state: Any,
+) -> None:
+    # Phase 1.26.2: Auto-load details when expander is open
+    details_state.requested[details_key] = True
+    set_details_state(st.session_state, details_state)
+
+    # Check if details were requested and load them
+    if details_state.requested.get(details_key, False) and not details_loaded:
+        try:
+            # Load the full group details
+            group_details_result = get_group_details(selected_run_id, group_id, "Account Name (Asc)", 1, 100, {})
+            group_details, total_count = group_details_result  # Unpack the tuple
+            details_state.data[details_key] = group_details
+            details_state.loaded[details_key] = True
+            set_details_state(st.session_state, details_state)
+
+            # Phase 1.26.2: Render the details table immediately after loading
             try:
-                # Load the full group details
-                group_details = get_group_details(selected_run_id, group_id, "Account Name (Asc)", 1, 100, {})
-                details_state.data[details_key] = group_details
-                details_state.loaded[details_key] = True
-                set_details_state(st.session_state, details_state)
+                # Convert to DataFrame for rendering
+                group_data = pd.DataFrame(group_details)
 
-                # Phase 1.26.2: Render the details table immediately after loading
-                try:
-                    # Convert to DataFrame for rendering
-                    group_data = pd.DataFrame(group_details)
+                # Display group info
+                _render_group_info(group_data, group_id)
 
-                    # Display group info
-                    _render_group_info(group_data, group_id)
+                # Display group table
+                _render_group_table(group_data)
 
-                    # Display group table
-                    _render_group_table(group_data)
+                # Only show aliases if full group details are loaded
+                _render_alias_cross_links(
+                    selected_run_id, group_id, group_data, aliases_state
+                )
+            except Exception as render_error:
+                st.error(f"Failed to render group details: {render_error}")
+                st.write(
+                    "Raw data:", group_details[:3] if isinstance(group_details, list) else group_details
+                )  # Show first 3 records for debugging
+        except Exception as e:
+            # Phase 1.23.1: Enhanced error handling for DuckDB failures
+            error_msg = str(e)
 
-                    # Only show aliases if full group details are loaded
-                    _render_alias_cross_links(
-                        selected_run_id, group_id, group_data, aliases_state
-                    )
-                except Exception as render_error:
-                    st.error(f"Failed to render group details: {render_error}")
-                    st.write(
-                        "Raw data:", group_details[:3]
-                    )  # Show first 3 records for debugging
-            except Exception as e:
-                # Phase 1.23.1: Enhanced error handling for DuckDB failures
-                error_msg = str(e)
+            if (
+                "DuckDB details loading failed and PyArrow fallback is disabled"
+                in error_msg
+            ):
+                # Show friendly error for DuckDB failures
+                st.error("🚨 DuckDB query failed — see logs")
 
-                if (
-                    "DuckDB details loading failed and PyArrow fallback is disabled"
-                    in error_msg
-                ):
-                    # Show friendly error for DuckDB failures
-                    st.error("🚨 DuckDB query failed — see logs")
+                # Show diagnostic information
+                with st.expander("🔍 Error Details", expanded=False):
+                    st.write(f"**Group ID:** {group_id}")
+                    st.write(f"**Run ID:** {selected_run_id}")
 
-                    # Show diagnostic information
-                    with st.expander("🔍 Error Details", expanded=False):
-                        st.write(f"**Group ID:** {group_id}")
-                        st.write(f"**Run ID:** {selected_run_id}")
+                    # Check if group_details.parquet exists
+                    try:
+                        from src.utils.artifact_management import get_artifact_paths
 
-                        # Check if group_details.parquet exists
-                        try:
-                            from src.utils.artifact_management import get_artifact_paths
+                        artifact_paths = get_artifact_paths(selected_run_id)
+                        details_path = artifact_paths.get("group_details_parquet")
 
-                            artifact_paths = get_artifact_paths(selected_run_id)
-                            details_path = artifact_paths.get("group_details_parquet")
+                        if details_path:
+                            import os
 
-                            if details_path:
-                                import os
+                            if os.path.exists(details_path):
+                                st.write(
+                                    f"**Details file:** ✅ Exists at `{details_path}`"
+                                )
 
-                                if os.path.exists(details_path):
+                                # Check schema
+                                try:
+                                    df = pd.read_parquet(details_path)
+                                    st.write(f"**Schema:** {list(df.columns)}")
+                                    st.write(f"**Rows:** {len(df)}")
                                     st.write(
-                                        f"**Details file:** ✅ Exists at `{details_path}`"
+                                        f"**Group ID sample:** {df['group_id'].head(3).tolist()}"
                                     )
-
-                                    # Check schema
-                                    try:
-                                        df = pd.read_parquet(details_path)
-                                        st.write(f"**Schema:** {list(df.columns)}")
-                                        st.write(f"**Rows:** {len(df)}")
-                                        st.write(
-                                            f"**Group ID sample:** {df['group_id'].head(3).tolist()}"
-                                        )
-                                    except Exception as schema_error:
-                                        st.write(
-                                            f"**Schema check failed:** {schema_error}"
-                                        )
-                                else:
+                                except Exception as schema_error:
                                     st.write(
-                                        f"**Details file:** ❌ Missing at `{details_path}`"
+                                        f"**Schema check failed:** {schema_error}"
                                     )
                             else:
                                 st.write(
-                                    "**Details file:** ❌ Path not found in artifacts"
+                                    f"**Details file:** ❌ Missing at `{details_path}`"
                                 )
-                        except Exception as path_error:
-                            st.write(f"**Path check failed:** {path_error}")
+                        else:
+                            st.write(
+                                "**Details file:** ❌ Path not found in artifacts"
+                            )
+                    except Exception as path_error:
+                        st.write(f"**Path check failed:** {path_error}")
 
-                        st.write(f"**Error:** {error_msg}")
-                        st.write(
-                            "**Expected columns:** `group_id`, `account_id`, `account_name`, `suffix_class`, `created_date`, `disposition`"
-                        )
-                else:
-                    # Generic error
-                    st.error(f"Failed to load group details: {error_msg}")
+                    st.write(f"**Error:** {error_msg}")
+                    st.write(
+                        "**Expected columns:** `group_id`, `account_id`, `account_name`, `suffix_class`, `created_date`, `disposition`"
+                    )
+            else:
+                # Generic error
+                st.error(f"Failed to load group details: {error_msg}")
 
-                details_state.data[details_key] = {"error": error_msg}
-                details_state.loaded[details_key] = True
-                set_details_state(st.session_state, details_state)
+            details_state.data[details_key] = {"error": error_msg}
+            details_state.loaded[details_key] = True
+            set_details_state(st.session_state, details_state)
 
-        # Render the details table if data is available
-        # Note: This is now handled in the async loading section above
-        # to avoid duplicate rendering and ensure immediate display
+    # Render the details table if data is available
+    # Note: This is now handled in the async loading section above
+    # to avoid duplicate rendering and ensure immediate display
 
 
 def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
-    """Render group information badges."""
-    col1, col2, col3 = st.columns([2, 1, 1])
+    """Render compact group information badges."""
+    col1, col2 = st.columns([3, 1])
 
     with col1:
-        # Group badges
+        # Compact group badges in a single row
+        badges = []
+        
+        # Suffix status
         if "suffix_class" in group_data.columns:
             suffix_classes = group_data["suffix_class"].unique()
             if len(suffix_classes) > 1:
-                st.error("⚠️ Suffix Mismatch")
+                badges.append("⚠️ Suffix Mismatch")
             elif len(suffix_classes) == 1 and suffix_classes[0] == "NONE":
-                st.info("📋 No suffix variations")
+                badges.append("📋 No suffix variations")
             else:
-                st.success(f"✅ {suffix_classes[0]}")
+                badges.append(f"✅ {suffix_classes[0]}")
 
         # Blacklist hits
         if ACCOUNT_NAME in group_data.columns:
@@ -196,73 +219,92 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
                 )
                 .sum()
             )
-
             if blacklist_hits > 0:
-                st.warning(f"⚠️ {blacklist_hits} blacklist hits")
+                badges.append(f"⚠️ {blacklist_hits} blacklist hits")
+
+        # Display badges in a compact row
+        if badges:
+            st.write(" | ".join(badges))
 
     with col2:
-        # Primary selection info
+        # Primary count (compact)
         if IS_PRIMARY in group_data.columns:
             primary_count = group_data[IS_PRIMARY].sum()
-            st.write(f"**Primary Records:** {primary_count}")
-
-    with col3:
-        # Manual override info (placeholder)
-        st.write("**Manual Override:** Not implemented yet")
+            st.caption(f"Primary: {primary_count}")
 
 
 def _render_group_table(group_data: pd.DataFrame) -> None:
-    """Render the group data table."""
-    st.write("**Records:**")
-
-    # Enhanced display columns with more useful information
-    display_cols = [
+    """Render the group data table in compact format."""
+    # Show essential columns first, with option to expand
+    essential_cols = [
         ACCOUNT_NAME,
         ACCOUNT_ID,
-        "relationship",
         DISPOSITION,
+        SUFFIX_CLASS,
+    ]
+    essential_cols = [col for col in essential_cols if col in group_data.columns]
+    
+    # Additional columns for expanded view
+    additional_cols = [
+        "relationship",
         IS_PRIMARY,
         WEAKEST_EDGE_TO_PRIMARY,
-        SUFFIX_CLASS,
         "created_date",
         "group_join_reason",
         "shared_tokens_count",
         "applied_penalties",
         "survivorship_reason",
     ]
-    display_cols = [col for col in display_cols if col in group_data.columns]
+    additional_cols = [col for col in additional_cols if col in group_data.columns]
+    
+    # Show compact view by default
+    display_cols = essential_cols
 
     if display_cols:
-        # Configure column display for better readability
+        # Configure column display for better readability (essential columns only)
         column_config = {
             ACCOUNT_NAME: st.column_config.TextColumn(
                 "Account Name", width="large", help="Company name", max_chars=None
             ),
             ACCOUNT_ID: st.column_config.TextColumn("Account ID", width="medium"),
-            "relationship": st.column_config.TextColumn("Relationship", width="medium"),
             DISPOSITION: st.column_config.SelectboxColumn(
                 DISPOSITION,
                 width="small",
                 options=["Keep", "Update", "Delete", "Verify"],
             ),
-            IS_PRIMARY: st.column_config.CheckboxColumn("Primary", width="small"),
-            WEAKEST_EDGE_TO_PRIMARY: st.column_config.NumberColumn(
-                "Edge Score", width="small", format="%.1f"
-            ),
             SUFFIX_CLASS: st.column_config.TextColumn("Suffix", width="small"),
-            "created_date": st.column_config.DateColumn("Created Date", width="small"),
-            "group_join_reason": st.column_config.TextColumn("Join Reason", width="medium"),
-            "shared_tokens_count": st.column_config.NumberColumn("Shared Tokens", width="small"),
-            "applied_penalties": st.column_config.TextColumn("Penalties", width="medium"),
-            "survivorship_reason": st.column_config.TextColumn("Survivorship", width="medium"),
         }
 
+        # Show essential columns in compact table
         st.dataframe(
             group_data[display_cols],
             width="stretch",
             column_config=column_config,
             hide_index=True,
         )
+        
+        # Show additional columns in expander if available
+        if additional_cols:
+            with st.expander("🔍 Additional Details", expanded=False):
+                additional_config = {
+                    "relationship": st.column_config.TextColumn("Relationship", width="medium"),
+                    IS_PRIMARY: st.column_config.CheckboxColumn("Primary", width="small"),
+                    WEAKEST_EDGE_TO_PRIMARY: st.column_config.NumberColumn(
+                        "Edge Score", width="small", format="%.1f"
+                    ),
+                    "created_date": st.column_config.DateColumn("Created Date", width="small"),
+                    "group_join_reason": st.column_config.TextColumn("Join Reason", width="medium"),
+                    "shared_tokens_count": st.column_config.NumberColumn("Shared Tokens", width="small"),
+                    "applied_penalties": st.column_config.TextColumn("Penalties", width="medium"),
+                    "survivorship_reason": st.column_config.TextColumn("Survivorship", width="medium"),
+                }
+                
+                st.dataframe(
+                    group_data[additional_cols],
+                    width="stretch",
+                    column_config=additional_config,
+                    hide_index=True,
+                )
     else:
         st.warning("No displayable columns found in group data")
 
@@ -278,13 +320,16 @@ def _render_alias_cross_links(
     aliases_key = (selected_run_id, group_id)
     aliases_loaded = aliases_state.requested.get(aliases_key, False)
 
+    # Check if alias_cross_refs column exists
+    if "alias_cross_refs" not in group_data.columns:
+        st.caption("🔗 No alias data available for this run (column `alias_cross_refs` missing).")
+        return
+
     # Check if group has aliases (lightweight check)
-    has_aliases = False
-    if "alias_cross_refs" in group_data.columns:
-        has_aliases = any(
-            record.get("alias_cross_refs")
-            for _, record in group_data.iterrows()
-        )
+    has_aliases = any(
+        record.get("alias_cross_refs")
+        for _, record in group_data.iterrows()
+    )
 
     if has_aliases:
         st.write("**Alias Cross-links:**")
@@ -323,6 +368,9 @@ def _render_alias_cross_links(
                     # No st.rerun() - let the fragment handle the update
                 else:
                     st.caption("Cross-links load on demand.")
+    else:
+        # Column exists but group has no aliases
+        st.caption("🔗 No cross-links found for this group.")
 
 
 @fragment

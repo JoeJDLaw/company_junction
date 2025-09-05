@@ -7,7 +7,8 @@ This module provides unified models for sort/filter operations.
 from dataclasses import dataclass
 from typing import Literal, Dict, Any, List, Tuple
 from src.utils.schema_utils import (
-    GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, GROUP_ID, DISPOSITION, WEAKEST_EDGE_TO_PRIMARY
+    GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, GROUP_ID, DISPOSITION, WEAKEST_EDGE_TO_PRIMARY,
+    ACCOUNT_NAME
 )
 from src.utils.opt_deps import PC
 from src.utils.logging_utils import get_logger
@@ -21,7 +22,7 @@ class SortSpec:
     direction: Literal["asc", "desc"]
     tie_breaker: tuple[str, Literal["asc", "desc"]] = ("group_id", "asc")
 
-def get_order_by(sort_key: str) -> str:
+def get_order_by(sort_key: str, context: str = "default") -> str:
     """
     Centralized sort key to ORDER BY mapping.
 
@@ -30,6 +31,7 @@ def get_order_by(sort_key: str) -> str:
 
     Args:
         sort_key: The sort key from the UI
+        context: The context for column mapping ("default", "group_details", "group_stats")
 
     Returns:
         The ORDER BY clause for DuckDB queries
@@ -37,14 +39,27 @@ def get_order_by(sort_key: str) -> str:
     Raises:
         ValueError: If sort_key is not recognized
     """
-    order_by_map = {
-        "Group Size (Desc)": f"{GROUP_SIZE} DESC",
-        "Group Size (Asc)": f"{GROUP_SIZE} ASC",
-        "Max Score (Desc)": f"{MAX_SCORE} DESC",
-        "Max Score (Asc)": f"{MAX_SCORE} ASC",
-        "Account Name (Asc)": f"{PRIMARY_NAME} ASC",
-        "Account Name (Desc)": f"{PRIMARY_NAME} DESC",
-    }
+    # Context-aware column mappings
+    if context == "group_details":
+        # For group_details_parquet which has account_name but not primary_name
+        order_by_map = {
+            "Group Size (Desc)": f"{GROUP_SIZE} DESC",
+            "Group Size (Asc)": f"{GROUP_SIZE} ASC", 
+            "Max Score (Desc)": f"{MAX_SCORE} DESC",
+            "Max Score (Asc)": f"{MAX_SCORE} ASC",
+            "Account Name (Asc)": f"{ACCOUNT_NAME} ASC",  # Use ACCOUNT_NAME instead of PRIMARY_NAME
+            "Account Name (Desc)": f"{ACCOUNT_NAME} DESC",  # Use ACCOUNT_NAME instead of PRIMARY_NAME
+        }
+    else:
+        # Default mapping for group_stats and other contexts
+        order_by_map = {
+            "Group Size (Desc)": f"{GROUP_SIZE} DESC",
+            "Group Size (Asc)": f"{GROUP_SIZE} ASC",
+            "Max Score (Desc)": f"{MAX_SCORE} DESC",
+            "Max Score (Asc)": f"{MAX_SCORE} ASC",
+            "Account Name (Asc)": f"{PRIMARY_NAME} ASC",
+            "Account Name (Desc)": f"{PRIMARY_NAME} DESC",
+        }
 
     if sort_key not in order_by_map:
         # Load default from config instead of hardcoded fallback
@@ -71,12 +86,13 @@ def get_order_by(sort_key: str) -> str:
     return order_by_map[sort_key]
 
 
-def build_sort_expression(sort_key: str) -> List[Tuple[str, str]]:
+def build_sort_expression(sort_key: str, context: str = "default") -> List[Tuple[str, str]]:
     """
     Build PyArrow sort keys for stable sorting.
 
     Args:
         sort_key: Sort key from dropdown (e.g., "Group Size (Desc)")
+        context: The context for column mapping ("default", "group_details", "group_stats")
 
     Returns:
         List of (field, direction) tuples for sorting
@@ -87,7 +103,7 @@ def build_sort_expression(sort_key: str) -> List[Tuple[str, str]]:
     elif "Max Score" in sort_key:
         field = MAX_SCORE
     elif "Account Name" in sort_key:
-        field = PRIMARY_NAME
+        field = ACCOUNT_NAME if context == "group_details" else PRIMARY_NAME
     else:
         # Default to group_id for stability
         field = GROUP_ID
@@ -101,44 +117,34 @@ def build_sort_expression(sort_key: str) -> List[Tuple[str, str]]:
     return [(field, direction), (GROUP_ID, "ascending")]
 
 
-def apply_filters_pyarrow(table: Any, filters: Dict[str, Any]) -> Any:
+def apply_filters_pyarrow(table: Any, filters: Dict[str, Any], available_columns: list[str] | None = None) -> Any:
     """
-    Apply filters to PyArrow table using Arrow-native operations.
-    
-    This provides a pure PyArrow implementation without DuckDB dependency.
-    
-    Args:
-        table: PyArrow table to filter
-        filters: Dictionary of filters to apply
-        
-    Returns:
-        Filtered PyArrow table
+    Apply filters to a PyArrow table using boolean masks (works across Arrow versions).
     """
-    if not filters or PC is None:
+    if not filters:
         return table
-    
-    exprs = []
-    
+
+    import pyarrow as pa
+    import pyarrow.compute as pc
+
+    mask = None
+
     # dispositions: IN (...)
     dispositions = filters.get("dispositions")
     if dispositions:
-        import pyarrow as pa
-        exprs.append(PC.is_in(PC.field(DISPOSITION), value_set=pa.array(dispositions)))
-    
-    # min_edge_strength: >= threshold
+        disp_mask = pc.is_in(table[DISPOSITION], value_set=pa.array(dispositions))
+        mask = disp_mask if mask is None else pc.and_kleene(mask, disp_mask)
+
+    # min_edge_strength: >= threshold (only if column exists)
     min_es = filters.get("min_edge_strength", 0.0)
-    if min_es not in (None, 0.0):
-        exprs.append(PC.greater_equal(PC.field(WEAKEST_EDGE_TO_PRIMARY), PC.scalar(float(min_es))))
-    
-    if not exprs:
+    if (min_es not in (None, 0.0)) and (WEAKEST_EDGE_TO_PRIMARY in table.column_names):
+        es_mask = pc.greater_equal(table[WEAKEST_EDGE_TO_PRIMARY], pc.scalar(float(min_es)))
+        mask = es_mask if mask is None else pc.and_kleene(mask, es_mask)
+
+    if mask is None:
         return table
-    
-    # Combine expressions with AND
-    predicate = exprs[0]
-    for e in exprs[1:]:
-        predicate = PC.and_(predicate, e)
-    
-    return table.filter(predicate)
+
+    return table.filter(mask)
 
 
 def apply_filters_duckdb(table: Any, filters: Dict[str, Any]) -> Any:

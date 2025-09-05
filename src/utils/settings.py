@@ -28,7 +28,10 @@ def get_settings() -> Dict[str, Any]:
             "duckdb_threads": 4,
             "use_duckdb_for_groups": False,
             "max_pyarrow_group_stats_seconds": 5,
-            "max_page_size": 250  # Safer default for production
+            "max_page_size": 250,  # Safer default for production
+            "admin_mode": True,  # Enable admin features like run deletion
+            "enable_run_deletion": True,  # Enable run deletion functionality
+                            "similarity_threshold_default": 100  # Default threshold (100 = exact duplicates only)
         },
         "ui_perf": {
             "groups": {

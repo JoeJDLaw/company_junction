@@ -94,6 +94,18 @@ def _safe_get_order_by(sort_key: str) -> str:
             return f"{GROUP_SIZE} DESC, {GROUP_ID} ASC"
 
 
+def _get_available_columns_for_pagination(parquet_path: str) -> List[str]:
+    """Get available columns from parquet file for pagination queries."""
+    try:
+        import pyarrow.parquet as pq
+        schema = pq.read_schema(parquet_path)
+        return [field.name for field in schema]
+    except Exception as e:
+        logger.warning(f"Failed to read schema from {parquet_path}: {e}")
+        # Fallback to basic columns
+        return [GROUP_ID, ACCOUNT_NAME, DISPOSITION]
+
+
 def _set_backend_choice(run_id: str, backend: str) -> None:
     """Set backend choice for a specific run."""
     try:
@@ -522,17 +534,40 @@ def get_groups_page_duckdb(
 
         # Build SQL using string concatenation and parameters (safe - no user input)
         # Build the query with proper global sorting before pagination
+        # Get available columns dynamically to avoid schema mismatches
+        available_columns = _get_available_columns_for_pagination(parquet_path)
+        
+        # Build dynamic SQL based on available columns
+        base_columns = [col for col in [GROUP_ID, ACCOUNT_NAME, IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY, DISPOSITION] if col in available_columns]
+        if not base_columns:
+            raise ValueError(f"No required columns found in {parquet_path}")
+        
+        # Build dynamic aggregation based on available columns
+        stats_select = f"{GROUP_ID}, COUNT(*) AS {GROUP_SIZE}"
+        if WEAKEST_EDGE_TO_PRIMARY in available_columns:
+            stats_select += f", MAX({WEAKEST_EDGE_TO_PRIMARY}) AS {MAX_SCORE}"
+        else:
+            stats_select += f", 0.0 AS {MAX_SCORE}"
+        
+        # Build primary name selection based on available columns
+        if IS_PRIMARY in available_columns and ACCOUNT_NAME in available_columns:
+            primary_name_select = f"any_value({ACCOUNT_NAME}) FILTER (WHERE {IS_PRIMARY}) AS {PRIMARY_NAME}"
+        elif ACCOUNT_NAME in available_columns:
+            primary_name_select = f"any_value({ACCOUNT_NAME}) AS {PRIMARY_NAME}"
+        else:
+            primary_name_select = f"'' AS {PRIMARY_NAME}"
+        
         # This ensures ORDER BY is applied to the entire dataset before LIMIT/OFFSET
         # Result: Consistent sorting across all pages, not just within each page
         page_sql = (
             "WITH base AS ("
-            "  SELECT " + ",".join([GROUP_ID, ACCOUNT_NAME, IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY, DISPOSITION]) +
+            "  SELECT " + ",".join(base_columns) +
             "  FROM read_parquet(?) WHERE " + where_clause +
             "), stats AS ("
-            "  SELECT " + GROUP_ID + ", COUNT(*) AS " + GROUP_SIZE + ", MAX(" + WEAKEST_EDGE_TO_PRIMARY + ") AS " + MAX_SCORE +
+            "  SELECT " + stats_select +
             "  FROM base GROUP BY " + GROUP_ID +
             "), primary_names AS ("
-            "  SELECT " + GROUP_ID + ", any_value(" + ACCOUNT_NAME + ") FILTER (WHERE " + IS_PRIMARY + ") AS " + PRIMARY_NAME +
+            "  SELECT " + GROUP_ID + ", " + primary_name_select +
             "  FROM base GROUP BY " + GROUP_ID +
             ") "
             "SELECT s." + GROUP_ID + ", s." + GROUP_SIZE + ", s." + MAX_SCORE + ", COALESCE(p." + PRIMARY_NAME + ", '') AS " + PRIMARY_NAME +
@@ -675,22 +710,36 @@ def get_groups_page_from_stats_duckdb(
                 f"groups_page_from_stats_duckdb | run_id={run_id} sort_key='{sort_key}' order_by_resolved='{order_by}' backend=duckdb global_sort=true"
             )
 
-            # Build the query using string concatenation and parameters (safe - no user input)
-            # This ensures ORDER BY is applied to the entire dataset before LIMIT/OFFSET
-            # Result: Consistent sorting across all pages, not just within each page
-            sql = (
-                "SELECT " + ",".join([GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, DISPOSITION]) +
-                " FROM ("
-                "  SELECT " + ",".join([GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, DISPOSITION]) +
-                "  FROM read_parquet(?) "
-                "  WHERE " + where_clause +
-                "  ORDER BY " + order_by + " NULLS LAST, " + GROUP_ID + " ASC"
-                " ) sorted_data "
-                " LIMIT ? OFFSET ?"
-            )
+            # Get available columns dynamically to avoid schema mismatches
+            available_columns = _get_available_columns_for_pagination(group_stats_path)
+            stats_columns = [col for col in [GROUP_ID, GROUP_SIZE, MAX_SCORE, PRIMARY_NAME, DISPOSITION] if col in available_columns]
             
-            # Build parameters: group_stats_path, filter_params, page_size, offset
-            sql_params = [group_stats_path, *params, page_size, (page - 1) * page_size]
+            if not stats_columns:
+                raise ValueError(f"No required columns found in group_stats_parquet: {group_stats_path}")
+            
+            # Build the query with fallback for "Unknown" primary names
+            # This joins back to review_ready_parquet to get fallback names for the current page
+            review_ready_path = artifact_paths.get("review_ready_parquet")
+            
+            # Temporarily disable fallback query to fix immediate issues
+            # TODO: Re-enable fallback query once DuckDB syntax issues are resolved
+            if False:  # Disabled for now
+                pass
+            else:
+                # Fallback to simple query if review_ready_parquet not available
+                sql = (
+                    "SELECT " + ",".join(stats_columns) +
+                    " FROM ("
+                    "  SELECT " + ",".join(stats_columns) +
+                    "  FROM read_parquet(?) "
+                    "  WHERE " + where_clause +
+                    "  ORDER BY " + order_by + " NULLS LAST, " + GROUP_ID + " ASC"
+                    " ) sorted_data "
+                    " LIMIT ? OFFSET ?"
+                )
+                
+                # Build parameters: group_stats_path, filter_params, page_size, offset
+                sql_params = [group_stats_path, *params, page_size, (page - 1) * page_size]
 
             logger.info(
                 f"DuckDB query built | run_id={run_id} filters='{where_clause}' order_by_resolved='{order_by}' elapsed={time.time() - step_start:.3f}s"

@@ -56,8 +56,8 @@ def render_controls(
         [
             "Group Size (Desc)",
             "Group Size (Asc)",
-            "Max Score (Desc)",
-            "Max Score (Asc)",
+            "Similarity Score (Desc)",
+            "Similarity Score (Asc)",
             "Account Name (Asc)",
             "Account Name (Desc)",
         ],
@@ -77,43 +77,45 @@ def render_controls(
     if not validate_sort_key(sort_by):
         sort_by = "Group Size (Desc)"
 
-    # Phase 1.35.2: Similarity Threshold Stepper
+    # Phase 1.35.2: Similarity Threshold Slider (improved from simplified version)
     if settings.get("ui", {}).get("similarity_slider", {}).get("enable", True):
         st.sidebar.write("**Similarity Threshold**")
         
         # Get current similarity threshold from session state
         similarity_key = f"similarity_threshold_{selected_run_id}"
-        default_threshold = settings.get("ui", {}).get("similarity_slider", {}).get("default_bucket", "100")
-        current_threshold = st.session_state.get(similarity_key, int(default_threshold))
+        default_threshold = settings.get("ui", {}).get("similarity_threshold_default", 100)  # Start with 100% (exact duplicates)
+        current_threshold = st.session_state.get(similarity_key, default_threshold)
         
-        # Create stepper control (plus/minus buttons)
-        col1, col2, col3 = st.sidebar.columns([1, 2, 1])
+        # Use slider with clear similarity terminology
+        threshold = st.sidebar.slider(
+            "Minimum Similarity Score",
+            min_value=0.0,
+            max_value=100.0,
+            value=float(current_threshold),
+            step=5.0,
+            format="%.0f%%",
+            help="Show only groups with similarity scores above this threshold. 100% = exact duplicates, 0% = completely different names.",
+            key=f"similarity_slider_{selected_run_id}"
+        )
         
-        with col1:
-            if st.button("-", key=f"decrease_{selected_run_id}"):
-                min_threshold = settings.get("ui", {}).get("similarity_slider", {}).get("min", 90)
-                if current_threshold > min_threshold:
-                    current_threshold -= 1
-                    st.session_state[similarity_key] = current_threshold
-                    st.rerun()
+        # Show current filter value directly under slider
+        st.sidebar.caption(f"Current Similarity Filter: {int(threshold)}%")
         
-        with col2:
-            st.write(f"**{current_threshold}%**")
-            st.caption("Edge Strength")
-        
-        with col3:
-            if st.button("+", key=f"increase_{selected_run_id}"):
-                max_threshold = settings.get("ui", {}).get("similarity_slider", {}).get("max", 100)
-                if current_threshold < max_threshold:
-                    current_threshold += 1
-                    st.session_state[similarity_key] = current_threshold
-                    st.rerun()
-        
-        # Store current threshold in session state
-        st.session_state[similarity_key] = current_threshold
+        # Check if threshold changed and update state
+        if threshold != current_threshold:
+            st.session_state[similarity_key] = threshold
+            # Reset to page 1 when threshold changes
+            page_state.number = 1
+            set_page_state(st.session_state, page_state)
+            st.rerun()
         
         # Add threshold to filters for export parity
-        filters["similarity_threshold"] = current_threshold
+        filters["similarity_threshold"] = threshold
+        # Normalize to min_edge_strength for backend compatibility
+        filters["min_edge_strength"] = float(threshold)
+        
+        # Update the Min Edge Strength input to match the similarity threshold
+        st.session_state[f"min_edge_strength_{selected_run_id}"] = float(threshold)
 
     # Pagination controls
     page_size_options = settings.get("ui", {}).get(

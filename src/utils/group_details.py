@@ -25,7 +25,8 @@ from typing import Dict, Any, List, Tuple
 
 from .opt_deps import DUCKDB
 from .schema_utils import (
-    GROUP_ID, ACCOUNT_NAME, IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY, DISPOSITION,
+    GROUP_ID, ACCOUNT_ID, ACCOUNT_NAME, IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY, DISPOSITION,
+    SUFFIX_CLASS, CREATED_DATE,
     # add any extra detail columns you need here, e.g. DOMAIN, EMAIL, etc.
 )
 from .artifact_management import get_artifact_paths
@@ -38,13 +39,50 @@ from .sql_utils import in_clause as _in_clause
 logger = get_logger(__name__)
 
 # Column list constant for details queries
-DETAILS_COLUMNS = [GROUP_ID, ACCOUNT_NAME, IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY, DISPOSITION]
+# Updated to match actual group_details.parquet schema from cleaning.py
+DETAILS_COLUMNS = [GROUP_ID, ACCOUNT_ID, ACCOUNT_NAME, SUFFIX_CLASS, CREATED_DATE, DISPOSITION]
+
+# Legacy columns that may be missing in some parquet files
+LEGACY_COLUMNS = [IS_PRIMARY, WEAKEST_EDGE_TO_PRIMARY]
 
 # Micro-DRY: Reusable SELECT clause
 _DETAILS_SELECT = "SELECT " + ",".join(DETAILS_COLUMNS) + " FROM read_parquet(?) "
 
 class DetailsFetchTimeout(Exception):
     pass
+
+
+def _get_available_columns(parquet_path: str) -> List[str]:
+    """Get available columns from parquet file, with fallback for missing columns."""
+    try:
+        import pyarrow.parquet as pq
+        schema = pq.read_schema(parquet_path)
+        available_columns = [field.name for field in schema]
+        
+        # Start with required columns that should always be present
+        select_columns = []
+        for col in DETAILS_COLUMNS:
+            if col in available_columns:
+                select_columns.append(col)
+            else:
+                logger.warning(f"Required column '{col}' not found in {parquet_path}")
+        
+        # Add legacy columns if available
+        for col in LEGACY_COLUMNS:
+            if col in available_columns:
+                select_columns.append(col)
+                logger.info(f"Found legacy column '{col}' in {parquet_path}")
+        
+        return select_columns
+    except Exception as e:
+        logger.warning(f"Failed to read schema from {parquet_path}: {e}")
+        # Fallback to basic columns
+        return [GROUP_ID, ACCOUNT_NAME, DISPOSITION]
+
+
+def _build_dynamic_select(available_columns: List[str]) -> str:
+    """Build SELECT clause based on available columns."""
+    return "SELECT " + ",".join(available_columns) + " FROM read_parquet(?) "
 
 
 def _set_backend_choice(run_id: str, backend: str) -> None:
@@ -54,7 +92,7 @@ def _set_backend_choice(run_id: str, backend: str) -> None:
         logger.warning(f"Failed to set backend choice: {e}")
 
 
-def _build_where_clause(filters: Dict[str, Any]) -> Tuple[str, List]:
+def _build_where_clause(filters: Dict[str, Any], available_columns: List[str]) -> Tuple[str, List]:
     """Build WHERE for per-row details (dispositions/min_edge_strength)."""
     where_sql, params = [], []
     if filters.get("dispositions"):
@@ -62,8 +100,12 @@ def _build_where_clause(filters: Dict[str, Any]) -> Tuple[str, List]:
         where_sql.append(DISPOSITION + " " + in_sql)
         params.extend(in_params)
     if (min_es := filters.get("min_edge_strength", 0.0)) not in (None, 0.0):
-        where_sql.append(WEAKEST_EDGE_TO_PRIMARY + " >= ?")
-        params.append(float(min_es))
+        if WEAKEST_EDGE_TO_PRIMARY in available_columns:
+            where_sql.append(WEAKEST_EDGE_TO_PRIMARY + " >= ?")
+            params.append(float(min_es))
+        else:
+            # Safe no-op; log once per run_id in caller if useful
+            pass
     return (" AND ".join(where_sql) if where_sql else "1=1"), params
 
 
@@ -100,10 +142,12 @@ def get_group_details(
     start_time = time.time()
     filters_signature = f"{len(filters)}_filters" if filters else "no_filters"
     
-    logger.info(
-        f"get_group_details | run_id={run_id} group_id={group_id} sort_key='{sort_key}' "
-        f"page={page} page_size={page_size} filters={filters_signature}"
-    )
+    # Reduce logging verbosity - only log for first page or errors
+    if page == 1:
+        logger.info(
+            f"get_group_details | run_id={run_id} group_id={group_id} sort_key='{sort_key}' "
+            f"page={page} page_size={page_size} filters={filters_signature}"
+        )
 
     try:
         from .settings import get_settings
@@ -128,8 +172,9 @@ def get_group_details(
         return [], 0
 
     # Get order_by early (comes from whitelist; safe to use in ORDER BY)
-    order_by = get_order_by(sort_key)  # for details, usually a single table — no aliasing needed
-    logger.info(f"get_group_details will use ORDER BY '{order_by}'")
+    order_by = get_order_by(sort_key, context="group_details")  # Use group_details context for correct column mapping
+    if page == 1:  # Only log for first page to reduce noise
+        logger.info(f"get_group_details will use ORDER BY '{order_by}'")
 
     # Check force flags first (highest priority)
     from .settings import get_ui_perf
@@ -180,12 +225,13 @@ def get_group_details(
         try:
             _set_backend_choice(run_id, "duckdb")
             result, total = _get_group_details_duckdb(source_path, group_id, order_by, page, page_size, filters, settings)
-            # Structured logging with metrics
+            # Structured logging with metrics - only for first page to reduce noise
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.info(
-                f"get_group_details_complete | backend=duckdb duration_ms={duration_ms} "
-                f"rows={len(result)} total={total} page={page} page_size={page_size}"
-            )
+            if page == 1:
+                logger.info(
+                    f"get_group_details_complete | backend=duckdb duration_ms={duration_ms} "
+                    f"rows={len(result)} total={total} page={page} page_size={page_size}"
+                )
             return result, total
         except Exception as e:
             logger.warning(f"DuckDB details failed, fallback allowed? {allow_pyarrow_fallback} | {e}")
@@ -194,12 +240,13 @@ def get_group_details(
 
     _set_backend_choice(run_id, "pyarrow")
     result, total = _get_group_details_pyarrow(source_path, group_id, order_by, page, page_size, filters, settings)
-    # Structured logging with metrics
+    # Structured logging with metrics - only for first page to reduce noise
     duration_ms = int((time.time() - start_time) * 1000)
-    logger.info(
-        f"get_group_details_complete | backend=pyarrow duration_ms={duration_ms} "
-        f"rows={len(result)} total={total} page={page} page_size={page_size}"
-    )
+    if page == 1:
+        logger.info(
+            f"get_group_details_complete | backend=pyarrow duration_ms={duration_ms} "
+            f"rows={len(result)} total={total} page={page} page_size={page_size}"
+        )
     return result, total
 
 
@@ -224,7 +271,11 @@ def _get_group_details_duckdb(
         if time.time() - start > timeout_seconds:
             raise DetailsFetchTimeout(f"Exceeded {timeout_seconds}s")
 
-    where_clause, params = _build_where_clause(filters)
+    # Get available columns dynamically
+    available_columns = _get_available_columns(parquet_path)
+    dynamic_select = _build_dynamic_select(available_columns)
+    
+    where_clause, params = _build_where_clause(filters, available_columns)
     # Clamp pagination inputs to avoid negative offsets and cap for performance
     page = max(1, int(page))
     requested_size = int(page_size)
@@ -235,9 +286,9 @@ def _get_group_details_duckdb(
         record_page_size_clamped()
     offset = (page - 1) * page_size
 
-    # Build SQL using string concatenation and parameters (safe - no user input)
+    # Build SQL using dynamic column selection
     sql = (
-        _DETAILS_SELECT +
+        dynamic_select +
         "WHERE " + GROUP_ID + " = ? AND " + where_clause + " "
         "ORDER BY " + order_by + " NULLS LAST, " + ACCOUNT_NAME + " ASC "  # order_by from get_order_by whitelist, stable tie-breaker, NULLs last
         "LIMIT ? OFFSET ?"
@@ -296,8 +347,9 @@ def _get_group_details_pyarrow(
         if time.time() - start > max_pyarrow_seconds:
             raise DetailsFetchTimeout(f"Exceeded {max_pyarrow_seconds}s")
 
-    # Project only needed columns to reduce IO and memory
-    table = pq.read_table(parquet_path, columns=DETAILS_COLUMNS)
+    # Get available columns dynamically and project only needed columns
+    available_columns = _get_available_columns(parquet_path)
+    table = pq.read_table(parquet_path, columns=available_columns)
     check_timeout()
 
     # Hard filter group_id first (Arrow-native)
@@ -306,7 +358,7 @@ def _get_group_details_pyarrow(
 
     # Filter: apply other filters (dispositions, min_edge_strength)
     from .filtering import apply_filters_pyarrow
-    filtered = apply_filters_pyarrow(table, filters)
+    filtered = apply_filters_pyarrow(table, filters, available_columns)
     check_timeout()
     
     # Early exit if no rows after filtering

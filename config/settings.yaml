@@ -42,7 +42,7 @@ similarity:
     shard_jumbo_blocks: true  # NEW: shard large blocks deterministically
     shard_strategy: "third_token_initial"  # NEW: "third_token_initial" | "first_bigram"
     ban_top_tokens:
-      enable: true  # NEW: exclude most frequent first tokens from primary blocking
+      enable: false  # DISABLED: was preventing 99 Cents records from being grouped
       top_k: 30  # NEW: number of top tokens to ban
 
   scoring:
@@ -237,6 +237,9 @@ ui:
   duckdb_threads: 4  # Number of DuckDB threads
   max_pyarrow_group_stats_seconds: 5  # Auto-switch threshold for group stats
   use_duckdb_for_groups: true  # Force DuckDB routing for groups list
+  # Admin and maintenance features
+  admin_mode: true  # Enable admin features like run deletion
+  enable_run_deletion: true  # Enable run deletion functionality
 
 # Phase 1.35.4: Group Stats Configuration
 group_stats:

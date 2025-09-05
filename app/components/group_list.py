@@ -108,7 +108,7 @@ def render_group_list(
     col1, col2, col3 = st.columns(3)
     with col1:
         if (
-            st.button("Prev", key=f"prev_page_{selected_run_id}")
+            st.button("◀ Prev", key=f"prev_page_{selected_run_id}")
             and page_state.number > 1
         ):
             page_state.number -= 1
@@ -117,7 +117,7 @@ def render_group_list(
         st.write(f"Page {page_state.number} / {max_page}")
     with col3:
         if (
-            st.button("Next", key=f"next_page_{selected_run_id}")
+            st.button("Next ▶", key=f"next_page_{selected_run_id}")
             and page_state.number < max_page
         ):
             page_state.number += 1
@@ -140,8 +140,12 @@ def render_group_list(
         group_stats_path = artifact_paths.get("group_stats_parquet")
 
         if group_stats_path and os.path.exists(group_stats_path):
+            # Show active threshold in the banner
+            active_threshold = int(filters.get("min_edge_strength", 0) or 0)
             st.success(
-                "⚡ **Fast stats mode**: Using pre-computed group statistics for instant loading"
+                f"⚡ **Fast stats mode**: Using pre-computed group statistics for instant loading · "
+                f"Similarity ≥ {active_threshold:.0f}%", 
+                icon="⚡"
             )
         else:
             st.info("📊 **Standard mode**: Computing group statistics on-demand")
@@ -169,6 +173,24 @@ def render_group_list_fragment(
         page_size: The page size
         filters: The filters dictionary
     """
+    # Add CSS for larger, more readable expander headers
+    st.markdown(
+        """
+        <style>
+        .streamlit-expanderHeader {
+            font-size: 1.2rem !important;
+            font-weight: 600 !important;
+            line-height: 1.4 !important;
+            padding: 0.75rem 1rem !important;
+        }
+        .streamlit-expanderContent {
+            padding: 1rem !important;
+        }
+        </style>
+        """, 
+        unsafe_allow_html=True
+    )
+    
     # Duplicate render guard for the list
     key = f"group_list_rendered:{selected_run_id}:{page}:{sort_by}"
     if not st.session_state.get(key):
@@ -180,7 +202,7 @@ def render_group_list_fragment(
     )
 
     # Group by group_id and display each group
-    for group_info in page_groups:
+    for i, group_info in enumerate(page_groups):
         group_id = group_info["group_id"]
         group_size = group_info["group_size"]
         primary_name = group_info["primary_name"]
@@ -190,22 +212,39 @@ def render_group_list_fragment(
         disposition = group_info.get("disposition", "Unknown")
 
         # Create a more informative expander title with key fields
-        expander_title = f"Group {group_id}: {primary_name} ({group_size} records)"
-        if max_score > 0:
-            expander_title += f" | Score: {max_score:.3f}"
+        primary_name_display = primary_name or "Unknown"
+        
+        # Dynamic font scaling based on similarity score (0.9rem to 1.6rem)
+        similarity_score = float(max_score or 0)
+        font_size = 0.9 + (similarity_score / 100.0) * 0.7  # 0.9rem at 0%, 1.6rem at 100%
+        font_size = max(0.9, min(1.6, font_size))  # Clamp between 0.9 and 1.6
+        
+        # Create expander title with dynamic font scaling
+        expander_title = f"Group {group_id} · {primary_name_display} · {group_size} records"
+        if max_score is not None and max_score > 0:
+            expander_title += f" · Similarity {int(round(max_score))}%"
         if disposition and disposition != "Unknown":
-            expander_title += f" | {disposition}"
+            expander_title += f" · {disposition}"
 
-        with st.expander(expander_title):
+        with st.expander(expander_title, expanded=False):
+            # Add dynamic font scaling for the primary name inside the expander
+            st.markdown(
+                f"<div style='font-size:{font_size:.1f}rem; font-weight:700; margin-bottom:0.5rem;'>{primary_name_display}</div>",
+                unsafe_allow_html=True
+            )
+            # Show active threshold for this group
+            active_threshold = int(filters.get("min_edge_strength", 0) or 0)
+            st.caption(f"Showing groups with Similarity Score ≥ {active_threshold:.0f}%")
+            
             # Display key group information for quick review
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Group Size", group_size)
             with col2:
                 if max_score > 0:
-                    st.metric("Max Score", f"{max_score:.3f}")
+                    st.metric("Similarity Score", f"{max_score:.1f}%")
                 else:
-                    st.metric("Max Score", "N/A")
+                    st.metric("Similarity Score", "N/A")
             with col3:
                 if disposition and disposition != "Unknown":
                     # Color-code dispositions for quick visual identification
@@ -222,5 +261,10 @@ def render_group_list_fragment(
                 else:
                     st.write("📋 No disposition")
 
-            # This will be handled by the group_details component
-            st.write("Group details will be loaded here...")
+            # Render group details
+            from app.components.group_details import render_group_details
+            render_group_details(selected_run_id, group_id, group_size, primary_name, expander_title, create_expander=False)
+        
+        # Add visual separator between groups (except for the last one)
+        if i < len(page_groups) - 1:
+            st.divider()
