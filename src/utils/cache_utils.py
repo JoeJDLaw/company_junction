@@ -117,6 +117,7 @@ def add_run_to_index(
     input_paths: list[str],
     config_paths: list[str],
     status: str = "running",
+    run_type: str = "dev",
 ) -> None:
     """Add a new run to the index."""
     run_index = load_run_index()
@@ -133,6 +134,7 @@ def add_run_to_index(
             config_hash.update(compute_file_hash(config_path).encode())
 
     run_index[run_id] = {
+        "run_type": run_type,
         "timestamp": datetime.now().isoformat(),
         "input_paths": input_paths,
         "input_hash": input_hash.hexdigest(),

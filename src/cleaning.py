@@ -126,6 +126,7 @@ def _create_audit_snapshot(
     settings: dict[str, Any],
     alias_stats: dict[str, Any],
     output_dir: str,
+    run_type: str = "dev",
 ) -> None:
     """Create an audit snapshot with run metadata.
 
@@ -168,6 +169,7 @@ def _create_audit_snapshot(
 
         # Create audit data
         audit_data = {
+            "run_type": run_type,
             "run_ts": datetime.now().isoformat(),
             "thresholds": settings.get("similarity", {}),
             "effective_blacklist_count": effective_count,
@@ -409,6 +411,7 @@ def run_pipeline(
     keep_runs: int = 10,
     col_overrides: Optional[dict[str, str]] = None,
     profile: bool = False,
+    run_type: str = "dev",
 ) -> None:
     """Run the complete deduplication pipeline.
 
@@ -442,7 +445,7 @@ def run_pipeline(
     interim_dir, processed_dir = create_cache_directories(run_id)
 
     # Add run to index
-    add_run_to_index(run_id, [input_path], [config_path], "running")
+    add_run_to_index(run_id, [input_path], [config_path], "running", run_type)
 
     # Prune old runs (gated by Phase 1 fuse)
     if PHASE_1_DESTRUCTIVE_FUSE:
@@ -1597,7 +1600,7 @@ def run_pipeline(
         # log_performance_summary function removed - using built-in logging instead
 
         # Create audit snapshot
-        _create_audit_snapshot(settings, alias_stats, processed_dir)
+        _create_audit_snapshot(settings, alias_stats, processed_dir, run_type)
 
         # Create comprehensive performance summary
         try:
@@ -1717,6 +1720,12 @@ def main() -> None:
         action="store_true",
         help="Enable performance profiling for pipeline stages",
     )
+    parser.add_argument(
+        "--run-type",
+        choices=["test", "dev", "prod"],
+        default="dev",
+        help="Run type for cleanup categorization (default: dev)",
+    )
 
     args = parser.parse_args()
 
@@ -1758,6 +1767,7 @@ def main() -> None:
             keep_runs=args.keep_runs,
             col_overrides=col_overrides_dict,
             profile=args.profile,
+            run_type=args.run_type,
         )
     except KeyboardInterrupt:
         logger.warning("Pipeline interrupted by user (Ctrl+C)")
