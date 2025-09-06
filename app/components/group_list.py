@@ -281,7 +281,11 @@ def render_group_list_fragment(
                 st.metric("Group Size", group_size)
             with col2:
                 if max_score > 0:
+                    # Show max score with better context
                     st.metric("Max Edge Score", f"{max_score:.1f}%", help="Highest similarity score between any two records in this group")
+                    # Add a note about score distribution if we have more info
+                    if group_size > 2:
+                        st.caption("(scores vary within group)")
                 else:
                     st.metric("Max Edge Score", "N/A")
             with col3:

@@ -213,6 +213,11 @@ def _render_group_details_content(
 def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
     """Render compact group information badges."""
     col1, col2 = st.columns([3, 1])
+    
+    # Add similarity analysis for larger groups
+    if len(group_data) > 3:
+        with st.expander("📊 Similarity Analysis", expanded=False):
+            _render_similarity_analysis(group_data, group_id)
 
     with col1:
         # Compact group badges in a single row
@@ -272,6 +277,13 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
                 - "unknown", "unsure", "1099"
                 - "test", "none", "n/a"
                 - "pnc is not sure"
+                
+                **Grouping Logic:**
+                - Records are grouped if they meet edge-gating rules:
+                  - **High threshold (92%)**: Any pair with ≥92% similarity can join
+                  - **Medium threshold (84%) + shared tokens**: Pairs with 84-91% similarity can join if they share meaningful tokens
+                - The "Max Edge Score" shows the highest similarity between any two records in the group
+                - Groups may contain pairs with varying similarity scores (e.g., 84% to 100%)
                 """)
 
     with col2:
@@ -337,6 +349,75 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
         # Additional Details section removed - was legacy from lazy loading
     else:
         st.warning("No displayable columns found in group data")
+
+
+def _render_similarity_analysis(group_data: pd.DataFrame, group_id: str) -> None:
+    """Render detailed similarity analysis for a group."""
+    try:
+        # Try to load candidate pairs data for this group
+        from src.utils.artifact_management import get_artifact_paths
+        import os
+        
+        # Get the run_id from the group_data if available, or use a default approach
+        # This is a simplified approach - in practice you'd pass the run_id
+        candidate_pairs_path = None
+        for run_dir in os.listdir("data/interim"):
+            if run_dir.startswith("cj"):
+                candidate_pairs_path = f"data/interim/{run_dir}/candidate_pairs.parquet"
+                if os.path.exists(candidate_pairs_path):
+                    break
+        
+        if candidate_pairs_path and os.path.exists(candidate_pairs_path):
+            candidate_pairs = pd.read_parquet(candidate_pairs_path)
+            
+            # Get account IDs in this group
+            group_accounts = group_data['account_id'].tolist()
+            
+            # Find pairs within this group
+            group_pairs = candidate_pairs[
+                (candidate_pairs['id_a'].isin(group_accounts)) & 
+                (candidate_pairs['id_b'].isin(group_accounts))
+            ]
+            
+            if len(group_pairs) > 0:
+                scores = group_pairs['score']
+                st.markdown(f"**Score Distribution ({len(group_pairs)} pairs):**")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Min", f"{scores.min():.1f}%")
+                with col2:
+                    st.metric("Mean", f"{scores.mean():.1f}%")
+                with col3:
+                    st.metric("Max", f"{scores.max():.1f}%")
+                
+                # Show score ranges
+                high_scores = (scores >= 92).sum()
+                medium_scores = ((scores >= 84) & (scores < 92)).sum()
+                low_scores = (scores < 84).sum()
+                
+                st.markdown(f"**Score Ranges:**")
+                st.markdown(f"- High (≥92%): {high_scores} pairs")
+                st.markdown(f"- Medium (84-91%): {medium_scores} pairs")
+                st.markdown(f"- Low (<84%): {low_scores} pairs")
+                
+                # Show some example pairs
+                if len(group_pairs) <= 10:
+                    st.markdown("**All Pairs:**")
+                    display_pairs = group_pairs[['id_a', 'id_b', 'score']].copy()
+                    # Add account names if possible
+                    if 'account_name' in group_data.columns:
+                        name_map = group_data.set_index('account_id')['account_name'].to_dict()
+                        display_pairs['name_a'] = display_pairs['id_a'].map(name_map)
+                        display_pairs['name_b'] = display_pairs['id_b'].map(name_map)
+                        st.dataframe(display_pairs[['name_a', 'name_b', 'score']], hide_index=True)
+                    else:
+                        st.dataframe(display_pairs, hide_index=True)
+            else:
+                st.info("No similarity pairs found for this group")
+        else:
+            st.info("Similarity data not available")
+    except Exception as e:
+        st.warning(f"Could not load similarity analysis: {e}")
 
 
 # Explain metadata function removed - all relevant fields now displayed in main table
