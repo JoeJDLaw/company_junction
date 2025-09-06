@@ -218,7 +218,7 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
         # Compact group badges in a single row
         badges = []
 
-        # Suffix status
+        # Suffix status with tooltip
         if "suffix_class" in group_data.columns:
             suffix_classes = group_data["suffix_class"].unique()
             if len(suffix_classes) > 1:
@@ -228,7 +228,7 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
             else:
                 badges.append(f"✅ {suffix_classes[0]}")
 
-        # Blacklist hits
+        # Blacklist hits with tooltip
         if ACCOUNT_NAME in group_data.columns:
             blacklist_hits = (
                 group_data[ACCOUNT_NAME]
@@ -243,6 +243,9 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
                             "none",
                             "n/a",
                             "test",
+                            "no pay stub",
+                            "no paystub",
+                            "no stubs",
                         ],
                     ),
                 )
@@ -251,9 +254,25 @@ def _render_group_info(group_data: pd.DataFrame, group_id: str) -> None:
             if blacklist_hits > 0:
                 badges.append(f"⚠️ {blacklist_hits} blacklist hits")
 
-        # Display badges in a compact row
+        # Display badges in a compact row with help text
         if badges:
-            st.write(" | ".join(badges))
+            badge_text = " | ".join(badges)
+            st.write(badge_text)
+            # Add help text for the badges
+            with st.expander("ℹ️ What do these badges mean?", expanded=False):
+                st.markdown("""
+                **Badge Explanations:**
+                - **📋 No suffix variations**: All records in this group have the same suffix class (e.g., all "NONE" or all "LLC")
+                - **⚠️ Suffix Mismatch**: Records in this group have different suffix classes (e.g., some "LLC", some "INC")
+                - **⚠️ X blacklist hits**: X records contain suspicious terms like "no pay stub", "unknown", "1099", etc.
+                - **✅ [Suffix]**: All records have the same suffix class (e.g., "LLC", "INC")
+                
+                **Blacklist Terms Include:**
+                - "no pay stub", "no paystub", "no stubs"
+                - "unknown", "unsure", "1099"
+                - "test", "none", "n/a"
+                - "pnc is not sure"
+                """)
 
     with col2:
         # Primary count (compact)
@@ -315,51 +334,7 @@ def _render_group_table(group_data: pd.DataFrame) -> None:
             hide_index=True,
         )
 
-        # Show additional columns in expander if available
-        if additional_cols:
-            with st.expander("🔍 Additional Details", expanded=False):
-                additional_config = {
-                    "relationship": st.column_config.TextColumn(
-                        "Relationship",
-                        width="medium",
-                    ),
-                    IS_PRIMARY: st.column_config.CheckboxColumn(
-                        "Primary",
-                        width="small",
-                    ),
-                    WEAKEST_EDGE_TO_PRIMARY: st.column_config.NumberColumn(
-                        "Edge Score",
-                        width="small",
-                        format="%.1f",
-                    ),
-                    "created_date": st.column_config.DateColumn(
-                        "Created Date",
-                        width="small",
-                    ),
-                    "group_join_reason": st.column_config.TextColumn(
-                        "Join Reason",
-                        width="medium",
-                    ),
-                    "shared_tokens_count": st.column_config.NumberColumn(
-                        "Shared Tokens",
-                        width="small",
-                    ),
-                    "applied_penalties": st.column_config.TextColumn(
-                        "Penalties",
-                        width="medium",
-                    ),
-                    "survivorship_reason": st.column_config.TextColumn(
-                        "Survivorship",
-                        width="medium",
-                    ),
-                }
-
-                st.dataframe(
-                    group_data[additional_cols],
-                    width="stretch",
-                    column_config=additional_config,
-                    hide_index=True,
-                )
+        # Additional Details section removed - was legacy from lazy loading
     else:
         st.warning("No displayable columns found in group data")
 

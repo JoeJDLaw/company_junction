@@ -258,7 +258,8 @@ def render_group_list_fragment(
             f"Group {group_id} · {primary_name_display} · {group_size} records"
         )
         if max_score is not None and max_score > 0:
-            expander_title += f" · Similarity {int(round(max_score))}%"
+            # Show max score but clarify it's the highest edge score in the group
+            expander_title += f" · Max Edge {int(round(max_score))}%"
         if disposition and disposition != "Unknown":
             expander_title += f" · {disposition}"
 
@@ -280,9 +281,9 @@ def render_group_list_fragment(
                 st.metric("Group Size", group_size)
             with col2:
                 if max_score > 0:
-                    st.metric("Similarity Score", f"{max_score:.1f}%")
+                    st.metric("Max Edge Score", f"{max_score:.1f}%", help="Highest similarity score between any two records in this group")
                 else:
-                    st.metric("Similarity Score", "N/A")
+                    st.metric("Max Edge Score", "N/A")
             with col3:
                 if disposition and disposition != "Unknown":
                     # Color-code dispositions for quick visual identification
