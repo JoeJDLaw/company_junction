@@ -168,7 +168,7 @@ def get_group_details(
 
     # Reduce logging verbosity - only log for first page or errors
     if page == 1:
-        logger.info(
+        logger.debug(
             f"get_group_details | run_id={run_id} group_id={group_id} sort_key='{sort_key}' "
             f"page={page} page_size={page_size} filters={filters_signature}",
         )
@@ -207,7 +207,7 @@ def get_group_details(
         context="group_details",
     )  # Use group_details context for correct column mapping
     if page == 1:  # Only log for first page to reduce noise
-        logger.info(f"get_group_details will use ORDER BY '{order_by}'")
+        logger.debug(f"get_group_details will use ORDER BY '{order_by}'")
 
     # Check force flags first (highest priority)
     from .settings import get_ui_perf
@@ -296,7 +296,7 @@ def get_group_details(
             # Structured logging with metrics - only for first page to reduce noise
             duration_ms = int((time.time() - start_time) * 1000)
             if page == 1:
-                logger.info(
+                logger.debug(
                     f"get_group_details_complete | backend=duckdb duration_ms={duration_ms} "
                     f"rows={len(result)} total={total} page={page} page_size={page_size}",
                 )
@@ -321,7 +321,7 @@ def get_group_details(
     # Structured logging with metrics - only for first page to reduce noise
     duration_ms = int((time.time() - start_time) * 1000)
     if page == 1:
-        logger.info(
+        logger.debug(
             f"get_group_details_complete | backend=pyarrow duration_ms={duration_ms} "
             f"rows={len(result)} total={total} page={page} page_size={page_size}",
         )

@@ -1,10 +1,22 @@
 [run]
-source = src
 branch = True
+source = 
+    src
 omit =
-    */__init__.py
+    tests/*
+    docs/*
+    tools/*
+    scripts/*
+    */migrations/*
+    */generated/*
+    */vendor/*
+    */third_party/*
+    setup.py
+    */__main__.py
+    src/*/experimental/*
+    src/*/legacy/*
 
 [report]
+skip_covered = True
 show_missing = True
-skip_covered = False
 precision = 1

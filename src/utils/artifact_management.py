@@ -22,7 +22,8 @@ def get_artifact_paths(run_id: str) -> dict[str, str]:
     interim_dir = get_interim_dir(run_id)
     processed_dir = get_processed_dir(run_id)
 
-    # Determine which directory exists and use that
+    # Determine which directory to use based on file availability
+    # Priority: processed directory first (has review_ready files), then interim (has candidate_pairs)
     if os.path.exists(processed_dir):
         base_dir = str(processed_dir)
         interim_format = "parquet"
@@ -34,12 +35,24 @@ def get_artifact_paths(run_id: str) -> dict[str, str]:
         base_dir = str(processed_dir)
         interim_format = "parquet"
 
+    # Get candidate pairs path - prioritize interim directory for this specific file
+    candidate_pairs_path = None
+    interim_candidate_pairs = f"{interim_dir}/candidate_pairs.parquet"
+    processed_candidate_pairs = f"{processed_dir}/candidate_pairs.parquet"
+    
+    if os.path.exists(interim_candidate_pairs):
+        candidate_pairs_path = interim_candidate_pairs
+    elif os.path.exists(processed_candidate_pairs):
+        candidate_pairs_path = processed_candidate_pairs
+    else:
+        candidate_pairs_path = f"{base_dir}/candidate_pairs.{interim_format}"
+
     return {
         "review_ready_csv": f"{base_dir}/review_ready.csv",
         "review_ready_parquet": f"{base_dir}/review_ready.parquet",
         "review_meta": f"{base_dir}/review_meta.json",
         "pipeline_state": f"{base_dir}/pipeline_state.json",
-        "candidate_pairs": f"{base_dir}/candidate_pairs.{interim_format}",
+        "candidate_pairs": candidate_pairs_path,
         "groups": f"{base_dir}/groups.{interim_format}",
         "survivorship": f"{base_dir}/survivorship.{interim_format}",
         "dispositions": f"{base_dir}/dispositions.{interim_format}",

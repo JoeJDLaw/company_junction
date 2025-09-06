@@ -395,7 +395,7 @@ def main() -> None:
     # Render group list with expanders
     from app.components.group_list import render_group_list_fragment
 
-    render_group_list_fragment(selected_run_id, sort_by, page, page_size, filters)
+    render_group_list_fragment(selected_run_id, sort_by, page, page_size, filters, settings)
 
     # (Group details are rendered inside each row's expander by the group list component.)
 

@@ -27,7 +27,7 @@ from src.alias_matching import (
     save_alias_matches,
 )
 from src.disposition import apply_dispositions, save_dispositions
-from src.grouping import create_groups_with_edge_gating
+from src.edge_grouping import create_groups_with_edge_gating
 
 # Import local modules
 from src.normalize import excel_serial_to_datetime, normalize_dataframe
