@@ -8,7 +8,7 @@ import pandas as pd
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from src.grouping import (
+from src.edge_grouping import (
     apply_canopy_bound,
     can_join_group,
     create_groups_standard,

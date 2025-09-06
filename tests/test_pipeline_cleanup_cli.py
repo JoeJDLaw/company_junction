@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pipeline_cleanup import format_bytes, get_runs_by_type, main, print_runs_by_type
+from tools.pipeline_cleanup import format_bytes, get_runs_by_type, main, print_runs_by_type
 
 
 class TestPipelineCleanupCLI:
