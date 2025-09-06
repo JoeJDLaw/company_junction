@@ -168,7 +168,8 @@ class TestPipelineCleanupCLI:
         }
         self._create_test_run_index(runs_data)
         
-        with patch("src.utils.cache_utils._calculate_directory_size", return_value=1024):
+        with patch("os.walk") as mock_walk, patch("os.path.getsize", return_value=1024):
+            mock_walk.return_value = [("/fake/dir", [], ["file1.txt"])]
             with patch("sys.argv", ["pipeline_cleanup.py", "--delete-tests", "--dry-run"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
@@ -217,7 +218,8 @@ class TestPipelineCleanupCLI:
         }
         self._create_test_run_index(runs_data)
         
-        with patch("src.utils.cache_utils._calculate_directory_size", return_value=1024):
+        with patch("os.walk") as mock_walk, patch("os.path.getsize", return_value=1024):
+            mock_walk.return_value = [("/fake/dir", [], ["file1.txt"])]
             with patch("builtins.input", return_value="n"):  # Cancel
                 with patch("sys.argv", ["pipeline_cleanup.py", "--delete-tests"]):
                     with pytest.raises(SystemExit) as exc_info:

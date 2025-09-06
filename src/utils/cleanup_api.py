@@ -7,10 +7,13 @@ delegating to cache_utils to ensure safety and consistency.
 from typing import Any, Optional
 
 from src.utils.cache_utils import (
-    get_latest_run_id,
-    load_run_index,
-    preview_delete_runs as _preview_core,
     delete_runs as _delete_core,
+)
+from src.utils.cache_utils import (
+    load_run_index,
+)
+from src.utils.cache_utils import (
+    preview_delete_runs as _preview_core,
 )
 from src.utils.logging_utils import get_logger
 
@@ -117,7 +120,6 @@ def list_runs() -> list[RunInfo]:
         List of RunInfo objects sorted by timestamp (newest first)
     """
     run_index = load_run_index()
-    latest_run_id = get_latest_run_id()
 
     runs = []
     for run_id, run_data in run_index.items():
@@ -142,8 +144,6 @@ def list_runs() -> list[RunInfo]:
     return runs
 
 
-
-
 def preview_delete(run_ids: list[str]) -> PreviewInfo:
     """Preview deletion of runs and return what would be removed.
 
@@ -162,7 +162,7 @@ def preview_delete(run_ids: list[str]) -> PreviewInfo:
     for run_data in raw["runs_to_delete"]:
         run_id = run_data["run_id"]
         run_meta = run_index.get(run_id, {})
-        
+
         # Handle legacy runs without run_type
         run_type = run_meta.get("run_type", "dev")
         if "run_type" not in run_meta and run_id in run_index:
@@ -199,7 +199,7 @@ def delete_runs(run_ids: list[str]) -> DeleteResult:
     """
     # Delegate to cache_utils for safety and consistency
     raw = _delete_core(run_ids)
-    
+
     return DeleteResult(
         deleted=raw["deleted"],
         not_found=raw["not_found"],
@@ -209,5 +209,3 @@ def delete_runs(run_ids: list[str]) -> DeleteResult:
         latest_reassigned=raw["latest_reassigned"],
         new_latest=raw["new_latest"],
     )
-
-

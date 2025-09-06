@@ -8,7 +8,14 @@ from unittest.mock import patch
 
 import pytest
 
-from src.utils.cleanup_api import DeleteResult, PreviewInfo, RunInfo, delete_runs, list_runs, preview_delete
+from src.utils.cleanup_api import (
+    DeleteResult,
+    PreviewInfo,
+    RunInfo,
+    delete_runs,
+    list_runs,
+    preview_delete,
+)
 
 
 class TestCleanupAPI:
@@ -18,11 +25,13 @@ class TestCleanupAPI:
         """Set up test environment."""
         self.temp_dir = tempfile.mkdtemp()
         self.run_index_path = os.path.join(self.temp_dir, "run_index.json")
-        
+
         # Mock the RUN_INDEX_PATH
-        self.patcher = patch("src.utils.cache_utils.RUN_INDEX_PATH", self.run_index_path)
+        self.patcher = patch(
+            "src.utils.cache_utils.RUN_INDEX_PATH", self.run_index_path
+        )
         self.patcher.start()
-        
+
         # Mock the path utilities to use temp directory
         self.path_patcher = patch("src.utils.cache_utils.get_processed_dir")
         self.mock_get_processed_dir = self.path_patcher.start()
@@ -34,6 +43,7 @@ class TestCleanupAPI:
         self.path_patcher.stop()
         # Clean up temp directory
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def _create_test_run_index(self, runs_data):
@@ -66,10 +76,10 @@ class TestCleanupAPI:
             },
         }
         self._create_test_run_index(runs_data)
-        
+
         runs = list_runs()
         assert len(runs) == 2
-        
+
         # Should be sorted by timestamp (newest first)
         assert runs[0].run_id == "run2"
         assert runs[0].run_type == "dev"
@@ -87,7 +97,7 @@ class TestCleanupAPI:
             },
         }
         self._create_test_run_index(runs_data)
-        
+
         with patch("src.utils.cleanup_api.logger") as mock_logger:
             runs = list_runs()
             assert len(runs) == 1
@@ -98,7 +108,7 @@ class TestCleanupAPI:
         """Test preview_delete with no runs."""
         self._create_test_run_index({})
         preview = preview_delete(["nonexistent"])
-        
+
         assert len(preview.runs_to_delete) == 0
         assert len(preview.runs_not_found) == 1
         assert preview.runs_not_found[0] == "nonexistent"
@@ -123,11 +133,12 @@ class TestCleanupAPI:
             },
         }
         self._create_test_run_index(runs_data)
-        
-        # Mock directory size calculation
-        with patch("src.utils.cache_utils._calculate_directory_size", return_value=1024):
+
+        # Mock directory size calculation by mocking os.walk and os.path.getsize
+        with patch("os.walk") as mock_walk, patch("os.path.getsize", return_value=1024):
+            mock_walk.return_value = [("/fake/dir", [], ["file1.txt"])]
             preview = preview_delete(["run1", "run2", "nonexistent"])
-        
+
         assert len(preview.runs_to_delete) == 1
         assert preview.runs_to_delete[0].run_id == "run1"
         assert len(preview.runs_inflight) == 1
@@ -139,7 +150,7 @@ class TestCleanupAPI:
         """Test delete_runs with fuse disabled."""
         with patch.dict(os.environ, {"PHASE1_DESTRUCTIVE_FUSE": "false"}):
             result = delete_runs(["run1"])
-            
+
             assert len(result.deleted) == 0
             assert len(result.errors) == 1
             assert "fuse not enabled" in result.errors[0]
@@ -156,11 +167,13 @@ class TestCleanupAPI:
             },
         }
         self._create_test_run_index(runs_data)
-        
+
         with patch.dict(os.environ, {"PHASE1_DESTRUCTIVE_FUSE": "true"}):
-            with patch("src.utils.cache_utils.is_run_truly_inflight", return_value=True):
+            with patch(
+                "src.utils.cache_utils.is_run_truly_inflight", return_value=True
+            ):
                 result = delete_runs(["run1"])
-                
+
                 assert len(result.deleted) == 0
                 assert len(result.inflight_blocked) == 1
                 assert result.inflight_blocked[0] == "run1"
@@ -172,7 +185,7 @@ class TestCleanupAPI:
             result1 = delete_runs(["nonexistent"])
             assert len(result1.deleted) == 0
             assert len(result1.not_found) == 1
-            
+
             # Second delete (should be no-op)
             result2 = delete_runs(["nonexistent"])
             assert len(result2.deleted) == 0
@@ -190,11 +203,12 @@ class TestCleanupAPI:
             },
         }
         self._create_test_run_index(runs_data)
-        
-        with patch("src.utils.cache_utils._calculate_directory_size", return_value=1024):
+
+        with patch("os.walk") as mock_walk, patch("os.path.getsize", return_value=1024):
+            mock_walk.return_value = [("/fake/dir", [], ["file1.txt"])]
             with patch("src.utils.cleanup_api.logger") as mock_logger:
                 preview = preview_delete(["legacy_run"])
-                
+
                 assert len(preview.runs_to_delete) == 1
                 assert preview.runs_to_delete[0].run_type == "dev"
                 mock_logger.warning.assert_called_once()
