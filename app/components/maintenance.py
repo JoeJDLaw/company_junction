@@ -205,15 +205,13 @@ def render_maintenance(selected_run_id: str) -> None:
                                     key=f"preview_{selected_run_id}",
                                     use_container_width=True,
                                 ):
-                                    from src.utils.cache_utils import (
-                                        preview_delete_runs,
-                                    )
+                                    from src.utils.cleanup_api import preview_delete
 
                                     try:
-                                        preview = preview_delete_runs(ids)
+                                        preview = preview_delete(ids)
                                         st.session_state[
                                             f"deletion_preview_{selected_run_id}"
-                                        ] = preview
+                                        ] = preview.to_dict()
                                         st.session_state[
                                             f"selected_run_ids_{selected_run_id}"
                                         ] = ids
@@ -227,15 +225,19 @@ def render_maintenance(selected_run_id: str) -> None:
                                     key=f"delete_{selected_run_id}",
                                     use_container_width=True,
                                 ):
-                                    from src.utils.cache_utils import delete_runs
+                                    from src.utils.cleanup_api import delete_runs
 
                                     try:
                                         results = delete_runs(ids)
-                                        if results.get("deleted"):
+                                        if results.deleted:
                                             panel.success(
-                                                f"Deleted {len(results['deleted'])} runs",
+                                                f"Deleted {len(results.deleted)} runs",
                                             )
-                                        if results.get("errors"):
+                                        if results.inflight_blocked:
+                                            panel.warning(
+                                                f"Skipped {len(results.inflight_blocked)} running runs"
+                                            )
+                                        if results.errors:
                                             panel.error("Errors occurred; see logs.")
                                         st.session_state.pop(
                                             f"deletion_preview_{selected_run_id}",
