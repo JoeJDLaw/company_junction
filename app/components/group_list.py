@@ -184,13 +184,35 @@ def render_group_list_fragment(
         """
         <style>
         .streamlit-expanderHeader {
-            font-size: 1.2rem !important;
+            font-size: 1.6rem !important;
             font-weight: 600 !important;
-            line-height: 1.4 !important;
-            padding: 0.75rem 1rem !important;
+            line-height: 1.6 !important;
+            padding: 1.25rem 1.5rem !important;
+            margin-bottom: 1rem !important;
         }
         .streamlit-expanderContent {
-            padding: 1rem !important;
+            padding: 1.5rem !important;
+        }
+        /* Make the expander header text more readable */
+        .streamlit-expanderHeader p {
+            font-size: 1.6rem !important;
+            font-weight: 600 !important;
+            margin: 0 !important;
+            line-height: 1.6 !important;
+        }
+        /* Ensure the markdown container text is large enough */
+        .st-emotion-cache-gx6i9d p {
+            font-size: 1.6rem !important;
+            font-weight: 600 !important;
+            line-height: 1.6 !important;
+        }
+        /* Remove horizontal dividers between groups */
+        .stDivider {
+            display: none !important;
+        }
+        /* Add more spacing between expanders instead */
+        .streamlit-expander {
+            margin-bottom: 1.5rem !important;
         }
         </style>
         """,
@@ -289,6 +311,4 @@ def render_group_list_fragment(
                 create_expander=False,
             )
 
-        # Add visual separator between groups (except for the last one)
-        if i < len(page_groups) - 1:
-            st.divider()
+        # Visual separators removed - using CSS margin instead for cleaner spacing

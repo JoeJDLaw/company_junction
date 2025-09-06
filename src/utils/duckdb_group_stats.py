@@ -236,8 +236,14 @@ class DuckDBGroupStatsEngine:
             {GROUP_ID},
             COUNT(*) as {GROUP_SIZE},
             MAX(CASE WHEN {WEAKEST_EDGE_TO_PRIMARY} IS NOT NULL THEN {WEAKEST_EDGE_TO_PRIMARY} ELSE 0.0 END) as {MAX_SCORE},
-            FIRST(CASE WHEN {IS_PRIMARY} THEN {ACCOUNT_NAME} ELSE NULL END) as {PRIMARY_NAME},
-            FIRST(CASE WHEN {IS_PRIMARY} THEN {DISPOSITION} ELSE 'Update' END) as disposition_col
+            COALESCE(
+                MAX(CASE WHEN {IS_PRIMARY} THEN {ACCOUNT_NAME} ELSE NULL END),
+                MIN({ACCOUNT_NAME})
+            ) as {PRIMARY_NAME},
+            COALESCE(
+                MAX(CASE WHEN {IS_PRIMARY} THEN {DISPOSITION} ELSE NULL END),
+                'Update'
+            ) as disposition_col
         FROM groups_df
         GROUP BY {GROUP_ID}
         ORDER BY {GROUP_ID}
