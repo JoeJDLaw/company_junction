@@ -35,7 +35,7 @@ python run_streamlit.py
 - **Audit**: `data/processed/review_meta.json` contains run metadata and statistics.
 """
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 import pandas as pd
 import streamlit as st
@@ -50,7 +50,7 @@ from src.utils.logging_utils import get_logger, setup_logging
 from src.utils.state_utils import migrate_legacy_keys
 
 
-def load_settings() -> Dict[str, Any]:
+def load_settings() -> dict[str, Any]:
     """Load application settings from config file."""
     try:
         with open("config/settings.yaml") as f:
@@ -115,7 +115,7 @@ def load_review_data(run_id: str) -> Optional[pd.DataFrame]:
         return None
 
 
-def parse_alias_cross_refs(cross_refs_str: str) -> List[Dict[str, Any]]:
+def parse_alias_cross_refs(cross_refs_str: str) -> list[dict[str, Any]]:
     """Parse alias cross-references from string format."""
     if pd.isna(cross_refs_str) or cross_refs_str == "":
         return []
@@ -266,7 +266,7 @@ def main() -> None:
     # Find selected run ID
     selected_run_id = None
     selected_run = None
-    for i, run in enumerate(sorted_runs):
+    for _i, run in enumerate(sorted_runs):
         display_name = format_run_display_name(run["run_id"], run)
         status_icon = (
             "✅"

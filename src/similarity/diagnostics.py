@@ -1,7 +1,7 @@
 """Diagnostics and brand suggestions functionality."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 def write_blocking_diagnostics(
-    block_stats: List[Dict[str, Any]],
-    brand_suggestions: List[Dict[str, Any]],
+    block_stats: list[dict[str, Any]],
+    brand_suggestions: list[dict[str, Any]],
     interim_dir: Optional[str] = None,
 ) -> None:
     """Write blocking diagnostics to CSV/Parquet files."""
@@ -41,10 +41,10 @@ def write_blocking_diagnostics(
 
 
 def generate_brand_suggestions(
-    block_stats: List[Dict[str, Any]],
+    block_stats: list[dict[str, Any]],
     groups_df: pd.DataFrame,
-    settings: Dict[str, Any],
-) -> List[Dict[str, Any]]:
+    settings: dict[str, Any],
+) -> list[dict[str, Any]]:
     """Generate brand suggestions based on block statistics and group analysis.
 
     Args:

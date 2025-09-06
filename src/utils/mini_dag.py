@@ -8,7 +8,7 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Literal
 
 from src.utils.path_utils import get_interim_dir
 from src.utils.pipeline_constants import (
@@ -25,9 +25,9 @@ Status = Literal["pending", "running", "completed", "failed", "interrupted"]
 class Stage:
     name: str
     status: Status = "pending"
-    start_time: Optional[float] = None
-    end_time: Optional[float] = None
-    deps: List[str] = field(default_factory=list)
+    start_time: float | None = None
+    end_time: float | None = None
+    deps: list[str] = field(default_factory=list)
 
 
 class MiniDAG:
@@ -36,8 +36,8 @@ class MiniDAG:
         self.state_file = state_file
         self.run_id = run_id
         self._logger = logging.getLogger(__name__)
-        self._stages: Dict[str, Stage] = {}
-        self._metadata: Dict[str, Any] = {
+        self._stages: dict[str, Stage] = {}
+        self._metadata: dict[str, Any] = {
             "dag_version": "1.0.0",  # Add version for future compatibility
             "input_path": "",
             "config_path": "",
@@ -49,7 +49,7 @@ class MiniDAG:
         }
         self._load()  # idempotent
 
-    def register(self, name: str, deps: Optional[List[str]] = None) -> None:
+    def register(self, name: str, deps: list[str] | None = None) -> None:
         if name not in self._stages:
             self._stages[name] = Stage(name=name, deps=list(deps or []))
             self._save()
@@ -92,14 +92,14 @@ class MiniDAG:
 
         self._save()
 
-    def should_run(self, name: str, resume_from: Optional[str]) -> bool:
+    def should_run(self, name: str, resume_from: str | None) -> bool:
         """Return True if this stage should execute, considering resume semantics."""
         if resume_from is None:
             return True
         # Run this stage and everything after it (caller decides ordering).
         return True
 
-    def get_status(self, name: str) -> Optional[Status]:
+    def get_status(self, name: str) -> Status | None:
         """Get the status of a stage."""
         if name in self._stages:
             return self._stages[name].status
@@ -109,7 +109,7 @@ class MiniDAG:
         """Check if a stage is completed."""
         return self.get_status(name) == "completed"
 
-    def get_last_completed_stage(self) -> Optional[str]:
+    def get_last_completed_stage(self) -> str | None:
         """Get the name of the last completed stage, or None if no stages completed."""
         completed_stages = [
             name for name, stage in self._stages.items() if stage.status == "completed"
@@ -128,7 +128,7 @@ class MiniDAG:
 
         return last_completed
 
-    def get_current_stage(self) -> Optional[str]:
+    def get_current_stage(self) -> str | None:
         """Get the name of the currently running stage, or None if no stage is running."""
         running_stages = [
             name for name, stage in self._stages.items() if stage.status == "running"
@@ -142,7 +142,7 @@ class MiniDAG:
     def validate_intermediate_files(
         self,
         stage_name: str,
-        interim_dir: Optional[Path] = None,
+        interim_dir: Path | None = None,
     ) -> bool:
         """Check if intermediate files exist for a given stage."""
         if interim_dir is None:
@@ -166,8 +166,8 @@ class MiniDAG:
 
     def get_smart_resume_stage(
         self,
-        interim_dir: Optional[Path] = None,
-    ) -> Optional[str]:
+        interim_dir: Path | None = None,
+    ) -> str | None:
         """Intelligently determine where to resume from based on:
         1. Last completed stage in state file
         2. Existence of intermediate files
@@ -250,8 +250,8 @@ class MiniDAG:
 
     def validate_resume_capability(
         self,
-        interim_dir: Optional[Path] = None,
-    ) -> Tuple[bool, str, ResumeDecision]:
+        interim_dir: Path | None = None,
+    ) -> tuple[bool, str, ResumeDecision]:
         """Validate if the pipeline can resume from the current state.
 
         Returns:
@@ -342,8 +342,8 @@ class MiniDAG:
 
     def get_resume_validation_summary(
         self,
-        interim_dir: Optional[Path] = None,
-    ) -> Dict[str, Any]:
+        interim_dir: Path | None = None,
+    ) -> dict[str, Any]:
         """Get a comprehensive summary of resume validation status.
 
         Returns:
@@ -399,7 +399,7 @@ class MiniDAG:
         )
         self._save()
 
-    def get_input_hash(self) -> Optional[str]:
+    def get_input_hash(self) -> str | None:
         """Get the stored input hash from metadata."""
         return self._metadata.get("input_hash")
 

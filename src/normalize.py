@@ -10,7 +10,7 @@ This module handles:
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 import pandas as pd
 import yaml
@@ -32,8 +32,8 @@ class NameNorm:
     has_parentheses: bool
     has_semicolon: bool
     has_multiple_names: bool
-    alias_candidates: List[str]
-    alias_sources: List[str]
+    alias_candidates: list[str]
+    alias_sources: list[str]
 
 
 # Legal suffix mapping (case-insensitive)
@@ -272,7 +272,7 @@ def _detect_multiple_names(name: str) -> bool:
     return False
 
 
-def _extract_alias_candidates(name: str) -> Tuple[List[str], List[str]]:
+def _extract_alias_candidates(name: str) -> tuple[list[str], list[str]]:
     """Extract alias candidates from a name string.
 
     Args:
@@ -364,7 +364,7 @@ def _normalize_alias(alias: str) -> str:
     return name_core
 
 
-def extract_suffix_from_tokens(tokens: List[str]) -> Tuple[str, str]:
+def extract_suffix_from_tokens(tokens: list[str]) -> tuple[str, str]:
     """Extract legal suffix from tokenized name.
 
     Args:
@@ -388,7 +388,7 @@ def extract_suffix_from_tokens(tokens: List[str]) -> Tuple[str, str]:
     return "NONE", " ".join(tokens)
 
 
-def extract_suffix(name_base: str) -> Tuple[str, str]:
+def extract_suffix(name_base: str) -> tuple[str, str]:
     """Extract legal suffix from normalized base name.
 
     Args:
@@ -503,7 +503,7 @@ def normalize_dataframe(
 
 def load_normalization_settings(
     config_path: str = "config/settings.yaml",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Load normalization settings from config file."""
     global _normalization_settings
     if _normalization_settings is None:
@@ -522,8 +522,8 @@ def load_normalization_settings(
 
 def enhance_name_core(
     name_core: str,
-    settings: Optional[Dict[str, Any]] = None,
-) -> Tuple[str, Set[str]]:
+    settings: Optional[dict[str, Any]] = None,
+) -> tuple[str, set[str]]:
     """Apply enhanced normalization to name_core for better retail brand matching.
 
     Args:
@@ -578,8 +578,8 @@ def enhance_name_core(
 
 def get_enhanced_tokens_for_jaccard(
     name_core: str,
-    settings: Optional[Dict[str, Any]] = None,
-) -> Set[str]:
+    settings: Optional[dict[str, Any]] = None,
+) -> set[str]:
     """Get token set for Jaccard calculation, excluding weak tokens.
 
     Args:

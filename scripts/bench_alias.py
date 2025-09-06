@@ -10,7 +10,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 from src.utils.logging_utils import get_logger
 
@@ -23,7 +22,7 @@ def run_pipeline_with_settings(
     optimize: bool,
     workers: int = 4,
     output_dir: Path | None = None,
-) -> Tuple[float, Dict]:
+) -> tuple[float, dict]:
     """Run pipeline with specific alias optimization settings.
 
     Args:
@@ -124,7 +123,7 @@ def run_pipeline_with_settings(
         return time.perf_counter() - start_time, {}
 
 
-def parse_alias_stats(log_output: str) -> Dict:
+def parse_alias_stats(log_output: str) -> dict:
     """Parse pipeline logs for alias stage statistics.
 
     Args:
@@ -155,7 +154,7 @@ def parse_alias_stats(log_output: str) -> Dict:
     return stats
 
 
-def print_benchmark_results(results: List[Tuple[str, float, Dict]]) -> None:
+def print_benchmark_results(results: list[tuple[str, float, dict]]) -> None:
     """Print benchmark results in a formatted table.
 
     Args:

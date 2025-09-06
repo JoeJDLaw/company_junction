@@ -10,7 +10,7 @@ This module provides:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -29,7 +29,7 @@ class ParquetSizeReporter:
         """
         self.target_size_mb = target_size_mb
 
-    def analyze_parquet_file(self, file_path: str) -> Dict[str, Any]:
+    def analyze_parquet_file(self, file_path: str) -> dict[str, Any]:
         """Analyze a single Parquet file.
 
         Args:
@@ -101,7 +101,7 @@ class ParquetSizeReporter:
             )
             return {"error": str(e), "path": str(file_path), "size_mb": 0.0}
 
-    def _extract_compression_info(self, metadata: Any) -> Dict[str, Any]:
+    def _extract_compression_info(self, metadata: Any) -> dict[str, Any]:
         """Extract compression information from Parquet metadata."""
         try:
             # Check if any column groups use dictionary encoding
@@ -153,7 +153,7 @@ class ParquetSizeReporter:
         }
         return compression_map.get(compression_code, f"unknown_{compression_code}")
 
-    def _extract_column_info(self, metadata: Any) -> List[Dict[str, Any]]:
+    def _extract_column_info(self, metadata: Any) -> list[dict[str, Any]]:
         """Extract detailed column information from Parquet metadata."""
         columns = []
 
@@ -225,7 +225,7 @@ class ParquetSizeReporter:
         original_path: str,
         optimized_path: str,
         run_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compare two Parquet files and report differences.
 
         Args:
@@ -254,7 +254,7 @@ class ParquetSizeReporter:
                 else 0
             )
 
-            comparison_report: Dict[str, Any] = {
+            comparison_report: dict[str, Any] = {
                 "original": original_report,
                 "optimized": optimized_report,
                 "comparison": {
@@ -287,7 +287,7 @@ class ParquetSizeReporter:
 
         return comparison_report
 
-    def _save_size_report(self, size_report: Dict[str, Any], run_id: str) -> None:
+    def _save_size_report(self, size_report: dict[str, Any], run_id: str) -> None:
         """Save size report to file.
 
         Args:
@@ -327,7 +327,7 @@ def create_parquet_size_reporter(target_size_mb: float = 180.0) -> ParquetSizeRe
     return ParquetSizeReporter(target_size_mb)
 
 
-def load_or_build_report(run_id: str, target_size_mb: float = 180.0) -> Dict[str, Any]:
+def load_or_build_report(run_id: str, target_size_mb: float = 180.0) -> dict[str, Any]:
     """Load existing size report or build a new one for a given run.
 
     Args:
@@ -347,7 +347,7 @@ def load_or_build_report(run_id: str, target_size_mb: float = 180.0) -> Dict[str
     if report_path.exists():
         try:
             with open(report_path) as f:
-                report: Dict[str, Any] = json.load(f)
+                report: dict[str, Any] = json.load(f)
             logger.info(f"parquet_size_reporter | report_loaded | path={report_path}")
             return report
         except Exception as e:

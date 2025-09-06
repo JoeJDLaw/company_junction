@@ -11,7 +11,6 @@ Usage:
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 # Schema-fragile column names to search for
 FRAGILE_COLUMNS = {
@@ -138,7 +137,7 @@ def should_exclude_line(line: str) -> bool:
     return False
 
 
-def find_fragile_references(file_path: Path) -> List[Tuple[int, str]]:
+def find_fragile_references(file_path: Path) -> list[tuple[int, str]]:
     """Find schema-fragile references in a file."""
     references = []
 
@@ -162,7 +161,7 @@ def find_fragile_references(file_path: Path) -> List[Tuple[int, str]]:
     return references
 
 
-def audit_directory(directory: Path) -> List[Tuple[Path, int, str]]:
+def audit_directory(directory: Path) -> list[tuple[Path, int, str]]:
     """Audit a directory for schema-fragile references."""
     all_references: list[tuple[Path, int, str]] = []
 

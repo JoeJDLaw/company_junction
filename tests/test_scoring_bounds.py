@@ -10,7 +10,7 @@ This module tests mathematical correctness and bounds:
 
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import pytest

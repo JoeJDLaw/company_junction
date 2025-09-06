@@ -5,7 +5,7 @@ for canopy bound checks in the grouping stage.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +19,9 @@ class DisjointSet:
 
     def __init__(self) -> None:
         """Initialize an empty disjoint set."""
-        self.parent: Dict[Any, Any] = {}
-        self.rank: Dict[Any, int] = {}
-        self.size: Dict[Any, int] = {}
+        self.parent: dict[Any, Any] = {}
+        self.rank: dict[Any, int] = {}
+        self.size: dict[Any, int] = {}
         self._count = 0
 
     def make_set(self, x: Any) -> None:

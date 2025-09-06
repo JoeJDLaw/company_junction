@@ -7,7 +7,7 @@ import logging
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ def to_arrow_strings(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def narrow_sort(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+def narrow_sort(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """Sort DataFrame using only specified columns to reduce memory copies.
 
     Args:
@@ -68,7 +68,7 @@ def parse_name_core_tokens(value: Union[str, list, None]) -> frozenset[str]:
         try:
             import orjson  # optional dep
         except ImportError:
-            orjson = None  # type: ignore[assignment]
+            orjson = None
 
         if orjson is not None:
             try:
@@ -151,7 +151,7 @@ def build_vectorized_masks(
 def apply_vectorized_disposition(
     df: pd.DataFrame,
     masks: dict,
-    reason_values: List[str],
+    reason_values: list[str],
     manual_overrides: Optional[dict] = None,
 ) -> tuple[pd.Series, pd.Series]:
     """Apply vectorized disposition classification using numpy.select.

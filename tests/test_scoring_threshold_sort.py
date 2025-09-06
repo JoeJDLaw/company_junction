@@ -9,7 +9,7 @@ This module tests threshold and sorting behavior:
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -22,7 +22,7 @@ from src.normalize import normalize_dataframe
 from src.similarity.scoring import score_pairs_bulk, score_pairs_parallel
 
 
-def _get_settings(overrides: dict = None) -> dict:
+def _get_settings(overrides: dict | None = None) -> dict:
     """Helper to create settings dict with optional overrides."""
     settings = {
         "similarity": {
@@ -313,7 +313,7 @@ class TestScoringThresholdSort:
             score_sorted = sorted(results, key=lambda r: -r["score"])
 
             # Group by score to test stability
-            score_groups: Dict[float, List[Dict[str, Any]]] = {}
+            score_groups: dict[float, list[dict[str, Any]]] = {}
             for result in score_sorted:
                 score = result["score"]
                 if score not in score_groups:

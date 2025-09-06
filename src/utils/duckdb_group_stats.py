@@ -12,7 +12,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import duckdb
 import pandas as pd
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 class DuckDBGroupStatsEngine:
     """DuckDB-based group statistics engine with memoization."""
 
-    def __init__(self, settings: Dict[str, Any], run_id: str):
+    def __init__(self, settings: dict[str, Any], run_id: str):
         """Initialize DuckDB group stats engine.
 
         Args:
@@ -83,7 +83,7 @@ class DuckDBGroupStatsEngine:
         # Initialize DuckDB connection
         self.conn = self._create_duckdb_connection()
 
-    def _get_duckdb_threads(self, config: Dict[str, Any]) -> int:
+    def _get_duckdb_threads(self, config: dict[str, Any]) -> int:
         """Get optimal DuckDB thread count."""
         if config.get("threads") == "auto":
             import multiprocessing
@@ -91,7 +91,7 @@ class DuckDBGroupStatsEngine:
             return min(multiprocessing.cpu_count(), 8)
         return int(config.get("threads", 4))
 
-    def _get_duckdb_memory_limit(self, config: Dict[str, Any]) -> Optional[str]:
+    def _get_duckdb_memory_limit(self, config: dict[str, Any]) -> Optional[str]:
         """Get DuckDB memory limit from config or environment."""
         if config.get("memory_limit"):
             return str(config["memory_limit"])
@@ -153,7 +153,7 @@ class DuckDBGroupStatsEngine:
         df: pd.DataFrame,
         config_digest: str = "",
         request_id: Optional[str] = None,
-    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    ) -> tuple[pd.DataFrame, dict[str, Any]]:
         """Compute group statistics using DuckDB.
 
         Args:
@@ -232,13 +232,13 @@ class DuckDBGroupStatsEngine:
 
         # SQL query for group statistics
         query = f"""
-        SELECT 
+        SELECT
             {GROUP_ID},
             COUNT(*) as {GROUP_SIZE},
             MAX(CASE WHEN {WEAKEST_EDGE_TO_PRIMARY} IS NOT NULL THEN {WEAKEST_EDGE_TO_PRIMARY} ELSE 0.0 END) as {MAX_SCORE},
             FIRST(CASE WHEN {IS_PRIMARY} THEN {ACCOUNT_NAME} ELSE NULL END) as {PRIMARY_NAME},
             FIRST(CASE WHEN {IS_PRIMARY} THEN {DISPOSITION} ELSE 'Update' END) as disposition_col
-        FROM groups_df 
+        FROM groups_df
         GROUP BY {GROUP_ID}
         ORDER BY {GROUP_ID}
         """
@@ -305,7 +305,7 @@ class DuckDBGroupStatsEngine:
         df: pd.DataFrame,
         output_path: str,
         target_size_mb: Optional[float] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Write DataFrame to optimized Parquet using DuckDB.
 
         Args:
@@ -342,7 +342,7 @@ class DuckDBGroupStatsEngine:
         #     copy_options.append("STATISTICS 1")
 
         copy_sql = f"""
-        COPY (SELECT * FROM output_df) TO '{output_path}' 
+        COPY (SELECT * FROM output_df) TO '{output_path}'
         ({', '.join(copy_options)})
         """
 
@@ -385,7 +385,7 @@ class DuckDBGroupStatsEngine:
 
 
 def create_duckdb_group_stats_engine(
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
     run_id: str,
 ) -> DuckDBGroupStatsEngine:
     """Factory function to create DuckDB group stats engine."""

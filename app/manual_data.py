@@ -7,7 +7,7 @@ with JSON persistence and audit trails.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import streamlit as st
 
@@ -21,7 +21,7 @@ def ensure_manual_directory() -> Path:
     return manual_dir
 
 
-def load_manual_dispositions() -> List[Dict[str, Any]]:
+def load_manual_dispositions() -> list[dict[str, Any]]:
     """Load manual disposition overrides from JSON file."""
     manual_dir = ensure_manual_directory()
     file_path = manual_dir / "manual_dispositions.json"
@@ -41,7 +41,7 @@ def load_manual_dispositions() -> List[Dict[str, Any]]:
         return []
 
 
-def save_manual_dispositions(dispositions: List[Dict[str, Any]]) -> bool:
+def save_manual_dispositions(dispositions: list[dict[str, Any]]) -> bool:
     """Save manual disposition overrides to JSON file."""
     manual_dir = ensure_manual_directory()
     file_path = manual_dir / "manual_dispositions.json"
@@ -88,7 +88,7 @@ def add_manual_disposition(
     return False
 
 
-def load_manual_blacklist() -> List[str]:
+def load_manual_blacklist() -> list[str]:
     """Load manual blacklist terms from JSON file."""
     manual_dir = ensure_manual_directory()
     file_path = manual_dir / "manual_blacklist.json"
@@ -109,7 +109,7 @@ def load_manual_blacklist() -> List[str]:
         return []
 
 
-def save_manual_blacklist(terms: List[str]) -> bool:
+def save_manual_blacklist(terms: list[str]) -> bool:
     """Save manual blacklist terms to JSON file."""
     manual_dir = ensure_manual_directory()
     file_path = manual_dir / "manual_blacklist.json"

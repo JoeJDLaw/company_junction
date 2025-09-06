@@ -3,7 +3,7 @@
 import os
 import tempfile
 import unittest
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -221,7 +221,7 @@ class TestBuildCacheKey:
                 ) as mock_get_paths2:
                     mock_get_paths2.return_value = {"review_ready_parquet": temp_path}
 
-                    inputs: Dict[str, Any] = {
+                    inputs: dict[str, Any] = {
                         "run_id": "test_run",
                         "sort_key": "Group Size (Desc)",
                         "page": 1,
@@ -295,7 +295,7 @@ def test_in_clause_helper() -> None:
     assert params == ["X"]
 
     # Test with empty list
-    empty: List[str] = []
+    empty: list[str] = []
     in_sql, params = _in_clause(empty)
     assert in_sql == "IN (NULL)"
     assert params == []

@@ -14,7 +14,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 # Allowed files that can import PyArrow (but with restrictions)
 ALLOWED_FILES = {
@@ -51,7 +51,7 @@ HARD_BAN_PATHS = [
 ]
 
 
-def find_pyarrow_imports(file_path: str) -> List[Dict[str, Any]]:
+def find_pyarrow_imports(file_path: str) -> list[dict[str, Any]]:
     """Find PyArrow imports in a file according to new policy rules.
 
     Args:
@@ -61,7 +61,7 @@ def find_pyarrow_imports(file_path: str) -> List[Dict[str, Any]]:
         List of import violations with line numbers and context
 
     """
-    violations: List[Dict[str, Any]] = []
+    violations: list[dict[str, Any]] = []
 
     try:
         with open(file_path, encoding="utf-8") as f:
@@ -168,7 +168,7 @@ def find_pyarrow_imports(file_path: str) -> List[Dict[str, Any]]:
     return violations
 
 
-def scan_directory(directory: str) -> List[Dict[str, Any]]:
+def scan_directory(directory: str) -> list[dict[str, Any]]:
     """Scan a directory for PyArrow usage violations.
 
     Args:
@@ -178,7 +178,7 @@ def scan_directory(directory: str) -> List[Dict[str, Any]]:
         List of all violations found
 
     """
-    all_violations: List[Dict[str, Any]] = []
+    all_violations: list[dict[str, Any]] = []
 
     for root, dirs, files in os.walk(directory):
         # Skip common directories that shouldn't contain Python code
@@ -200,7 +200,7 @@ def scan_directory(directory: str) -> List[Dict[str, Any]]:
     return all_violations
 
 
-def generate_report(violations: List[Dict[str, Any]]) -> str:
+def generate_report(violations: list[dict[str, Any]]) -> str:
     """Generate a human-readable report of violations.
 
     Args:

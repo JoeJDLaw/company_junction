@@ -7,7 +7,7 @@ for group statistics computation.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class ParityValidator:
         duckdb_df: pd.DataFrame,
         pandas_df: pd.DataFrame,
         run_id: str,
-    ) -> Tuple[bool, Dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any]]:
         """Validate that DuckDB and pandas group stats are identical.
 
         Args:
@@ -84,7 +84,7 @@ class ParityValidator:
             return False, {"error": error_msg}
 
         # Initialize parity report
-        parity_report: Dict[str, Any] = {
+        parity_report: dict[str, Any] = {
             "rows_compared": len(duckdb_sorted),
             "mismatches": 0,
             "metrics": {},
@@ -135,7 +135,7 @@ class ParityValidator:
         duckdb_series: pd.Series,
         pandas_series: pd.Series,
         column_name: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Validate parity for a single column.
 
         Args:
@@ -241,7 +241,7 @@ class ParityValidator:
         self,
         duckdb_df: pd.DataFrame,
         pandas_df: pd.DataFrame,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Validate that both DataFrames have matching dtypes.
 
         Args:
@@ -252,7 +252,7 @@ class ParityValidator:
             Schema parity report
 
         """
-        schema_report: Dict[str, Any] = {
+        schema_report: dict[str, Any] = {
             "mismatches": 0,
             "dtype_comparisons": {},
             "mismatch_details": [],
@@ -315,7 +315,7 @@ class ParityValidator:
             return "bool"
         return dtype_lower
 
-    def _save_parity_report(self, parity_report: Dict[str, Any], run_id: str) -> None:
+    def _save_parity_report(self, parity_report: dict[str, Any], run_id: str) -> None:
         """Save parity report to file.
 
         Args:

@@ -9,7 +9,7 @@ This module tests handling of degenerate inputs:
 
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -26,7 +26,7 @@ from src.similarity.scoring import (
 )
 
 
-def _get_settings(overrides: dict = None) -> dict:
+def _get_settings(overrides: dict | None = None) -> dict:
     """Helper to create settings dict with optional overrides."""
     settings = {
         "similarity": {
@@ -86,7 +86,7 @@ class TestScoringDegenerate:
         )
 
         df_norm = normalize_dataframe(test_data, "Account Name")
-        candidate_pairs = []  # Empty list
+        candidate_pairs: list[tuple[int, int]] = []  # Empty list
         settings = _get_settings()
 
         # Test bulk scoring
@@ -112,7 +112,7 @@ class TestScoringDegenerate:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         original_df = df_norm.copy()
-        candidate_pairs = []  # Empty list
+        candidate_pairs: list[tuple[int, int]] = []  # Empty list
         settings = _get_settings()
 
         # Run scoring with empty candidates
@@ -123,7 +123,6 @@ class TestScoringDegenerate:
         pd.testing.assert_frame_equal(
             df_norm,
             original_df,
-            "DataFrame should not be mutated with empty candidates",
         )
 
     def test_empty_candidate_list_correct_columns(self):
@@ -134,7 +133,7 @@ class TestScoringDegenerate:
         )
 
         df_norm = normalize_dataframe(test_data, "Account Name")
-        candidate_pairs = []  # Empty list
+        candidate_pairs: list[tuple[int, int]] = []  # Empty list
         settings = _get_settings()
 
         # Run scoring
@@ -170,7 +169,7 @@ class TestScoringDegenerate:
             AttributeError, match="'NoneType' object has no attribute 'split'"
         ):
             compute_score_components(
-                None,  # None input
+                None,  # type: ignore[arg-type] # None input
                 "acme store",
                 "NONE",
                 "NONE",

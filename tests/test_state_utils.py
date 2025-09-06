@@ -3,7 +3,7 @@
 This module tests the session state utilities for Phase 1.18.1 refactor.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from src.utils.state_utils import (
     AliasesState,
@@ -80,7 +80,7 @@ def test_cache_state_defaults() -> None:
 
 def test_get_set_page_state() -> None:
     """Test get_page_state and set_page_state functions."""
-    session_state: Dict[str, Any] = {}
+    session_state: dict[str, Any] = {}
 
     # Test defaults
     page_state = get_page_state(session_state)
@@ -96,7 +96,7 @@ def test_get_set_page_state() -> None:
 
 def test_get_set_backend_state() -> None:
     """Test get_backend_state and set_backend_state functions."""
-    session_state: Dict[str, Any] = {}
+    session_state: dict[str, Any] = {}
 
     # Test defaults
     backend_state = get_backend_state(session_state)
@@ -110,7 +110,7 @@ def test_get_set_backend_state() -> None:
 
 def test_get_set_details_state() -> None:
     """Test get_details_state and set_details_state functions."""
-    session_state: Dict[str, Any] = {}
+    session_state: dict[str, Any] = {}
 
     # Test defaults
     details_state = get_details_state(session_state)
@@ -129,7 +129,7 @@ def test_get_set_details_state() -> None:
 
 def test_get_set_explain_state() -> None:
     """Test get_explain_state and set_explain_state functions."""
-    session_state: Dict[str, Any] = {}
+    session_state: dict[str, Any] = {}
 
     # Test defaults
     explain_state = get_explain_state(session_state)
@@ -148,7 +148,7 @@ def test_get_set_explain_state() -> None:
 
 def test_get_set_aliases_state() -> None:
     """Test get_aliases_state and set_aliases_state functions."""
-    session_state: Dict[str, Any] = {}
+    session_state: dict[str, Any] = {}
 
     # Test defaults
     aliases_state = get_aliases_state(session_state)
@@ -167,7 +167,7 @@ def test_get_set_aliases_state() -> None:
 
 def test_get_set_filters_state() -> None:
     """Test get_filters_state and set_filters_state functions."""
-    session_state: Dict[str, Any] = {}
+    session_state: dict[str, Any] = {}
 
     # Test defaults
     filters_state = get_filters_state(session_state)
@@ -181,7 +181,7 @@ def test_get_set_filters_state() -> None:
 
 def test_get_set_cache_state() -> None:
     """Test get_cache_state and set_cache_state functions."""
-    session_state: Dict[str, Any] = {}
+    session_state: dict[str, Any] = {}
 
     # Test defaults
     cache_state = get_cache_state(session_state)
@@ -195,7 +195,7 @@ def test_get_set_cache_state() -> None:
 
 def test_migrate_legacy_keys() -> None:
     """Test migrate_legacy_keys function."""
-    session_state: Dict[str, Any] = {
+    session_state: dict[str, Any] = {
         "page": 5,
         "groups_backend": {"run1": "duckdb"},
         "previous_filters_key": "old_signature",
@@ -210,7 +210,7 @@ def test_migrate_legacy_keys() -> None:
 
 def test_clear_legacy_keys() -> None:
     """Test clear_legacy_keys function."""
-    session_state: Dict[str, Any] = {
+    session_state: dict[str, Any] = {
         "page": 5,
         "groups_backend": {"run1": "duckdb"},
         "previous_filters_key": "old_signature",

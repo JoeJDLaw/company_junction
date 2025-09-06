@@ -1,11 +1,11 @@
 """CLI Command Builder utilities for Streamlit UI."""
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 from src.utils.path_utils import get_config_path
 
 
-def get_available_input_files() -> List[str]:
+def get_available_input_files() -> list[str]:
     """Get list of available CSV files in data/raw/ directory."""
     raw_dir = get_config_path().parent.parent / "data" / "raw"
     if not raw_dir.exists():
@@ -19,7 +19,7 @@ def get_available_input_files() -> List[str]:
     return sorted(csv_files)
 
 
-def get_available_config_files() -> List[str]:
+def get_available_config_files() -> list[str]:
     """Get list of available YAML config files in config/ directory."""
     config_dir = get_config_path().parent
     if not config_dir.exists():
@@ -43,15 +43,15 @@ def validate_cli_args(
     no_resume: bool = False,
     run_id: Optional[str] = None,
     keep_runs: Optional[int] = None,
-    col_overrides: Optional[List[str]] = None,
-) -> Dict[str, str]:
+    col_overrides: Optional[list[str]] = None,
+) -> dict[str, str]:
     """Validate CLI arguments and return any validation errors.
 
     Returns:
         Dict mapping field names to error messages. Empty dict if valid.
 
     """
-    errors: Dict[str, str] = {}
+    errors: dict[str, str] = {}
 
     # Required fields
     if not input_file:
@@ -114,7 +114,7 @@ def build_cli_command(
     run_id: Optional[str] = None,
     keep_runs: Optional[int] = None,
     extra_args: str = "",
-    col_overrides: Optional[List[str]] = None,
+    col_overrides: Optional[list[str]] = None,
 ) -> str:
     """Build CLI command for running the pipeline.
 
@@ -180,7 +180,7 @@ def build_cli_command(
     return " ".join(cmd_parts)
 
 
-def get_known_run_ids() -> List[str]:
+def get_known_run_ids() -> list[str]:
     """Get list of known run IDs from run_index.json."""
     try:
         from src.utils.cache_utils import load_run_index

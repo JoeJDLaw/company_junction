@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterable, Iterator
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 T = TypeVar("T")
 
@@ -11,12 +11,12 @@ T = TypeVar("T")
 class ProgressLogger:
     def __init__(
         self,
-        total: Optional[int],
+        total: int | None,
         label: str,
         step_every: int = 10_000,
         secs_every: float = 5.0,
         enable_tqdm: bool = False,
-        make_desc: Optional[Callable[[int, Optional[int], float], str]] = None,
+        make_desc: Callable[[int, int | None, float], str] | None = None,
     ) -> None:
         self.total = total
         self.label = label

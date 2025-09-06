@@ -4,7 +4,7 @@ This module provides unified models for sort/filter operations.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Tuple, cast
+from typing import Any, Literal, cast
 
 from src.utils.logging_utils import get_logger
 from src.utils.schema_utils import (
@@ -96,7 +96,7 @@ def get_order_by(sort_key: str, context: str = "default") -> str:
 def build_sort_expression(
     sort_key: str,
     context: str = "default",
-) -> List[Tuple[str, str]]:
+) -> list[tuple[str, str]]:
     """Build PyArrow sort keys for stable sorting.
 
     Args:
@@ -129,7 +129,7 @@ def build_sort_expression(
 
 def apply_filters_pyarrow(
     table: Any,
-    filters: Dict[str, Any],
+    filters: dict[str, Any],
     available_columns: list[str] | None = None,
 ) -> Any:
     """Apply filters to a PyArrow table using boolean masks (works across Arrow versions)."""
@@ -166,7 +166,7 @@ def apply_filters_pyarrow(
     return table.filter(mask)
 
 
-def apply_filters_duckdb(table: Any, filters: Dict[str, Any]) -> Any:
+def apply_filters_duckdb(table: Any, filters: dict[str, Any]) -> Any:
     """Apply filters to DuckDB table/DataFrame.
 
     Args:

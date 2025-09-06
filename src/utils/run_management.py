@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from src.utils.cache_utils import (
     get_latest_run_id,
@@ -20,7 +20,7 @@ from src.utils.path_utils import get_interim_dir, get_processed_dir
 logger = get_logger(__name__)
 
 
-def list_runs() -> List[Dict[str, Any]]:
+def list_runs() -> list[dict[str, Any]]:
     """Get a sorted list of all runs with metadata, with duplicates removed.
 
     Returns:
@@ -49,7 +49,7 @@ def list_runs() -> List[Dict[str, Any]]:
     return runs
 
 
-def get_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
+def get_run_metadata(run_id: str) -> Optional[dict[str, Any]]:
     """Get detailed metadata for a specific run.
 
     Args:
@@ -99,7 +99,7 @@ def get_run_metadata(run_id: str) -> Optional[Dict[str, Any]]:
     return result
 
 
-def validate_run_artifacts(run_id: str) -> Dict[str, Any]:
+def validate_run_artifacts(run_id: str) -> dict[str, Any]:
     """Validate that a run has all required artifacts.
 
     Args:
@@ -109,7 +109,7 @@ def validate_run_artifacts(run_id: str) -> Dict[str, Any]:
         Dictionary with validation results
 
     """
-    validation: Dict[str, Any] = {
+    validation: dict[str, Any] = {
         "run_exists": False,
         "status": "unknown",
         "has_review_ready_csv": False,
@@ -186,7 +186,7 @@ def get_default_run_id() -> str:
 
 def format_run_display_name(
     run_id: str,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: Optional[dict[str, Any]] = None,
 ) -> str:
     """Format a run ID for display in the UI.
 
@@ -223,7 +223,7 @@ def format_run_display_name(
     return f"{input_file} ({run_id[:8]})"
 
 
-def load_stage_state(run_id: str) -> Optional[Dict[str, Any]]:
+def load_stage_state(run_id: str) -> Optional[dict[str, Any]]:
     """Load and parse MiniDAG stage state for a run.
 
     Args:

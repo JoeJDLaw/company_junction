@@ -25,12 +25,11 @@ from .io_utils import (
 )
 from .logging_utils import setup_logging
 from .path_utils import ensure_directory_exists, get_data_paths, get_project_root
-from .perf_utils import (  # type: ignore[assignment]
+from .perf_utils import (
     apply_vectorized_disposition,
     build_vectorized_masks,
     # to_arrow_strings,  # DEPRECATED: PyArrow backend removed
     narrow_sort,
-    optimize_dataframe_memory,
     parse_name_core_tokens,
 )
 

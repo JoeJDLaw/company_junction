@@ -17,7 +17,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -123,8 +123,8 @@ def _assert_pairs_cover_accounts(
 
 
 def _create_audit_snapshot(
-    settings: Dict[str, Any],
-    alias_stats: Dict[str, Any],
+    settings: dict[str, Any],
+    alias_stats: dict[str, Any],
     output_dir: str,
 ) -> None:
     """Create an audit snapshot with run metadata.
@@ -407,7 +407,7 @@ def run_pipeline(
     parallel_backend: str = "loky",
     run_id: Optional[str] = None,
     keep_runs: int = 10,
-    col_overrides: Optional[Dict[str, str]] = None,
+    col_overrides: Optional[dict[str, str]] = None,
     profile: bool = False,
 ) -> None:
     """Run the complete deduplication pipeline.
@@ -1085,9 +1085,8 @@ def run_pipeline(
                     )
 
                     logger.info(
-                        "group_stats | duckdb_complete | elapsed_sec=%.3f | groups=%s | records=%s | "
-                        "throughput=%s recs/sec | memoize=%s | cache_hit=%s"
-                        % (
+                        "group_stats | duckdb_complete | elapsed_sec={:.3f} | groups={} | records={} | "
+                        "throughput={} recs/sec | memoize={} | cache_hit={}".format(
                             duckdb_metadata.get("elapsed_sec", 0),
                             duckdb_metadata.get("groups"),
                             duckdb_metadata.get("records"),

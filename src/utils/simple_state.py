@@ -5,7 +5,7 @@ that consolidates the multiple state classes into a single, easy-to-use interfac
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -21,24 +21,24 @@ class AppState:
     page_size: int = 50
 
     # Backend selection per run
-    backend_choices: Dict[str, str] = field(default_factory=dict)  # run_id -> backend
+    backend_choices: dict[str, str] = field(default_factory=dict)  # run_id -> backend
 
     # Group details state (lazy loading)
-    details_requested: Dict[Tuple[str, str], bool] = field(
+    details_requested: dict[tuple[str, str], bool] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> bool
-    details_loaded: Dict[Tuple[str, str], bool] = field(
+    details_loaded: dict[tuple[str, str], bool] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> bool
-    details_data: Dict[Tuple[str, str], List[Dict[str, Any]]] = field(
+    details_data: dict[tuple[str, str], list[dict[str, Any]]] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> data
 
     # Alias cross-references state
-    aliases_requested: Dict[Tuple[str, str], bool] = field(
+    aliases_requested: dict[tuple[str, str], bool] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> bool
-    aliases_data: Dict[Tuple[str, str], List[Dict[str, Any]]] = field(
+    aliases_data: dict[tuple[str, str], list[dict[str, Any]]] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> data
 
@@ -181,7 +181,7 @@ def set_details_loaded(
     app_state: AppState,
     run_id: str,
     group_id: str,
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
 ) -> None:
     """Mark details as loaded and store the data."""
     key = (run_id, group_id)
@@ -193,7 +193,7 @@ def get_details_data(
     app_state: AppState,
     run_id: str,
     group_id: str,
-) -> Optional[List[Dict[str, Any]]]:
+) -> Optional[list[dict[str, Any]]]:
     """Get the loaded details data for a group."""
     return app_state.details_data.get((run_id, group_id))
 

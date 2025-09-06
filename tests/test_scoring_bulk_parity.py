@@ -11,7 +11,7 @@ This module tests numerical consistency between bulk and parallel scoring:
 import copy
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -303,7 +303,7 @@ class TestScoringBulkParity:
         )
 
         df_norm = normalize_dataframe(test_data, "Account Name")
-        candidate_pairs: List[Tuple[int, int]] = []  # Empty
+        candidate_pairs: list[tuple[int, int]] = []  # Empty
 
         settings = {
             "similarity": {

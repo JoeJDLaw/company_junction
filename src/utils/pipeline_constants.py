@@ -6,7 +6,7 @@ consistency between pipeline stages and mini-DAG resume logic.
 Phase 1.27.2: Mini-DAG resume system standardization
 """
 
-from typing import Dict, List, Literal
+from typing import Literal
 
 # Pipeline stage names in execution order
 PIPELINE_STAGES = [
@@ -22,7 +22,7 @@ PIPELINE_STAGES = [
 
 # Expected intermediate files for each stage
 # Each stage requires all files from previous stages plus its own output
-STAGE_INTERMEDIATE_FILES: Dict[str, List[str]] = {
+STAGE_INTERMEDIATE_FILES: dict[str, list[str]] = {
     "normalization": [
         "accounts_filtered.parquet",  # Pipeline produces filtered, not normalized
     ],

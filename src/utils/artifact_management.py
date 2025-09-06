@@ -4,12 +4,11 @@ This module handles core path helpers for artifacts.
 """
 
 import os
-from typing import Dict
 
 from src.utils.path_utils import get_artifact_path, get_interim_dir, get_processed_dir
 
 
-def get_artifact_paths(run_id: str) -> Dict[str, str]:
+def get_artifact_paths(run_id: str) -> dict[str, str]:
     """Get artifact paths for a run.
 
     Args:

@@ -1,6 +1,6 @@
 """Test similarity computation functionality."""
 
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -60,7 +60,7 @@ class TestSimilarity:
     def test_candidate_pair_generation(
         self,
         sample_data: Any,
-        settings: Dict[str, Any],
+        settings: dict[str, Any],
     ) -> None:
         """Test that candidate pairs are generated correctly."""
         pairs_df = pair_scores(sample_data, settings)

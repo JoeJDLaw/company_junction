@@ -7,7 +7,7 @@ and resume functionality.
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 
 def stable_content_hash(
@@ -126,7 +126,7 @@ def compute_file_hash(file_path: Union[str, Path]) -> str:
 # =============================================================================
 
 
-def config_hash(cfg_dict: Dict) -> str:
+def config_hash(cfg_dict: dict) -> str:
     """Compute a deterministic hash of the configuration.
 
     Args:
@@ -142,7 +142,7 @@ def config_hash(cfg_dict: Dict) -> str:
     return hash_obj.hexdigest()[:8]
 
 
-def stable_group_id(member_ids: List[str], cfg_dict: Dict, n: int = 10) -> str:
+def stable_group_id(member_ids: list[str], cfg_dict: dict, n: int = 10) -> str:
     """Generate a stable, deterministic group ID.
 
     Args:
@@ -165,7 +165,7 @@ def stable_group_id(member_ids: List[str], cfg_dict: Dict, n: int = 10) -> str:
     return hash_obj.hexdigest()[:n]
 
 
-def _compute_config_hash(config_dict: Dict[str, Any]) -> str:
+def _compute_config_hash(config_dict: dict[str, Any]) -> str:
     """Compute a deterministic hash of the configuration.
 
     Args:

@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -120,7 +120,7 @@ class TestSimilarityRefactor:
 
     def test_get_stop_tokens_default(self):
         """Test that default stop tokens are used when not in config."""
-        settings: Dict[str, Any] = {"similarity": {"blocking": {}}}
+        settings: dict[str, Any] = {"similarity": {"blocking": {}}}
 
         stop_tokens = get_stop_tokens(settings)
         assert stop_tokens == {"inc", "llc", "ltd"}

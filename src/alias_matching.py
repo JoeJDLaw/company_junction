@@ -8,7 +8,7 @@ import logging
 import time
 from collections import defaultdict
 from itertools import zip_longest
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def _build_first_token_bucket(
     name_core: pd.Series,
-) -> Tuple[Dict[str, np.ndarray], Dict[int, int], Dict[int, int]]:
+) -> tuple[dict[str, np.ndarray], dict[int, int], dict[int, int]]:
     """Build a bucket mapping first tokens to row indices and an index mapping.
 
     Args:
@@ -62,7 +62,7 @@ def _build_first_token_bucket(
     return bucket_arrays, index_map, reverse_map
 
 
-def _records_with_aliases(df_norm: pd.DataFrame) -> List[Any]:
+def _records_with_aliases(df_norm: pd.DataFrame) -> list[Any]:
     """Get sorted list of record indices that have non-empty alias candidates.
 
     Args:
@@ -75,7 +75,7 @@ def _records_with_aliases(df_norm: pd.DataFrame) -> List[Any]:
     records_with_aliases = []
 
     for idx, record in df_norm.iterrows():
-        alias_candidates: List[str] = record.get("alias_candidates", [])
+        alias_candidates: list[str] = record.get("alias_candidates", [])
 
         # Handle numpy arrays properly
         if hasattr(alias_candidates, "size"):
@@ -94,12 +94,12 @@ def _process_one_record_optimized(
     name_core: pd.Series,
     suffix_class: pd.Series,
     group_id_by_idx: pd.Series,
-    bucket: Dict[str, np.ndarray],
-    index_map: Dict[int, int],
-    reverse_map: Dict[int, int],
+    bucket: dict[str, np.ndarray],
+    index_map: dict[int, int],
+    reverse_map: dict[int, int],
     high_threshold: int,
     debug: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Process one record's aliases using optimized vectorized approach.
 
     Args:
@@ -120,8 +120,8 @@ def _process_one_record_optimized(
 
     """
     record = df_norm.loc[record_id]
-    alias_candidates: List[str] = list(record.get("alias_candidates", []))
-    alias_sources: List[str] = list(record.get("alias_sources", []))
+    alias_candidates: list[str] = list(record.get("alias_candidates", []))
+    alias_sources: list[str] = list(record.get("alias_sources", []))
 
     # Map record_id to new index space
     record_idx = index_map[record_id]
@@ -154,7 +154,7 @@ def _process_one_record_optimized(
         if normalized:
             normalized_aliases.append(normalized)
 
-    matches: List[Dict[str, Any]] = []
+    matches: list[dict[str, Any]] = []
     record_suffix = suffix_class.loc[record_id]
 
     # Process each alias
@@ -283,9 +283,9 @@ def _process_one_record_optimized(
 def compute_alias_matches(
     df_norm: pd.DataFrame,
     df_groups: pd.DataFrame,
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
     parallel_executor: Optional[ParallelExecutor] = None,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Compute alias matches across records.
 
     Args:
@@ -366,7 +366,7 @@ def compute_alias_matches(
         logger.info(f"Using sequential alias matching: {reason}")
 
     # Initialize alias_matches list
-    alias_matches: List[Dict[str, Any]] = []
+    alias_matches: list[dict[str, Any]] = []
 
     if can_parallel:
         # Optimized path with parallelization already logged above
@@ -403,7 +403,7 @@ def compute_alias_matches(
             _last_progress_time = time.time()
             _processed_count = 0
 
-            def process_one_record(record_id: Any) -> List[Dict[str, Any]]:
+            def process_one_record(record_id: Any) -> list[dict[str, Any]]:
                 return _process_one_record_optimized(
                     record_id,
                     df_norm,
@@ -469,8 +469,8 @@ def compute_alias_matches(
 
         # Process each record with aliases
         for idx, record in df_norm.iterrows():
-            alias_candidates: List[str] = record.get("alias_candidates", [])
-            alias_sources: List[str] = record.get("alias_sources", [])
+            alias_candidates: list[str] = record.get("alias_candidates", [])
+            alias_sources: list[str] = record.get("alias_sources", [])
 
             # Handle numpy arrays properly
             if hasattr(alias_candidates, "size"):
@@ -487,7 +487,9 @@ def compute_alias_matches(
                     normalized_aliases.append(normalized)
 
             # Score each alias against other records' name_core
-            for i, (alias, source) in enumerate(zip(normalized_aliases, alias_sources)):
+            for _i, (alias, source) in enumerate(
+                zip(normalized_aliases, alias_sources)
+            ):
                 alias_matches.extend(
                     _score_alias_against_records(
                         record,
@@ -601,7 +603,7 @@ def _score_alias_against_records(
     df_groups: pd.DataFrame,
     high_threshold: int,
     debug: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Score an alias against all other records' name_core.
 
     Args:
@@ -617,7 +619,7 @@ def _score_alias_against_records(
         List of match dictionaries
 
     """
-    matches: List[Dict[str, Any]] = []
+    matches: list[dict[str, Any]] = []
     record_id = record.name
 
     if debug:
@@ -722,7 +724,7 @@ def create_alias_cross_refs(
         return df_norm
 
     # Group matches by record_id
-    cross_refs: Dict[str, List[Dict[str, Any]]] = {}
+    cross_refs: dict[str, list[dict[str, Any]]] = {}
     for _, match in df_alias_matches.iterrows():
         record_id = match["record_id"]
         if record_id not in cross_refs:

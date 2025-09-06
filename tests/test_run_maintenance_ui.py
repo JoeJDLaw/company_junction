@@ -1,6 +1,6 @@
 """Tests for run maintenance UI confirmation logic."""
 
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -19,7 +19,7 @@ def test_checkbox_confirmation_logic() -> None:
 def test_preview_payload_rendering() -> None:
     """Test that preview payload renders expected counts and bytes."""
     # Mock preview data structure
-    preview_data: Dict[str, Any] = {
+    preview_data: dict[str, Any] = {
         "runs_to_delete": [
             {
                 "run_id": "run1_123_20231201120000",
@@ -61,7 +61,7 @@ def test_preview_payload_rendering() -> None:
 def test_preview_payload_edge_cases() -> None:
     """Test preview payload edge cases."""
     # Test empty preview
-    empty_preview: Dict[str, Any] = {
+    empty_preview: dict[str, Any] = {
         "runs_to_delete": [],
         "runs_not_found": ["nonexistent_run"],
         "runs_inflight": [],
@@ -75,7 +75,7 @@ def test_preview_payload_edge_cases() -> None:
     assert empty_preview["latest_affected"] is False
 
     # Test inflight runs
-    inflight_preview: Dict[str, Any] = {
+    inflight_preview: dict[str, Any] = {
         "runs_to_delete": [],
         "runs_not_found": [],
         "runs_inflight": ["running_run"],
@@ -91,7 +91,7 @@ def test_preview_payload_edge_cases() -> None:
 def test_quick_action_session_state() -> None:
     """Test quick action session state structure (simplified confirmation)."""
     # Test delete all runs action
-    delete_all_action: Dict[str, Any] = {
+    delete_all_action: dict[str, Any] = {
         "type": "delete_all_runs",
         "runs_to_delete": ["run1", "run2", "run3"],
     }
@@ -101,7 +101,7 @@ def test_quick_action_session_state() -> None:
     # No expected_confirmation field in simplified version
 
     # Test delete all except latest action
-    delete_except_latest_action: Dict[str, Any] = {
+    delete_except_latest_action: dict[str, Any] = {
         "type": "delete_all_except_latest",
         "runs_to_delete": ["run1", "run2"],
     }

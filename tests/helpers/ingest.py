@@ -4,7 +4,7 @@ This module provides utilities to normalize test data to match the expected
 internal schema used by the pipeline.
 """
 
-from typing import Dict
+from typing import Any
 
 import pandas as pd
 
@@ -125,7 +125,7 @@ def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.Data
 
 
 def create_test_fixture_data(
-    base_data: Dict[str, list],
+    base_data: dict[str, list],
     required_columns: list | None = None,
 ) -> pd.DataFrame:
     """Create a test fixture DataFrame with canonical column names.

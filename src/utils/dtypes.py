@@ -5,7 +5,7 @@ across the pipeline to prevent memory bloat and ensure data consistency.
 """
 
 import logging
-from typing import Dict, Optional, Set
+from typing import Optional
 
 import pandas as pd
 
@@ -28,7 +28,7 @@ from src.utils.schema_utils import (
 logger = logging.getLogger(__name__)
 
 
-def apply_dtypes(df: pd.DataFrame, schema: Dict[str, str]) -> pd.DataFrame:
+def apply_dtypes(df: pd.DataFrame, schema: dict[str, str]) -> pd.DataFrame:
     """Apply dtype mapping to dataframe, handling missing columns gracefully.
 
     Args:
@@ -71,7 +71,7 @@ def apply_dtypes(df: pd.DataFrame, schema: Dict[str, str]) -> pd.DataFrame:
 
 def assert_no_unexpected_object_columns(
     df: pd.DataFrame,
-    allowed: Optional[Set[str]] = None,
+    allowed: Optional[set[str]] = None,
     context: str = "dataframe",
 ) -> None:
     """Assert that no unexpected object columns exist in the dataframe.
@@ -186,7 +186,7 @@ def optimize_dataframe_memory(
     return df
 
 
-def _detect_schema(df: pd.DataFrame) -> Optional[Dict[str, str]]:
+def _detect_schema(df: pd.DataFrame) -> Optional[dict[str, str]]:
     """Detect which schema to apply based on dataframe columns.
 
     Args:
@@ -211,7 +211,7 @@ def _detect_schema(df: pd.DataFrame) -> Optional[Dict[str, str]]:
     return None
 
 
-def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
+def get_dtypes_for_schema(schema_name: str) -> dict[str, str]:
     """Get dtype mapping for specific pipeline schema.
 
     Args:

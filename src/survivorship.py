@@ -8,7 +8,7 @@ This module handles:
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 def select_primary_records(
     df_groups: pd.DataFrame,
-    relationship_ranks: Dict[str, int],
-    settings: Dict[str, Any],
+    relationship_ranks: dict[str, int],
+    settings: dict[str, Any],
     enable_progress: bool = False,
     profile: bool = False,
 ) -> pd.DataFrame:
@@ -92,8 +92,8 @@ def select_primary_records(
 
 def _select_primary_records_optimized(
     df_groups: pd.DataFrame,
-    relationship_ranks: Dict[str, int],
-    settings: Dict[str, Any],
+    relationship_ranks: dict[str, int],
+    settings: dict[str, Any],
     enable_progress: bool = False,
 ) -> pd.DataFrame:
     """Hybrid optimized primary selection with vectorized singletons and iterative multi-groups.
@@ -188,8 +188,8 @@ def _select_primary_records_optimized(
 
 def _select_primary_records_vectorized(
     df_groups: pd.DataFrame,
-    relationship_ranks: Dict[str, int],
-    settings: Dict[str, Any],
+    relationship_ranks: dict[str, int],
+    settings: dict[str, Any],
     enable_progress: bool = False,
 ) -> pd.DataFrame:
     """Fully vectorized primary selection for maximum performance.
@@ -267,8 +267,8 @@ def _select_primary_records_vectorized(
 
 def _select_primary_records_original(
     df_groups: pd.DataFrame,
-    relationship_ranks: Dict[str, int],
-    settings: Dict[str, Any],
+    relationship_ranks: dict[str, int],
+    settings: dict[str, Any],
     enable_progress: bool = False,
 ) -> pd.DataFrame:
     """Original primary selection logic (fallback when optimization is disabled)."""
@@ -330,8 +330,8 @@ def _select_primary_records_original(
 
 def _select_primary_from_group(
     group_data: pd.DataFrame,
-    relationship_ranks: Dict[str, int],
-    settings: Dict[str, Any],
+    relationship_ranks: dict[str, int],
+    settings: dict[str, Any],
 ) -> int:
     """Select primary record from a group using relationship rank and tie-breakers.
 
@@ -385,8 +385,8 @@ def _select_primary_from_group(
 
 def generate_merge_preview(
     df_groups: pd.DataFrame,
-    selected_fields: Optional[List[str]] = None,
-    settings: Optional[Dict[str, Any]] = None,
+    selected_fields: Optional[list[str]] = None,
+    settings: Optional[dict[str, Any]] = None,
 ) -> pd.DataFrame:
     """Generate merge preview showing field differences within groups.
 
@@ -440,7 +440,7 @@ def generate_merge_preview(
 
 def _generate_merge_preview_original(
     df_groups: pd.DataFrame,
-    available_fields: List[str],
+    available_fields: list[str],
 ) -> pd.DataFrame:
     """Original row-by-row merge preview generation.
 
@@ -481,7 +481,7 @@ def _generate_merge_preview_original(
 
 def _generate_merge_preview_by_group(
     df_groups: pd.DataFrame,
-    available_fields: List[str],
+    available_fields: list[str],
     skip_clean_groups: bool = True,
     preview_output: str = "survivorship_preview.parquet",
 ) -> pd.DataFrame:
@@ -537,9 +537,13 @@ def _generate_merge_preview_by_group(
         try:
             import orjson
 
-            json_dumps = lambda x: orjson.dumps(x).decode("utf-8")
+            def json_dumps(x: Any) -> str:
+                return str(orjson.dumps(x).decode("utf-8"))
+
         except ImportError:
-            json_dumps = lambda x: json.dumps(x)
+
+            def json_dumps(x: Any) -> str:
+                return json.dumps(x)
 
         # Process groups in batches for better performance
         batch_size = 1000
@@ -588,8 +592,8 @@ def _generate_merge_preview_by_group(
 
 def _generate_group_merge_preview(
     group_data: pd.DataFrame,
-    fields: List[str],
-) -> Dict[str, Any]:
+    fields: list[str],
+) -> dict[str, Any]:
     """Generate merge preview for a specific group.
 
     Args:
@@ -616,7 +620,7 @@ def _generate_group_merge_preview(
     primary_record = group_data[primary_mask].iloc[0]
     non_primary_records = group_data[~primary_mask]
 
-    preview: Dict[str, Any] = {
+    preview: dict[str, Any] = {
         "primary_record": {
             "index": int(str(primary_record.name)),
             "account_id": safe_str(primary_record.get("account_id", "")),

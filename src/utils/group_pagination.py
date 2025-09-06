@@ -6,7 +6,7 @@ This module handles pagination logic for groups.
 import os
 import re
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from .artifact_management import get_artifact_paths
 from .filtering import build_sort_expression, get_order_by
@@ -38,7 +38,7 @@ class PageFetchTimeout(Exception):
     """Raised when page fetch exceeds timeout."""
 
 
-def _build_where_clause(filters: Dict[str, Any], score_column: str) -> Tuple[str, List]:
+def _build_where_clause(filters: dict[str, Any], score_column: str) -> tuple[str, list]:
     """Build WHERE clause and parameters for common filters.
 
     Args:
@@ -110,7 +110,7 @@ def _safe_get_order_by(sort_key: str) -> str:
             return f"{GROUP_SIZE} DESC, {GROUP_ID} ASC"
 
 
-def _get_available_columns_for_pagination(parquet_path: str) -> List[str]:
+def _get_available_columns_for_pagination(parquet_path: str) -> list[str]:
     """Get available columns from parquet file for pagination queries."""
     try:
         import pyarrow.parquet as pq
@@ -136,8 +136,8 @@ def get_groups_page(
     sort_key: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int]:
+    filters: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
     """Get a page of groups using the configured backend (PyArrow or DuckDB).
 
     Args:
@@ -293,8 +293,8 @@ def get_groups_page_pyarrow(
     sort_key: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int]:
+    filters: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
     """Get a page of groups using PyArrow backend.
 
     Args:
@@ -370,7 +370,7 @@ def get_groups_page_pyarrow(
             table = pq.read_table(parquet_path, columns=present_columns)
     except ImportError:
         logger.error("PyArrow not available for groups page querying")
-        raise ImportError("PyArrow not available for groups page querying")
+        raise ImportError("PyArrow not available for groups page querying") from None
     except Exception as e:
         logger.error(f"Failed to read parquet file: {e}")
         raise
@@ -492,8 +492,8 @@ def get_groups_page_duckdb(
     sort_key: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int]:
+    filters: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
     """Load groups page data using DuckDB for optimal performance.
 
     Args:
@@ -730,8 +730,8 @@ def get_groups_page_from_stats_duckdb(
     sort_key: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int]:
+    filters: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
     """Get a page of groups using DuckDB from group_stats.parquet.
 
     Args:
@@ -910,7 +910,7 @@ def get_groups_page_from_stats_duckdb(
         raise
 
 
-def get_total_groups_count(run_id: str, filters: Dict[str, Any]) -> int:
+def get_total_groups_count(run_id: str, filters: dict[str, Any]) -> int:
     """Get the total count of groups for a run with optional filters.
 
     Args:
@@ -958,7 +958,7 @@ def get_total_groups_count(run_id: str, filters: Dict[str, Any]) -> int:
 
 def get_total_groups_count_from_stats_duckdb(
     run_id: str,
-    filters: Dict[str, Any],
+    filters: dict[str, Any],
 ) -> int:
     """Get total groups count from group_stats.parquet using DuckDB.
 
@@ -1033,7 +1033,7 @@ def get_total_groups_count_from_stats_duckdb(
 
 def get_total_groups_count_from_main_parquet(
     run_id: str,
-    filters: Dict[str, Any],
+    filters: dict[str, Any],
 ) -> int:
     """Get total groups count from main parquet file using DuckDB.
 

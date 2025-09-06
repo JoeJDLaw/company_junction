@@ -5,7 +5,7 @@ like duckdb, pyarrow, and streamlit.
 """
 
 import importlib
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 def try_import(module: str) -> Optional[Any]:
@@ -16,7 +16,7 @@ def try_import(module: str) -> Optional[Any]:
         return None
 
 
-def try_import_many(modules: Dict[str, str]) -> Dict[str, Optional[Any]]:
+def try_import_many(modules: dict[str, str]) -> dict[str, Optional[Any]]:
     """Try to import multiple modules, return dict of results."""
     result = {}
     for alias, module_name in modules.items():

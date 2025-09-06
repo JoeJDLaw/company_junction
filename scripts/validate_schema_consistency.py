@@ -11,7 +11,6 @@ Usage:
 import re
 import sys
 from pathlib import Path
-from typing import List, Set, Tuple
 
 # Canonical schema constants from schema_utils.py
 CANONICAL_COLUMNS = {
@@ -55,7 +54,7 @@ COLUMN_PATTERNS = [
 ]
 
 
-def find_column_references(file_path: Path) -> Set[str]:
+def find_column_references(file_path: Path) -> set[str]:
     """Find all column references in a Python file."""
     try:
         with open(file_path, encoding="utf-8") as f:
@@ -73,7 +72,7 @@ def find_column_references(file_path: Path) -> Set[str]:
     return columns
 
 
-def validate_dtypes_map() -> Tuple[bool, List[str]]:
+def validate_dtypes_map() -> tuple[bool, list[str]]:
     """Validate that dtypes_map.py uses canonical column names."""
     dtypes_file = Path("src/dtypes_map.py")
     if not dtypes_file.exists():
@@ -113,7 +112,7 @@ def validate_dtypes_map() -> Tuple[bool, List[str]]:
     return len(errors) == 0, errors
 
 
-def scan_directory_for_column_references() -> Tuple[bool, List[str], List[str]]:
+def scan_directory_for_column_references() -> tuple[bool, list[str], list[str]]:
     """Scan directories for column references and validate against canonical schema."""
     errors = []
     warnings = []

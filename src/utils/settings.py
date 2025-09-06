@@ -6,14 +6,14 @@ with caching and validation.
 
 import os
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import Any
 
 __all__ = ["get_settings", "get_ui_perf", "validate_settings"]
 
 
 # TODO: Implement get_settings with LRU caching
 @lru_cache(maxsize=1)
-def get_settings() -> Dict[str, Any]:
+def get_settings() -> dict[str, Any]:
     """Get application settings with caching."""
     # TODO: Implement actual settings loading from config files
     # For now, return default settings that match legacy behavior
@@ -46,7 +46,7 @@ def get_settings() -> Dict[str, Any]:
     }
 
 
-def get_ui_perf(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def get_ui_perf(settings: dict[str, Any] | None = None) -> dict[str, Any]:
     """Returns ui_perf settings with defaults and force flag precedence.
 
     Precedence order: config > env > default
@@ -86,7 +86,7 @@ def get_ui_perf(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
     return cfg
 
 
-def validate_settings(settings: Dict[str, Any] | None = None) -> List[str]:
+def validate_settings(settings: dict[str, Any] | None = None) -> list[str]:
     """Returns list of validation warnings.
 
     Args:

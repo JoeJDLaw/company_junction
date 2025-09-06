@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 
@@ -34,7 +34,7 @@ class RunModesBenchmark:
         self.benchmark_dir = Path("data/benchmarks")
         self.benchmark_dir.mkdir(parents=True, exist_ok=True)
 
-    def run_duckdb_only_mode(self) -> Dict[str, Any]:
+    def run_duckdb_only_mode(self) -> dict[str, Any]:
         """Test 1: DuckDB-only mode (group_stats.backend=duckdb)."""
         print("🦆 Testing DuckDB-only mode...")
 
@@ -68,7 +68,7 @@ class RunModesBenchmark:
             "artifacts": artifacts,
         }
 
-    def run_parity_mode(self) -> Dict[str, Any]:
+    def run_parity_mode(self) -> dict[str, Any]:
         """Test 2: Parity mode (duckdb+pandas; mismatches ≤ 2)."""
         print("🔄 Testing Parity mode...")
 
@@ -108,7 +108,7 @@ class RunModesBenchmark:
             "parity_validation": parity_validation,
         }
 
-    def run_resume_mode(self) -> Dict[str, Any]:
+    def run_resume_mode(self) -> dict[str, Any]:
         """Test 3: Resume mode (start, interrupt after groups, resume to end)."""
         print("⏸️ Testing Resume mode...")
 
@@ -127,7 +127,7 @@ class RunModesBenchmark:
             "resume_support": resume_support,
         }
 
-    def run_no_resume_mode(self) -> Dict[str, Any]:
+    def run_no_resume_mode(self) -> dict[str, Any]:
         """Test 4: No-resume mode (clean start-to-finish)."""
         print("🚀 Testing No-resume mode...")
 
@@ -164,7 +164,7 @@ class RunModesBenchmark:
             "artifacts": artifacts,
         }
 
-    def run_persistence_override_mode(self) -> Dict[str, Any]:
+    def run_persistence_override_mode(self) -> dict[str, Any]:
         """Test 5: Persistence override (env CJ_GROUP_STATS_PERSIST_ARTIFACTS=true)."""
         print("💾 Testing Persistence override mode...")
 
@@ -204,7 +204,7 @@ class RunModesBenchmark:
             "artifacts": artifacts,
         }
 
-    def run_benchmark_sanity(self) -> Dict[str, Any]:
+    def run_benchmark_sanity(self) -> dict[str, Any]:
         """Benchmark sanity: 3 runs on 1k with memoization validation."""
         print("📊 Running Benchmark sanity (3 runs with memoization)...")
 
@@ -262,7 +262,7 @@ class RunModesBenchmark:
             "cache_hit_rate": cache_hit_rate,
         }
 
-    def _check_artifacts(self, mode: str) -> Dict[str, bool]:
+    def _check_artifacts(self, mode: str) -> dict[str, bool]:
         """Check for required artifacts in the run directory."""
         # Find the most recent run directory
         run_dirs = list(Path("data/processed").glob(f"*{mode}*"))
@@ -292,7 +292,7 @@ class RunModesBenchmark:
 
         return artifacts
 
-    def _validate_parity_results(self) -> Dict[str, Any]:
+    def _validate_parity_results(self) -> dict[str, Any]:
         """Validate that parity results meet requirements (≤2 mismatches)."""
         try:
             # Find parity report
@@ -346,7 +346,7 @@ class RunModesBenchmark:
 
                 shutil.rmtree(run_dir)
 
-    def run_all_tests(self) -> Dict[str, Any]:
+    def run_all_tests(self) -> dict[str, Any]:
         """Run all tests and collect results."""
         print("🚀 Starting Phase 1.35.7 Run-Modes + Benchmark Sanity Matrix")
         print(f"📊 Dataset: {self.dataset}")
@@ -369,7 +369,7 @@ class RunModesBenchmark:
 
         return self.results
 
-    def _generate_summary(self) -> Dict[str, Any]:
+    def _generate_summary(self) -> dict[str, Any]:
         """Generate summary of all test results."""
         # Count actual test modes (exclude summary)
         test_modes = [mode for mode in self.results.keys() if mode != "summary"]

@@ -2,7 +2,7 @@
 
 import logging
 from itertools import combinations
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -13,7 +13,7 @@ from .diagnostics import write_blocking_diagnostics
 logger = logging.getLogger(__name__)
 
 
-def get_stop_tokens(settings: Dict[str, Any]) -> Set[str]:
+def get_stop_tokens(settings: dict[str, Any]) -> set[str]:
     """Get stop tokens from configuration."""
     blocking_settings = settings.get("similarity", {}).get("blocking", {})
     stop_tokens = set(blocking_settings.get("stop_tokens", ["inc", "llc", "ltd"]))
@@ -25,8 +25,8 @@ def generate_candidate_pairs_soft_ban(
     enable_progress: bool = False,
     parallel_executor: Optional[ExecutorLike] = None,
     interim_dir: Optional[str] = None,
-    settings: Optional[Dict[str, Any]] = None,
-) -> List[Tuple[int, int]]:
+    settings: Optional[dict[str, Any]] = None,
+) -> list[tuple[int, int]]:
     """Generate candidate pairs using soft-ban blocking strategy.
 
     Args:
@@ -40,7 +40,7 @@ def generate_candidate_pairs_soft_ban(
         List of candidate pair tuples (index_a, index_b)
 
     """
-    pairs: List[Tuple[int, int]] = []
+    pairs: list[tuple[int, int]] = []
 
     if df_norm.empty or "name_core" not in df_norm.columns:
         return pairs
@@ -94,7 +94,7 @@ def generate_candidate_pairs_soft_ban(
 
     # Initialize diagnostics
     block_stats = []
-    brand_suggestions: List[Dict[str, Any]] = []
+    brand_suggestions: list[dict[str, Any]] = []
 
     # Allowlisted bigram pass: force full pairing within those bigram groups
     if len(allowlist_bigrams) > 0:
@@ -248,7 +248,7 @@ def _create_shards_with_fallback(
     primary: str,
     fallback: str,
     max_size: int,
-) -> List[pd.DataFrame]:
+) -> list[pd.DataFrame]:
     """Create shards with fallback strategy for oversized shards."""
     shards = _create_shards(df, primary, max_size)
     out = []
@@ -270,7 +270,7 @@ def _apply_soft_ban_sharding(
     length_window: int,
     min_token_overlap: int,
     max_candidates_per_record: int,
-) -> List[Tuple[int, int]]:
+) -> list[tuple[int, int]]:
     """Apply soft-ban sharding with prefiltering."""
     shards = _create_shards_with_fallback(
         block_df,
@@ -303,7 +303,7 @@ def _apply_standard_sharding(
     shard_strategy: str,
     block_cap: int,
     fallback_shard: Optional[str] = None,
-) -> List[Tuple[int, int]]:
+) -> list[tuple[int, int]]:
     """Apply standard sharding for large blocks."""
     shards = _create_shards_with_fallback(
         block_df,
@@ -325,7 +325,7 @@ def _create_shards(
     block_df: pd.DataFrame,
     shard_strategy: str,
     max_shard_size: int,
-) -> List[pd.DataFrame]:
+) -> list[pd.DataFrame]:
     """Create shards based on strategy."""
     shards = []
 
@@ -334,7 +334,7 @@ def _create_shards(
         block_df["shard_key"] = block_df["name_core"].str.split().str[1].fillna("")
         shard_groups = block_df.groupby("shard_key")
 
-        for shard_key, shard_df in shard_groups:
+        for _shard_key, shard_df in shard_groups:
             if len(shard_df) > max_shard_size:
                 # Further shard by third token
                 for _, sub_group in shard_df.groupby(
@@ -349,7 +349,7 @@ def _create_shards(
         block_df["shard_key"] = block_df["name_core"].str[:3].fillna("")
         shard_groups = block_df.groupby("shard_key")
 
-        for shard_key, shard_df in shard_groups:
+        for _shard_key, shard_df in shard_groups:
             if len(shard_df) > max_shard_size:
                 # Further shard by 4-gram
                 for _, sub_group in shard_df.groupby(
@@ -372,7 +372,7 @@ def _apply_prefiltering(
     length_window: int,
     min_token_overlap: int,
     max_candidates_per_record: int,
-) -> List[Tuple[int, int]]:
+) -> list[tuple[int, int]]:
     """Apply prefiltering to candidate pairs within a shard."""
     names = shard_df["name_core"].tolist()
     indices = shard_df.index.tolist()

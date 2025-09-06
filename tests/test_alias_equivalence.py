@@ -1,6 +1,6 @@
 """Test alias matching equivalence between legacy and optimized paths."""
 
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -162,7 +162,7 @@ def test_alias_equivalence_edge_cases():
     df_norm = ensure_required_columns(df_norm, required_columns)
     df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
 
-    settings: Dict[str, Any] = {
+    settings: dict[str, Any] = {
         "similarity": {"high": 85, "max_alias_pairs": 1000},
         "parallelism": {"workers": 2, "backend": "threading", "chunk_size": 100},
         "alias": {"optimize": True, "progress_interval_s": 0.1},
@@ -203,7 +203,7 @@ def test_alias_equivalence_mismatched_sources():
     df_norm = ensure_required_columns(df_norm, required_columns)
     df_groups = ensure_required_columns(df_groups, ["group_id", "account_id"])
 
-    settings: Dict[str, Any] = {
+    settings: dict[str, Any] = {
         "similarity": {"high": 85, "max_alias_pairs": 1000},
         "parallelism": {"workers": 2, "backend": "threading", "chunk_size": 100},
         "alias": {"optimize": True, "progress_interval_s": 0.1},

@@ -7,7 +7,7 @@ with support for different backends and resource monitoring.
 import os
 import threading
 from collections.abc import Iterable
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 from src.utils.logging_utils import get_logger
 from src.utils.path_utils import get_config_path
@@ -19,7 +19,7 @@ from src.utils.resource_monitor import (
 logger = get_logger(__name__)
 
 
-def _load_parallelism_settings() -> Dict[str, Any]:
+def _load_parallelism_settings() -> dict[str, Any]:
     """Load parallelism settings from config file."""
     try:
         import yaml
@@ -112,11 +112,11 @@ def ensure_single_thread_blas() -> None:
 
 def parallel_map(
     func: Callable[[Any], Any],
-    items: List[Any],
+    items: list[Any],
     workers: Optional[int] = None,
     backend: Optional[str] = None,
     chunk_size: Optional[int] = None,
-) -> List[Any]:
+) -> list[Any]:
     """Parallel map function using joblib with deterministic ordering.
 
     Args:
@@ -155,12 +155,12 @@ def parallel_map(
 
 
 def execute_chunked(
-    func: Callable[[List[Any]], List[Any]],
-    items: List[Any],
+    func: Callable[[list[Any]], list[Any]],
+    items: list[Any],
     workers: Optional[int] = None,
     backend: Optional[str] = None,
     chunk_size: Optional[int] = None,
-) -> List[Any]:
+) -> list[Any]:
     """Execute function on chunks of items in parallel.
 
     This is optimized for processing large datasets where the function
@@ -257,7 +257,7 @@ def is_loky_available() -> bool:
     return _LOKY_AVAILABLE
 
 
-def select_backend(requested: str) -> Tuple[str, str]:
+def select_backend(requested: str) -> tuple[str, str]:
     """Select the appropriate backend based on availability and platform.
 
     Args:
@@ -366,9 +366,9 @@ class ParallelExecutor:
     def execute(
         self,
         func: Callable[[Any], Any],
-        items: List[Any],
+        items: list[Any],
         operation_name: str = "parallel_operation",
-    ) -> List[Any]:
+    ) -> list[Any]:
         """Execute function in parallel or sequentially.
 
         Args:
@@ -425,11 +425,11 @@ class ParallelExecutor:
 
     def execute_chunked(
         self,
-        func: Callable[[List[Any]], Any],
-        items: List[Any],
+        func: Callable[[list[Any]], Any],
+        items: list[Any],
         chunk_size: Optional[int] = None,
         operation_name: str = "parallel_operation",
-    ) -> List[Any]:
+    ) -> list[Any]:
         """Execute function in parallel with custom chunking.
 
         Args:
@@ -603,9 +603,9 @@ def create_parallel_executor(
 
 
 def ensure_deterministic_order(
-    results: List[Any],
+    results: list[Any],
     sort_key: Optional[Callable] = None,
-) -> List[Any]:
+) -> list[Any]:
     """Ensure deterministic ordering of parallel results.
 
     Args:

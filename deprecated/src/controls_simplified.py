@@ -4,7 +4,7 @@ This is a demonstration of how the controls component would look with the
 simplified session state management approach.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import streamlit as st
 
@@ -21,9 +21,9 @@ from src.utils.simple_state import (
 
 def render_controls_simplified(
     selected_run_id: str,
-    settings: Dict[str, Any],
-    filters: Dict[str, Any],
-) -> tuple[Dict[str, Any], str, int, int, int]:
+    settings: dict[str, Any],
+    filters: dict[str, Any],
+) -> tuple[dict[str, Any], str, int, int, int]:
     """Render pagination and filter controls using simplified state management.
 
     Args:

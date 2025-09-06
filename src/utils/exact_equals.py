@@ -9,14 +9,14 @@ This module handles:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
-def build_raw_exact_key(account_name: str, settings: Dict[str, Any]) -> str:
+def build_raw_exact_key(account_name: str, settings: dict[str, Any]) -> str:
     """Build raw exact key by trim + collapse whitespace (no case/punct changes).
 
     Args:
@@ -52,9 +52,9 @@ def build_raw_exact_key(account_name: str, settings: Dict[str, Any]) -> str:
 
 def find_exact_equals_groups(
     df: pd.DataFrame,
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
     name_column: str = "Account Name",
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Find exact equals groups before normalization.
 
     Args:
@@ -206,7 +206,7 @@ def write_exact_equals_artifacts(
     candidate_pairs_exact_raw: pd.DataFrame,
     interim_dir: str,
     run_id: str,
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
 ) -> None:
     """Write exact equals artifacts with no-overwrite policy.
 
@@ -272,7 +272,7 @@ def write_exact_equals_artifacts(
 def create_unique_normalized(
     df: pd.DataFrame,
     raw_exact_map: pd.DataFrame,
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
 ) -> pd.DataFrame:
     """Create unique normalized dataset with representatives + singletons only.
 

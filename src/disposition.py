@@ -9,7 +9,7 @@ This module handles:
 
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -61,8 +61,8 @@ BLACKLIST = BLACKLIST_TOKENS + BLACKLIST_PHRASES
 
 def classify_disposition(
     row: pd.Series,
-    group_meta: Dict[str, Any],
-    settings: Dict[str, Any],
+    group_meta: dict[str, Any],
+    settings: dict[str, Any],
 ) -> str:
     """Classify disposition for a single record.
 
@@ -111,7 +111,7 @@ def classify_disposition(
     return "Update"
 
 
-def _load_manual_blacklist() -> List[str]:
+def _load_manual_blacklist() -> list[str]:
     """Load manual blacklist terms from JSON file.
 
     Returns:
@@ -127,7 +127,7 @@ def _load_manual_blacklist() -> List[str]:
         return []
 
 
-def _load_manual_dispositions() -> Dict[str, str]:
+def _load_manual_dispositions() -> dict[str, str]:
     """Load manual disposition overrides from JSON file.
 
     Returns:
@@ -152,7 +152,7 @@ def _load_manual_dispositions() -> Dict[str, str]:
         return {}
 
 
-def get_blacklist_terms(settings: Optional[Dict[str, Any]] = None) -> List[str]:
+def get_blacklist_terms(settings: Optional[dict[str, Any]] = None) -> list[str]:
     """Get blacklist terms from configuration or fallback to built-in.
 
     Args:
@@ -166,8 +166,8 @@ def get_blacklist_terms(settings: Optional[Dict[str, Any]] = None) -> List[str]:
         # Phase 1.35.3: Load from configuration first
         config_blacklist = settings.get("disposition", {}).get("blacklist", {})
         if config_blacklist:
-            tokens: List[str] = config_blacklist.get("tokens", [])
-            phrases: List[str] = config_blacklist.get("phrases", [])
+            tokens: list[str] = config_blacklist.get("tokens", [])
+            phrases: list[str] = config_blacklist.get("phrases", [])
             if tokens or phrases:
                 logger.info(
                     f"disposition | loaded_blacklist | tokens={len(tokens)} | phrases={len(phrases)} | source=config",
@@ -338,7 +338,7 @@ def _is_mostly_punctuation_or_stopwords(name: str) -> bool:
     return False
 
 
-def _is_suspicious_singleton(row: pd.Series, settings: Dict[str, Any]) -> bool:
+def _is_suspicious_singleton(row: pd.Series, settings: dict[str, Any]) -> bool:
     """Check if a singleton record is suspicious.
 
     Args:
@@ -375,7 +375,7 @@ def _is_suspicious_singleton(row: pd.Series, settings: Dict[str, Any]) -> bool:
     return False
 
 
-def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict[str, Any]]:
+def compute_group_metadata(df_groups: pd.DataFrame) -> dict[int, dict[str, Any]]:
     """Compute metadata for each group.
 
     Args:
@@ -418,7 +418,7 @@ def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict[str, Any]]
 
 def apply_dispositions(
     df_groups: pd.DataFrame,
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
 ) -> pd.DataFrame:
     """Apply disposition classification to all records.
 
@@ -452,7 +452,7 @@ def apply_dispositions(
 
 def _apply_dispositions_vectorized(
     df_groups: pd.DataFrame,
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
 ) -> pd.DataFrame:
     """Apply disposition classification using vectorized operations (np.select).
 
@@ -637,7 +637,7 @@ def _apply_dispositions_vectorized(
 
 def _apply_dispositions_legacy(
     df_groups: pd.DataFrame,
-    settings: Dict[str, Any],
+    settings: dict[str, Any],
 ) -> pd.DataFrame:
     """Legacy disposition classification using iterrows (fallback).
 
@@ -736,8 +736,8 @@ def load_dispositions(input_path: str) -> pd.DataFrame:
 
 def get_disposition_reason(
     row: pd.Series,
-    group_meta: Dict[str, Any],
-    settings: Dict[str, Any],
+    group_meta: dict[str, Any],
+    settings: dict[str, Any],
 ) -> str:
     """Get the reason for a disposition classification.
 
@@ -788,10 +788,10 @@ def get_disposition_reason(
 
 def _generate_disposition_reasons_vectorized(
     df: pd.DataFrame,
-    group_metadata: Dict[int, Dict[str, Any]],
+    group_metadata: dict[int, dict[str, Any]],
     blacklist_mask: pd.Series,
-    manual_overrides: Dict[str, str],
-    settings: Dict[str, Any],
+    manual_overrides: dict[str, str],
+    settings: dict[str, Any],
 ) -> pd.Series:
     """Generate disposition reasons using vectorized operations.
 

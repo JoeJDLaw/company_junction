@@ -5,7 +5,7 @@ Phase 1.27.4: Cleanup reconciler and dry-run testing
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -157,7 +157,7 @@ class TestCleanupReconcile:
             mock_scan.return_value = {"orphan_run_123"}
 
             # Test discover_candidates with reconciliation
-            run_index: Dict[str, Any] = {}
+            run_index: dict[str, Any] = {}
             plan = discover_candidates(
                 run_index=run_index,
                 prod_sweep=True,
@@ -256,7 +256,7 @@ class TestCleanupReconcile:
             mock_scan.return_value = {"orphan_run_123"}
 
             # Test discover_candidates with reconciliation and empty index
-            run_index: Dict[str, Any] = {}
+            run_index: dict[str, Any] = {}
             plan = discover_candidates(
                 run_index=run_index,
                 prod_sweep=True,

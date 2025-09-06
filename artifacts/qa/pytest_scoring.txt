@@ -5,64 +5,52 @@ WARNING: Failed to generate report: No data to report.
 
                                                                          [100%]
 =============================== warnings summary ===============================
-tests/perf/test_groups_bench.py:208
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:208: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:217
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:217: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:234
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:234: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:244
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:244: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:261
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:261: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:272
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:272: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:289
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:289: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:304
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:304: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:317
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:317: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:336
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:336: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:318
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:318: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.slow
-
-tests/perf/test_groups_bench.py:344
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:344: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:364
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:364: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:345
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:345: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.slow
-
-tests/perf/test_groups_bench.py:375
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:375: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:396
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:396: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:404
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:404: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:429
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:429: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:437
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:437: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:466
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:466: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/perf/test_groups_bench.py:472
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:472: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/perf/test_groups_bench.py:502
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/perf/test_groups_bench.py:502: PytestUnknownMarkWarning: Unknown pytest.mark.performance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     @pytest.mark.performance
 
-tests/test_alias_validation.py:190
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/test_alias_validation.py:190: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    pytest.param(15000, marks=pytest.mark.slow, id="slow"),
-
-tests/test_cache_keys.py:12
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/test_cache_keys.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.duckdb - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/test_cache_keys.py:11
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/test_cache_keys.py:11: PytestUnknownMarkWarning: Unknown pytest.mark.duckdb - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     pytestmark = [pytest.mark.duckdb, pytest.mark.pyarrow]
 
-tests/test_cache_keys.py:12
-  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/test_cache_keys.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.pyarrow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+tests/test_cache_keys.py:11
+  /Users/joe.j/Documents/dev/salesforce/apps/company_junction/tests/test_cache_keys.py:11: PytestUnknownMarkWarning: Unknown pytest.mark.pyarrow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
     pytestmark = [pytest.mark.duckdb, pytest.mark.pyarrow]
 
 tests/test_duckdb_query_params.py:13
@@ -76,9 +64,8 @@ _______________ coverage: platform darwin, python 3.12.2-final-0 _______________
 
 ============================= slowest 20 durations =============================
 0.03s call     tests/test_scoring_bounds.py::TestScoringBounds::test_score_clamp_upper_bound
-0.01s call     tests/test_scoring_bulk_parity.py::TestScoringBulkParity::test_gate_correctness_below_cutoff
-0.01s call     tests/test_scoring_degenerate.py::TestScoringDegenerate::test_very_long_inputs_handling
 0.01s call     tests/test_scoring_bulk_gate.py::TestScoringBulkGate::test_bulk_gate_cutoff_behavior
+0.01s call     tests/test_scoring_degenerate.py::TestScoringDegenerate::test_very_long_inputs_handling
+0.01s call     tests/test_scoring_bulk_parity.py::TestScoringBulkParity::test_suffix_defaulting_non_mutation
 
 (16 durations < 0.005s hidden.  Use -vv to show these durations.)
-177 passed, 632 deselected, 16 warnings in 1.36s

@@ -7,7 +7,7 @@ pinned run protection, latest symlink protection, and JSON output.
 
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -129,13 +129,13 @@ class TestRunTypeDetection:
         assert detect_run_type(run_data) == "dev"
 
         # No input paths
-        empty_run_data: Dict[str, Any] = {}
+        empty_run_data: dict[str, Any] = {}
         assert detect_run_type(empty_run_data) == "dev"
 
     def test_detect_run_type_edge_cases(self):
         """Test edge cases in run type detection."""
         # Empty input paths
-        run_data: Dict[str, Any] = {"input_paths": []}
+        run_data: dict[str, Any] = {"input_paths": []}
         assert detect_run_type(run_data) == "dev"
 
         # Non-string input paths
@@ -162,7 +162,7 @@ class TestAgeCalculation:
     def test_get_run_age_days_invalid(self):
         """Test age calculation with invalid timestamps."""
         # No timestamp
-        run_data: Dict[str, Any] = {}
+        run_data: dict[str, Any] = {}
         age = get_run_age_days(run_data)
         assert age == 999
 

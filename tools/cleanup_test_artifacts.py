@@ -21,7 +21,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -36,14 +36,14 @@ class CleanupPlan:
     """Represents a cleanup plan with candidates and reasons."""
 
     def __init__(self) -> None:
-        self.candidates: List[Tuple[str, Dict[str, Any], str]] = (
+        self.candidates: list[tuple[str, dict[str, Any], str]] = (
             []
         )  # (run_id, run_data, reason)
         self.latest_run_id: Optional[str] = None
-        self.pinned_runs: Set[str] = set()
-        self.prod_runs: Set[str] = set()
+        self.pinned_runs: set[str] = set()
+        self.prod_runs: set[str] = set()
 
-    def add_candidate(self, run_id: str, run_data: Dict[str, Any], reason: str) -> None:
+    def add_candidate(self, run_id: str, run_data: dict[str, Any], reason: str) -> None:
         """Add a run to the cleanup candidates."""
         self.candidates.append((run_id, run_data, reason))
 
@@ -55,11 +55,11 @@ class CleanupPlan:
             or run_id in self.prod_runs
         )
 
-    def get_protected_candidates(self) -> List[str]:
+    def get_protected_candidates(self) -> list[str]:
         """Get list of protected candidates that would be excluded."""
         return [run_id for run_id, _, _ in self.candidates if self.is_protected(run_id)]
 
-    def get_deletable_candidates(self) -> List[Tuple[str, Dict[str, Any], str]]:
+    def get_deletable_candidates(self) -> list[tuple[str, dict[str, Any], str]]:
         """Get list of candidates that can actually be deleted."""
         return [
             (run_id, run_data, reason)
@@ -72,7 +72,7 @@ class CleanupPlan:
         self.candidates.sort(key=lambda x: x[0])
 
 
-def load_run_index() -> Dict[str, Any]:
+def load_run_index() -> dict[str, Any]:
     """Load the run index file."""
     index_path = Path(str(get_processed_dir("index") / "run_index.json"))
     if not index_path.exists():
@@ -90,7 +90,7 @@ def load_run_index() -> Dict[str, Any]:
         return {}
 
 
-def save_run_index(run_index: Dict[str, Any]) -> None:
+def save_run_index(run_index: dict[str, Any]) -> None:
     """Save the run index file atomically."""
     index_path = Path(str(get_processed_dir("index") / "run_index.json"))
     temp_path = index_path.with_suffix(".tmp")
@@ -151,7 +151,7 @@ def scan_filesystem_runs() -> set[str]:
     return _list_run_dirs(interim_root) | _list_run_dirs(processed_root)
 
 
-def detect_run_type(run_data: Dict[str, Any]) -> str:
+def detect_run_type(run_data: dict[str, Any]) -> str:
     """Detect run type from existing metadata (heuristic for MVP)."""
     # Check input paths for test indicators
     input_paths = run_data.get("input_paths", [])
@@ -167,7 +167,7 @@ def detect_run_type(run_data: Dict[str, Any]) -> str:
     return "dev"
 
 
-def get_run_age_days(run_data: Dict[str, Any]) -> int:
+def get_run_age_days(run_data: dict[str, Any]) -> int:
     """Get the age of a run in days."""
     timestamp_str = run_data.get("timestamp", "")
     if not timestamp_str:
@@ -183,12 +183,12 @@ def get_run_age_days(run_data: Dict[str, Any]) -> int:
 
 
 def discover_candidates(
-    run_index: Dict[str, Any],
-    types: Optional[List[str]] = None,
+    run_index: dict[str, Any],
+    types: Optional[list[str]] = None,
     older_than: Optional[int] = None,
     prod_sweep: bool = False,
     include_prod: bool = False,
-    pinned_run_ids: Set[str] | None = None,
+    pinned_run_ids: set[str] | None = None,
     reconcile: bool = False,
 ) -> CleanupPlan:
     """Discover cleanup candidates using deterministic logic.
@@ -341,8 +341,8 @@ def update_latest_symlink() -> None:
 
 def execute_cleanup(
     plan: CleanupPlan,
-    run_index: Dict[str, Any],
-) -> Tuple[List[str], int]:
+    run_index: dict[str, Any],
+) -> tuple[list[str], int]:
     """Execute the cleanup plan.
 
     Returns:
@@ -356,7 +356,7 @@ def execute_cleanup(
 
     logger.info(f"Executing cleanup for {len(deletable_candidates)} runs...")
 
-    for run_id, run_data, reason in deletable_candidates:
+    for run_id, _run_data, reason in deletable_candidates:
         if reason == "stale_index":
             # Only remove from index
             del run_index[run_id]

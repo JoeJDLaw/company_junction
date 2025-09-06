@@ -5,7 +5,7 @@ with automatic worker count adjustment based on available resources.
 """
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from src.utils.logging_utils import get_logger
 
@@ -21,9 +21,9 @@ except ImportError:
     logger.warning("psutil not available - resource monitoring will be limited")
 
 
-def get_system_info() -> Dict[str, Any]:
+def get_system_info() -> dict[str, Any]:
     """Get basic system information."""
-    info: Dict[str, Any] = {
+    info: dict[str, Any] = {
         "cpu_count": os.cpu_count() or 1,
         "psutil_available": PSUTIL_AVAILABLE,
     }

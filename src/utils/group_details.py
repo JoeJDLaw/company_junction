@@ -20,7 +20,7 @@ Fallbacks:
 
 import os
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from .artifact_management import get_artifact_paths
 from .filtering import get_order_by  # if you want user-facing sort options
@@ -69,7 +69,7 @@ class DetailsFetchTimeout(Exception):
     pass
 
 
-def _get_available_columns(parquet_path: str) -> List[str]:
+def _get_available_columns(parquet_path: str) -> list[str]:
     """Get available columns from parquet file, with fallback for missing columns."""
     try:
         import pyarrow.parquet as pq
@@ -98,7 +98,7 @@ def _get_available_columns(parquet_path: str) -> List[str]:
         return [GROUP_ID, ACCOUNT_NAME, DISPOSITION]
 
 
-def _build_dynamic_select(available_columns: List[str]) -> str:
+def _build_dynamic_select(available_columns: list[str]) -> str:
     """Build SELECT clause based on available columns."""
     return "SELECT " + ",".join(available_columns) + " FROM read_parquet(?) "
 
@@ -111,9 +111,9 @@ def _set_backend_choice(run_id: str, backend: str) -> None:
 
 
 def _build_where_clause(
-    filters: Dict[str, Any],
-    available_columns: List[str],
-) -> Tuple[str, List]:
+    filters: dict[str, Any],
+    available_columns: list[str],
+) -> tuple[str, list]:
     """Build WHERE for per-row details (dispositions/min_edge_strength)."""
     where_sql, params = [], []
     if filters.get("dispositions"):
@@ -130,7 +130,7 @@ def _build_where_clause(
     return (" AND ".join(where_sql) if where_sql else "1=1"), params
 
 
-def _parse_order_by(order_by: str) -> Tuple[str, bool]:
+def _parse_order_by(order_by: str) -> tuple[str, bool]:
     """Parse ORDER BY clause into column and direction.
 
     Args:
@@ -160,8 +160,8 @@ def get_group_details(
     sort_key: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int]:
+    filters: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
     """Entry point selecting backend & returning (rows, total_rows) for a single group."""
     start_time = time.time()
     filters_signature = f"{len(filters)}_filters" if filters else "no_filters"
@@ -334,9 +334,9 @@ def _get_group_details_duckdb(
     order_by: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-    settings: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int]:
+    filters: dict[str, Any],
+    settings: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
     """DuckDB backend for group details (fast filtering + pagination)."""
     if DUCKDB is None:
         raise ImportError("DuckDB not available for group details")
@@ -413,9 +413,9 @@ def _get_group_details_pyarrow(
     order_by: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-    settings: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int]:
+    filters: dict[str, Any],
+    settings: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
     """PyArrow backend for group details with pandas fallback and deterministic sort."""
     import pyarrow as pa
     import pyarrow.compute as pc

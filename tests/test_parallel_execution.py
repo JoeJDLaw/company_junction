@@ -7,7 +7,7 @@ This module tests:
 - Resource monitoring
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -67,7 +67,7 @@ def test_deterministic_execution() -> None:
     # Create test data
     test_items = list(range(100))
 
-    def test_function(x: int) -> Dict[str, Any]:
+    def test_function(x: int) -> dict[str, Any]:
         """Test function that returns a dictionary."""
         return {"value": x, "squared": x**2, "string": f"item_{x}"}
 
@@ -107,7 +107,7 @@ def test_backend_comparison() -> None:
     """Test execution with different backends."""
     test_items = list(range(20))
 
-    def test_function(x: int) -> Dict[str, Any]:
+    def test_function(x: int) -> dict[str, Any]:
         return {"input": x, "output": x * 3}
 
     # Test threading backend
@@ -133,7 +133,7 @@ def test_chunked_execution() -> None:
     """Test chunked parallel execution."""
     test_items = list(range(100))
 
-    def test_function(chunk: List[int]) -> List[Dict[str, Any]]:
+    def test_function(chunk: list[int]) -> list[dict[str, Any]]:
         return [{"value": x, "processed": True} for x in chunk]
 
     executor = create_parallel_executor(workers=2, chunk_size=25)
@@ -214,7 +214,7 @@ def test_error_handling() -> None:
     executor = create_parallel_executor(workers=2)
 
     # Should handle errors gracefully
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         executor.execute(failing_function, test_items, "test_error")
 
 

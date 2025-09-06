@@ -9,14 +9,14 @@ import logging
 import subprocess
 import tracemalloc
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import pandas as pd
 
 try:
     from src.utils.hash_utils import stable_schema_hash as _stable_schema_hash
 
-    HashFunc = Callable[[Dict[str, Any]], str]
+    HashFunc = Callable[[dict[str, Any]], str]
     stable_schema_hash: Optional[HashFunc] = _stable_schema_hash
 except ImportError:
     stable_schema_hash = None
@@ -30,12 +30,12 @@ class PerformanceTracker:
     def __init__(self) -> None:
         self.start_time: Optional[datetime] = None
         self.end_time: Optional[datetime] = None
-        self.timings: Dict[str, float] = {}
-        self.memory_snapshots: List[Any] = []
+        self.timings: dict[str, float] = {}
+        self.memory_snapshots: list[Any] = []
         self.peak_memory: float = 0.0
         self.config_hash: Optional[str] = None
 
-    def start_run(self, config_dict: Dict[str, Any]) -> None:
+    def start_run(self, config_dict: dict[str, Any]) -> None:
         """Start tracking performance for a pipeline run."""
         self.start_time = datetime.now(timezone.utc)
         if stable_schema_hash is not None:
@@ -73,11 +73,11 @@ class PerformanceTracker:
 
     def generate_summary(
         self,
-        dataset_stats: Dict[str, int],
-        candidate_stats: Dict[str, int],
-        group_stats: Dict[str, Any],
-        block_stats: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        dataset_stats: dict[str, int],
+        candidate_stats: dict[str, int],
+        group_stats: dict[str, Any],
+        block_stats: dict[str, Any],
+    ) -> dict[str, Any]:
         """Generate comprehensive performance summary.
 
         Args:
@@ -136,7 +136,7 @@ class PerformanceTracker:
 
 
 def save_performance_summary(
-    summary: Dict[str, Any],
+    summary: dict[str, Any],
     output_path: str = "data/processed/perf_summary.json",
 ) -> None:
     """Save performance summary to JSON file.
@@ -155,7 +155,7 @@ def save_performance_summary(
         raise
 
 
-def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
+def compute_group_size_histogram(groups_df: pd.DataFrame) -> dict[str, int]:
     """Compute group size histogram from groups dataframe.
 
     Args:
@@ -194,7 +194,7 @@ def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
 def compute_block_top_tokens(
     blocks_df: pd.DataFrame,
     top_n: int = 10,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Compute top tokens from blocking statistics.
 
     Args:

@@ -3,7 +3,7 @@
 This module provides a session state adapter with dict fallback for tests.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 # TODO: Import from opt_deps when implemented
 # from .opt_deps import STREAMLIT
@@ -15,7 +15,7 @@ class SessionState:
     def __init__(self, use_streamlit: bool = True):
         # TODO: Implement actual streamlit detection
         self._use_streamlit = use_streamlit  # and STREAMLIT is not None
-        self._fallback: Dict[str, Any] = {}
+        self._fallback: dict[str, Any] = {}
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get value from session state."""

@@ -4,10 +4,8 @@ This module provides helper functions for building parameterized SQL queries
 that prevent SQL injection while maintaining readability.
 """
 
-from typing import List, Tuple
 
-
-def in_clause(values: List) -> Tuple[str, List]:
+def in_clause(values: list) -> tuple[str, list]:
     """Return 'IN (?,?,...)' and corresponding params, for DuckDB.
 
     Args:

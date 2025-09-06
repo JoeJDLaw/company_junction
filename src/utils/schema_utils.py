@@ -9,7 +9,7 @@ import json
 import logging
 import re
 from collections.abc import Mapping
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 from rapidfuzz import fuzz
@@ -93,7 +93,7 @@ DISPLAY_LABELS = {
 }
 
 
-def get_canonical_columns() -> Dict[str, str]:
+def get_canonical_columns() -> dict[str, str]:
     """Get mapping of canonical column names to their constants.
 
     Returns:
@@ -158,8 +158,8 @@ def ensure_required_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def resolve_schema(
     df: pd.DataFrame,
-    settings: Optional[Dict[str, Any]] = None,
-    cli_overrides: Optional[Dict[str, str]] = None,
+    settings: Optional[dict[str, Any]] = None,
+    cli_overrides: Optional[dict[str, str]] = None,
     input_filename: Optional[str] = None,
 ) -> Mapping[str, str]:
     """Resolve schema mapping from DataFrame headers to canonical names.
@@ -238,8 +238,8 @@ def resolve_schema(
 
 def _apply_cli_overrides(
     df: pd.DataFrame,
-    cli_overrides: Dict[str, str],
-) -> Dict[str, str]:
+    cli_overrides: dict[str, str],
+) -> dict[str, str]:
     """Apply CLI column overrides."""
     mapping = {}
 
@@ -258,8 +258,8 @@ def _apply_cli_overrides(
 def _match_filename_template(
     df: pd.DataFrame,
     input_filename: str,
-    settings: Dict[str, Any],
-) -> Optional[Dict[str, str]]:
+    settings: dict[str, Any],
+) -> Optional[dict[str, str]]:
     """Match filename against configured templates."""
     schema_config = settings.get("schema", {})
     templates = schema_config.get("templates", [])
@@ -282,7 +282,7 @@ def _match_filename_template(
     return None
 
 
-def _match_synonyms(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, str]:
+def _match_synonyms(df: pd.DataFrame, settings: dict[str, Any]) -> dict[str, str]:
     """Match columns using configured synonyms."""
     schema_config = settings.get("schema", {})
     synonyms = schema_config.get("synonyms", {})
@@ -292,8 +292,8 @@ def _match_synonyms(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, str
 
 def _build_mapping_from_aliases(
     df: pd.DataFrame,
-    aliases: Dict[str, List[str]],
-) -> Dict[str, str]:
+    aliases: dict[str, list[str]],
+) -> dict[str, str]:
     """Build column mapping from aliases configuration."""
     mapping = {}
     available_columns = set(df.columns)
@@ -323,7 +323,7 @@ def _build_mapping_from_aliases(
     return mapping
 
 
-def _apply_heuristics(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, str]:
+def _apply_heuristics(df: pd.DataFrame, settings: dict[str, Any]) -> dict[str, str]:
     """Apply heuristics for column matching."""
     mapping = {}
     available_columns = list(df.columns)
@@ -357,8 +357,8 @@ def _apply_heuristics(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, s
 
 
 def _find_best_similarity_match(
-    available_columns: List[str],
-    target_terms: List[str],
+    available_columns: list[str],
+    target_terms: list[str],
     threshold: int = 80,
 ) -> Optional[str]:
     """Find best column match using string similarity."""
@@ -382,7 +382,7 @@ def _find_best_similarity_match(
     return best_match
 
 
-def _find_id_columns(df: pd.DataFrame, available_columns: List[str]) -> List[str]:
+def _find_id_columns(df: pd.DataFrame, available_columns: list[str]) -> list[str]:
     """Find columns that look like IDs based on data patterns."""
     id_candidates = []
 
@@ -404,7 +404,7 @@ def _find_id_columns(df: pd.DataFrame, available_columns: List[str]) -> List[str
     return sorted(id_candidates)
 
 
-def _find_date_columns(df: pd.DataFrame, available_columns: List[str]) -> List[str]:
+def _find_date_columns(df: pd.DataFrame, available_columns: list[str]) -> list[str]:
     """Find columns that look like dates based on data patterns."""
     date_candidates = []
 
@@ -429,7 +429,7 @@ def _find_date_columns(df: pd.DataFrame, available_columns: List[str]) -> List[s
     return sorted(date_candidates)
 
 
-def _validate_required_columns(mapping: Dict[str, str]) -> bool:
+def _validate_required_columns(mapping: dict[str, str]) -> bool:
     """Validate that required columns are present in mapping."""
     required_columns = [ACCOUNT_NAME]
     return all(col in mapping for col in required_columns)
@@ -470,7 +470,7 @@ def save_schema_mapping(mapping: Mapping[str, str], run_id: str) -> None:
         logger.error(f"Failed to save schema mapping: {e}")
 
 
-def load_schema_mapping(run_id: str) -> Optional[Dict[str, str]]:
+def load_schema_mapping(run_id: str) -> Optional[dict[str, str]]:
     """Load schema mapping from file.
 
     Args:
@@ -502,7 +502,7 @@ def load_schema_mapping(run_id: str) -> Optional[Dict[str, str]]:
         return None
 
 
-def invert_mapping(mapping: Dict[str, str]) -> Dict[str, str]:
+def invert_mapping(mapping: dict[str, str]) -> dict[str, str]:
     """Invert mapping from canonical -> actual to actual -> canonical.
 
     Args:
@@ -568,7 +568,7 @@ def normalize_legacy_headers(df: pd.DataFrame) -> pd.DataFrame:
 
 def apply_canonical_rename(
     df: pd.DataFrame,
-    mapping_canonical_to_actual: Dict[str, str],
+    mapping_canonical_to_actual: dict[str, str],
 ) -> pd.DataFrame:
     """Rename columns from ACTUAL -> CANONICAL using the inverted mapping.
     This must be called immediately after resolving schema and BEFORE any canonical constant is used.

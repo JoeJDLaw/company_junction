@@ -7,7 +7,7 @@ import hashlib
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from src.utils.artifact_management import get_artifact_paths
 from src.utils.logging_utils import get_logger
@@ -108,7 +108,7 @@ def build_cache_key(
     sort_key: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
+    filters: dict[str, Any],
     backend: str = "pyarrow",
     source: str = "review_ready",
 ) -> str:

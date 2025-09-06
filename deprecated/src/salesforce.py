@@ -9,7 +9,7 @@ This module handles:
 
 import logging
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -40,9 +40,11 @@ class SalesforceCLI:
             )
             logger.info(f"Salesforce CLI version: {result.stdout.strip()}")
         except (subprocess.CalledProcessError, FileNotFoundError):
-            raise RuntimeError("Salesforce CLI not found. Please install it first.")
+            raise RuntimeError(
+                "Salesforce CLI not found. Please install it first."
+            ) from None
 
-    def _run_command(self, command: List[str]) -> Dict[str, Any]:
+    def _run_command(self, command: list[str]) -> dict[str, Any]:
         """Run a Salesforce CLI command.
 
         Args:
@@ -64,11 +66,11 @@ class SalesforceCLI:
                 "return_code": e.returncode,
             }
 
-    def list_orgs(self) -> Dict[str, Any]:
+    def list_orgs(self) -> dict[str, Any]:
         """List available Salesforce orgs."""
         return self._run_command(["sf", "org", "list"])
 
-    def get_org_info(self) -> Dict[str, Any]:
+    def get_org_info(self) -> dict[str, Any]:
         """Get information about the current/default org."""
         command = ["sf", "org", "display"]
         if self.org_alias:
@@ -79,8 +81,8 @@ class SalesforceCLI:
         self,
         object_type: str,
         record_id: str,
-        fields: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        fields: dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a single Salesforce record.
 
         Args:
@@ -107,7 +109,7 @@ class SalesforceCLI:
 
         return {"success": True, "message": "Update operation simulated"}
 
-    def delete_record(self, object_type: str, record_id: str) -> Dict[str, Any]:
+    def delete_record(self, object_type: str, record_id: str) -> dict[str, Any]:
         """Delete a Salesforce record.
 
         Args:
@@ -126,8 +128,8 @@ class SalesforceCLI:
     def batch_update(
         self,
         object_type: str,
-        records: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        records: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """Perform batch update of multiple records.
 
         Args:
@@ -151,7 +153,7 @@ def sync_cleaned_data_to_salesforce(
     cleaned_df: pd.DataFrame,
     object_type: str,
     org_alias: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Sync cleaned and merged data back to Salesforce.
 
     Args:
@@ -173,12 +175,12 @@ def sync_cleaned_data_to_salesforce(
 
     updates_count = 0
     deletes_count = 0
-    errors: List[str] = []
+    errors: list[str] = []
 
     # Process master record updates
     for _, record in master_records.iterrows():
         # Remove internal columns
-        update_fields: Dict[str, Any] = {
+        update_fields: dict[str, Any] = {
             str(col): val
             for col, val in record.items()
             if not str(col).startswith("_") and pd.notna(val)

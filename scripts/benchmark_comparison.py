@@ -7,7 +7,7 @@ import logging
 import os
 import subprocess
 import time
-from typing import Any, Dict, List, cast
+from typing import Any, cast
 
 import psutil
 
@@ -99,7 +99,7 @@ def run_group_stats_benchmark(
     }
 
 
-def generate_parquet_size_report(run_id: str) -> Dict[str, Any]:
+def generate_parquet_size_report(run_id: str) -> dict[str, Any]:
     """Generate parquet size report for the run."""
     try:
         from src.utils.parquet_size_reporter import create_parquet_size_reporter
@@ -110,7 +110,7 @@ def generate_parquet_size_report(run_id: str) -> Dict[str, Any]:
         duckdb_path = f"data/processed/{run_id}_duckdb/group_stats_duckdb.parquet"
         pandas_path = f"data/processed/{run_id}_pandas/group_stats_pandas.parquet"
 
-        size_report: Dict[str, Any] = {
+        size_report: dict[str, Any] = {
             "run_id": run_id,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "files": [],
@@ -156,7 +156,7 @@ def generate_parquet_size_report(run_id: str) -> Dict[str, Any]:
 def create_settings_override(
     persist_artifacts: bool = True,
     run_parity: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a transient settings override for benchmark runs."""
     import yaml
 
@@ -179,9 +179,9 @@ def create_settings_override(
 
 def generate_benchmark_report(
     dataset_size: str,
-    run_times: List[float],
+    run_times: list[float],
     run_id: str,
-    duckdb_settings: Dict[str, Any],
+    duckdb_settings: dict[str, Any],
 ) -> str:
     """Generate benchmark report markdown file."""
     median_time = sorted(run_times)[len(run_times) // 2]
@@ -198,9 +198,9 @@ def generate_benchmark_report(
 
     benchmark_content = f"""# Phase 1.35.4 Benchmark Report
 
-**Generated**: {time.strftime("%Y-%m-%d %H:%M:%S")}  
-**Dataset Size**: {dataset_size} ({len(run_times)} runs)  
-**Backend**: DuckDB  
+**Generated**: {time.strftime("%Y-%m-%d %H:%M:%S")}
+**Dataset Size**: {dataset_size} ({len(run_times)} runs)
+**Backend**: DuckDB
 **Run ID**: {run_id}
 
 ## Performance Results

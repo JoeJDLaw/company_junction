@@ -4,7 +4,7 @@ import functools
 import logging
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 import pandas as pd
 import yaml
@@ -19,7 +19,7 @@ _settings_load_count = 0
 
 
 @functools.lru_cache(maxsize=1)
-def load_settings(path: str) -> Dict[str, Any]:
+def load_settings(path: str) -> dict[str, Any]:
     """Load settings from YAML file with defaults.
 
     This function is cached to prevent repeated file I/O and parsing.
@@ -81,7 +81,7 @@ def load_settings(path: str) -> Dict[str, Any]:
             user_config = yaml.safe_load(f) or {}
 
         # Deep merge user config over defaults
-        def deep_merge(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
+        def deep_merge(base: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
             for key, value in update.items():
                 if (
                     key in base
@@ -103,7 +103,7 @@ def load_settings(path: str) -> Dict[str, Any]:
         return DEFAULTS
 
 
-def reload_settings(path: str) -> Dict[str, Any]:
+def reload_settings(path: str) -> dict[str, Any]:
     """Force reload settings from file (clears cache).
 
     Args:
@@ -127,7 +127,7 @@ def get_settings_load_count() -> int:
     return _settings_load_count
 
 
-def load_relationship_ranks(path: str) -> Dict[str, int]:
+def load_relationship_ranks(path: str) -> dict[str, int]:
     """Load relationship ranks from CSV file.
 
     Args:
@@ -169,8 +169,8 @@ def get_file_info(file_path: str) -> dict:
 
 def list_data_files(
     directory: str,
-    extensions: Optional[List[str]] = None,
-) -> List[str]:
+    extensions: Optional[list[str]] = None,
+) -> list[str]:
     """List data files in a directory.
 
     Args:
@@ -184,7 +184,7 @@ def list_data_files(
     if extensions is None:
         extensions = [".csv", ".xlsx", ".xls"]
 
-    files: List[Path] = []
+    files: list[Path] = []
     for ext in extensions:
         files.extend(Path(directory).glob(f"*{ext}"))
 
@@ -218,7 +218,7 @@ def _read_csv_typed(
     )
 
 
-def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> Dict[str, str]:
+def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> dict[str, str]:
     """Infer a stable CSV schema by analyzing a sample of the data.
 
     Args:
@@ -292,7 +292,7 @@ def infer_csv_schema(file_path: str, sample_rows: int = 20000) -> Dict[str, str]
 
 def read_csv_stable(
     file_path: str,
-    dtype_map: Optional[Dict[str, str]] = None,
+    dtype_map: Optional[dict[str, str]] = None,
     engine: Optional[str] = None,
 ) -> pd.DataFrame:
     """Read CSV file with stable dtypes to avoid mixed-type warnings.

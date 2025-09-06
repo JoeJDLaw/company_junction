@@ -7,7 +7,7 @@ that should be configurable or use helper functions.
 import ast
 import re
 from pathlib import Path
-from typing import List
+from typing import Any
 
 # Only scan these code roots for hardcoded values
 CODE_ROOTS = ["src/", "app/", "tools/", "scripts/"]
@@ -74,7 +74,7 @@ def is_excluded_file(file_path: Path) -> bool:
     return False
 
 
-def extract_string_literals(file_path: Path) -> List[tuple]:
+def extract_string_literals(file_path: Path) -> list[tuple]:
     """Extract string literals from Python file, excluding comments and docstrings."""
     try:
         with open(file_path, encoding="utf-8") as f:
@@ -97,7 +97,7 @@ def extract_string_literals(file_path: Path) -> List[tuple]:
         return []
 
 
-def check_file_for_hardcoded_values(file_path: Path) -> List[dict]:
+def check_file_for_hardcoded_values(file_path: Path) -> list[dict]:
     """Check a single file for hardcoded values."""
     violations: list = []
 
@@ -144,10 +144,10 @@ def check_file_for_hardcoded_values(file_path: Path) -> List[dict]:
     return violations
 
 
-def find_python_files() -> List[Path]:
+def find_python_files() -> list[Path]:
     """Find all Python files in the project."""
     project_root = Path(__file__).parent.parent
-    python_files: List[Path] = []
+    python_files: list[Path] = []
 
     for root in CODE_ROOTS:
         root_path = project_root / root.rstrip("/")

@@ -4,7 +4,7 @@
 import argparse
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -24,7 +24,7 @@ def load_parquet_safe(path: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def analyze_block_sizes(block_stats_path: str) -> Dict[str, Any]:
+def analyze_block_sizes(block_stats_path: str) -> dict[str, Any]:
     """Analyze block size distribution."""
     df = pd.read_csv(block_stats_path)
     stats = {
@@ -43,7 +43,7 @@ def compare_alias_matches(
     legacy_path: str,
     optimized_path: str,
     block_stats_path: str,
-) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Compare alias matches between legacy and optimized paths."""
     # Load alias matches
     legacy_df = load_parquet_safe(legacy_path)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, cast
 
 import pandas as pd
 from rapidfuzz import fuzz
@@ -21,8 +21,8 @@ def compute_score_components(
     name_core_b: str,
     suffix_class_a: str,
     suffix_class_b: str,
-    penalties: Dict[str, Any],
-    settings: Optional[Dict[str, Any]] = None,
+    penalties: dict[str, Any],
+    settings: dict[str, Any] | None = None,
 ) -> ScoreComponents:
     """Canonical scorer function - single source of truth for similarity scoring.
 
@@ -39,8 +39,8 @@ def compute_score_components(
 
     """
     # Apply enhanced normalization if available
-    tokens_a: Set[str]
-    tokens_b: Set[str]
+    tokens_a: set[str]
+    tokens_b: set[str]
 
     try:
         from src.normalize import enhance_name_core, get_enhanced_tokens_for_jaccard
@@ -106,11 +106,11 @@ def compute_score_components(
 
 def score_pairs_parallel(
     df_norm: pd.DataFrame,
-    candidate_pairs: List[Tuple[int, int]],
-    settings: Dict[str, Any],
+    candidate_pairs: list[tuple[int, int]],
+    settings: dict[str, Any],
     enable_progress: bool = False,
-    parallel_executor: Optional[ExecutorLike] = None,
-) -> List[Dict[str, Any]]:
+    parallel_executor: ExecutorLike | None = None,
+) -> list[dict[str, Any]]:
     """Compute similarity scores for candidate pairs using parallel processing.
 
     Args:
@@ -152,7 +152,7 @@ def score_pairs_parallel(
             for i in range(0, len(candidate_pairs), chunk_size)
         ]
 
-        def process_chunk(chunk: List[Tuple[int, int]]) -> List[Dict[str, Any]]:
+        def process_chunk(chunk: list[tuple[int, int]]) -> list[dict[str, Any]]:
             return [
                 {
                     "id_a": account_id_array[index_map[idx_a]],
@@ -196,10 +196,10 @@ def score_pairs_parallel(
 
 def score_pairs_bulk(
     df_norm: pd.DataFrame,
-    candidate_pairs: List[Tuple[int, int]],
-    settings: Dict[str, Any],
+    candidate_pairs: list[tuple[int, int]],
+    settings: dict[str, Any],
     enable_progress: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Compute similarity scores for candidate pairs using bulk processing.
 
     Args:

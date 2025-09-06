@@ -10,7 +10,7 @@ import os
 import shutil
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from src.utils.logging_utils import get_logger
 from src.utils.path_utils import get_interim_dir, get_processed_dir
@@ -40,7 +40,7 @@ def compute_file_hash(file_path: str) -> str:
     return hash_sha256.hexdigest()
 
 
-def generate_run_id(input_paths: List[str], config_paths: List[str]) -> str:
+def generate_run_id(input_paths: list[str], config_paths: list[str]) -> str:
     """Generate a unique run ID based on input and config file hashes.
 
     Format: {input_hash[:8]}_{config_hash[:8]}_{YYYYMMDDHHMMSS}
@@ -65,14 +65,14 @@ def generate_run_id(input_paths: List[str], config_paths: List[str]) -> str:
     return run_id
 
 
-def get_cache_directories(run_id: str) -> Tuple[str, str]:
+def get_cache_directories(run_id: str) -> tuple[str, str]:
     """Get interim and processed cache directories for a run."""
     interim_dir = str(get_interim_dir(run_id))
     processed_dir = str(get_processed_dir(run_id))
     return interim_dir, processed_dir
 
 
-def create_cache_directories(run_id: str) -> Tuple[str, str]:
+def create_cache_directories(run_id: str) -> tuple[str, str]:
     """Create cache directories for a run and return their paths."""
     if not run_id:
         logger.error("Missing run_id; refusing to write to non-scoped processed path")
@@ -87,7 +87,7 @@ def create_cache_directories(run_id: str) -> Tuple[str, str]:
     return interim_dir, processed_dir
 
 
-def load_run_index() -> Dict[str, Any]:
+def load_run_index() -> dict[str, Any]:
     """Load the run index from JSON file."""
     if not os.path.exists(RUN_INDEX_PATH):
         return {}
@@ -101,7 +101,7 @@ def load_run_index() -> Dict[str, Any]:
         return {}
 
 
-def save_run_index(run_index: Dict[str, Any]) -> None:
+def save_run_index(run_index: dict[str, Any]) -> None:
     """Save the run index to JSON file."""
     os.makedirs(os.path.dirname(RUN_INDEX_PATH), exist_ok=True)
 
@@ -114,8 +114,8 @@ def save_run_index(run_index: Dict[str, Any]) -> None:
 
 def add_run_to_index(
     run_id: str,
-    input_paths: List[str],
-    config_paths: List[str],
+    input_paths: list[str],
+    config_paths: list[str],
     status: str = "running",
 ) -> None:
     """Add a new run to the index."""
@@ -290,7 +290,7 @@ def cleanup_failed_runs() -> None:
     save_run_index(run_index)
 
 
-def preview_delete_runs(run_ids: List[str]) -> Dict[str, Any]:
+def preview_delete_runs(run_ids: list[str]) -> dict[str, Any]:
     """Preview deletion of runs and return what would be removed.
 
     Args:
@@ -301,7 +301,7 @@ def preview_delete_runs(run_ids: List[str]) -> Dict[str, Any]:
 
     """
     run_index = load_run_index()
-    preview: Dict[str, Any] = {
+    preview: dict[str, Any] = {
         "runs_to_delete": [],
         "runs_not_found": [],
         "runs_inflight": [],
@@ -333,7 +333,7 @@ def preview_delete_runs(run_ids: List[str]) -> Dict[str, Any]:
 
         for directory in [interim_dir, processed_dir]:
             if os.path.exists(directory):
-                for root, dirs, files in os.walk(directory):
+                for root, _dirs, files in os.walk(directory):
                     for file in files:
                         file_path = os.path.join(root, file)
                         try:
@@ -356,7 +356,7 @@ def preview_delete_runs(run_ids: List[str]) -> Dict[str, Any]:
     return preview
 
 
-def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
+def delete_runs(run_ids: list[str]) -> dict[str, Any]:
     """Delete runs and their artifacts.
 
     Args:
@@ -379,7 +379,7 @@ def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
         }
 
     run_index = load_run_index()
-    results: Dict[str, Any] = {
+    results: dict[str, Any] = {
         "deleted": [],
         "not_found": [],
         "inflight_blocked": [],
@@ -419,7 +419,7 @@ def delete_runs(run_ids: List[str]) -> Dict[str, Any]:
             if os.path.exists(directory):
                 try:
                     # Calculate size before deletion
-                    for root, dirs, files in os.walk(directory):
+                    for root, _dirs, files in os.walk(directory):
                         for file in files:
                             try:
                                 run_bytes_freed += os.path.getsize(
@@ -519,7 +519,7 @@ def remove_latest_pointer() -> None:
             logger.warning(f"Failed to remove JSON pointer: {e}")
 
 
-def log_deletion_audit(run_ids: List[str], bytes_freed: int) -> None:
+def log_deletion_audit(run_ids: list[str], bytes_freed: int) -> None:
     """Log deletion audit information to file."""
     audit_log_path = str(get_processed_dir("audit") / "run_deletions.log")
 
@@ -538,7 +538,7 @@ def log_deletion_audit(run_ids: List[str], bytes_freed: int) -> None:
         logger.error(f"Failed to log deletion audit: {e}")
 
 
-def list_runs_sorted() -> List[Tuple[str, Dict[str, Any]]]:
+def list_runs_sorted() -> list[tuple[str, dict[str, Any]]]:
     """Get list of runs sorted by timestamp (newest first)."""
     run_index = load_run_index()
 
@@ -548,7 +548,7 @@ def list_runs_sorted() -> List[Tuple[str, Dict[str, Any]]]:
     return runs
 
 
-def list_runs_deduplicated() -> List[Tuple[str, Dict[str, Any]]]:
+def list_runs_deduplicated() -> list[tuple[str, dict[str, Any]]]:
     """Get list of runs sorted by timestamp (newest first) with duplicates removed.
 
     Duplicates are runs with identical input_hash and config_hash. Only the most recent
@@ -561,7 +561,7 @@ def list_runs_deduplicated() -> List[Tuple[str, Dict[str, Any]]]:
     run_index = load_run_index()
 
     # Group runs by input_hash + config_hash
-    hash_groups: Dict[str, List[Tuple[str, Dict[str, Any]]]] = {}
+    hash_groups: dict[str, list[tuple[str, dict[str, Any]]]] = {}
 
     for run_id, run_data in run_index.items():
         input_hash = run_data.get("input_hash", "")
@@ -576,7 +576,7 @@ def list_runs_deduplicated() -> List[Tuple[str, Dict[str, Any]]]:
     deduplicated_runs = []
     total_duplicates = 0
 
-    for hash_key, group_runs in hash_groups.items():
+    for _hash_key, group_runs in hash_groups.items():
         if len(group_runs) > 1:
             # Sort by timestamp (newest first) and keep only the first (most recent)
             group_runs.sort(key=lambda x: x[1]["timestamp"], reverse=True)

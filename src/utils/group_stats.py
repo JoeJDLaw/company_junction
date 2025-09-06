@@ -73,7 +73,7 @@ def compute_group_stats_duckdb(table: pd.DataFrame) -> pd.DataFrame:
             # Execute aggregation query - using schema constants (safe, not user input)
             query = (
                 """
-            SELECT 
+            SELECT
                 """
                 + GROUP_ID
                 + """ as group_id,
@@ -94,7 +94,7 @@ def compute_group_stats_duckdb(table: pd.DataFrame) -> pd.DataFrame:
                 + """ ELSE NULL END) as """
                 + PRIMARY_NAME
                 + """
-            FROM groups_df 
+            FROM groups_df
             GROUP BY """
                 + GROUP_ID
                 + """

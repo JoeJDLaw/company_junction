@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable
 
 import pandas as pd
 
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 try:
     from src.utils.hash_utils import stable_group_id as _stable_group_id
 
-    StableGroupIdFunc = Callable[[List[str], Dict[str, Any]], str]
-    stable_group_id: Optional[StableGroupIdFunc] = _stable_group_id
+    StableGroupIdFunc = Callable[[list[str], dict[str, Any]], str]
+    stable_group_id: StableGroupIdFunc | None = _stable_group_id
 except Exception:  # pragma: no cover
     stable_group_id = None
 
@@ -33,11 +33,11 @@ except Exception:  # pragma: no cover
 def can_join_group(
     primary_id: str,
     candidate_id: str,
-    edge_scores: Dict[Tuple[str, str], float],
-    token_sets: Dict[str, Set[str]],
-    config: Dict[str, Any],
-    stop_tokens: Set[str],
-) -> Tuple[bool, str, float]:
+    edge_scores: dict[tuple[str, str], float],
+    token_sets: dict[str, set[str]],
+    config: dict[str, Any],
+    stop_tokens: set[str],
+) -> tuple[bool, str, float]:
     """Determine if a candidate can join a group based on edge-gating rules.
 
     Args:
@@ -90,8 +90,8 @@ def apply_canopy_bound(
     group_size: int,
     primary_id: str,
     candidate_id: str,
-    edge_scores: Dict[Tuple[str, str], float],
-    config: Dict[str, Any],
+    edge_scores: dict[tuple[str, str], float],
+    config: dict[str, Any],
 ) -> bool:
     """Apply canopy bound to prevent oversized groups.
 
@@ -136,8 +136,8 @@ def apply_canopy_bound(
 def create_groups_with_edge_gating(
     accounts_df: pd.DataFrame,
     candidate_pairs_df: pd.DataFrame,
-    config: Dict[str, Any],
-    stop_tokens: Set[str],
+    config: dict[str, Any],
+    stop_tokens: set[str],
     enable_progress: bool = False,
     profile: bool = False,
 ) -> pd.DataFrame:
@@ -247,8 +247,8 @@ def create_groups_with_edge_gating(
         return create_groups_standard(accounts_df, candidate_pairs_df, config)
 
     # Prepare data structures
-    edge_scores: Dict[Tuple[str, str], float] = {}
-    token_sets: Dict[str, Set[str]] = {}
+    edge_scores: dict[tuple[str, str], float] = {}
+    token_sets: dict[str, set[str]] = {}
 
     # Build edge scores dict
     perf_settings = (
@@ -352,8 +352,8 @@ def create_groups_with_edge_gating(
 
     if not maintain_unionfind_size:
         # Standard Union-Find structure
-        parent: Dict[str, str] = {}
-        rank: Dict[str, int] = {}
+        parent: dict[str, str] = {}
+        rank: dict[str, int] = {}
 
         def find(x: str) -> str:
             if parent[x] != x:
@@ -391,8 +391,8 @@ def create_groups_with_edge_gating(
             rank[account_id] = 0
 
     # Group membership tracking (move this ABOVE any use)
-    group_members: Dict[str, List[str]] = defaultdict(list)
-    explain_metadata: Dict[str, Dict[str, Any]] = {}
+    group_members: dict[str, list[str]] = defaultdict(list)
+    explain_metadata: dict[str, dict[str, Any]] = {}
 
     # Phase 1.35.2: Fast-path union of exact equals pairs first
     exact_equals_unions = 0
@@ -571,7 +571,7 @@ def create_groups_with_edge_gating(
             logger.warning(f"Failed to save profile: {e}")
 
     # Build final groups dataframe
-    groups_data: List[Dict[str, Any]] = []
+    groups_data: list[dict[str, Any]] = []
 
     for account_id in accounts_df["account_id"]:
         group_root = find(account_id)
@@ -607,7 +607,7 @@ def create_groups_with_edge_gating(
         from src.utils.dtypes import optimize_dataframe_memory as _opt_df_mem
 
         OptimizeFunc = Callable[[pd.DataFrame, str], pd.DataFrame]
-        optimize_dataframe_memory: Optional[OptimizeFunc] = _opt_df_mem
+        optimize_dataframe_memory: OptimizeFunc | None = _opt_df_mem
     except Exception:
         optimize_dataframe_memory = None  # pragma: no cover
 
@@ -624,7 +624,7 @@ def create_groups_with_edge_gating(
 def create_groups_standard(
     accounts_df: pd.DataFrame,
     candidate_pairs_df: pd.DataFrame,
-    config: Dict[str, Any],
+    config: dict[str, Any],
 ) -> pd.DataFrame:
     """Create groups using standard connected components logic (fallback).
 
@@ -640,8 +640,8 @@ def create_groups_standard(
     logger.info("Creating groups using standard connected components")
 
     # Standard Union-Find implementation
-    parent: Dict[str, str] = {}
-    rank: Dict[str, int] = {}
+    parent: dict[str, str] = {}
+    rank: dict[str, int] = {}
 
     def find(x: str) -> str:
         if parent[x] != x:
@@ -687,8 +687,8 @@ def create_groups_standard(
         union(id1, id2)
 
     # Build groups
-    groups_data: List[Dict[str, Any]] = []
-    group_members: Dict[str, List[str]] = defaultdict(list)
+    groups_data: list[dict[str, Any]] = []
+    group_members: dict[str, list[str]] = defaultdict(list)
 
     for account_id in accounts_df["account_id"]:
         group_root = find(account_id)
@@ -722,7 +722,7 @@ def create_groups_standard(
         from src.utils.dtypes import optimize_dataframe_memory as _opt_df_mem
 
         OptimizeFunc = Callable[[pd.DataFrame, str], pd.DataFrame]
-        optimize_dataframe_memory: Optional[OptimizeFunc] = _opt_df_mem
+        optimize_dataframe_memory: OptimizeFunc | None = _opt_df_mem
     except Exception:
         optimize_dataframe_memory = None  # pragma: no cover
 

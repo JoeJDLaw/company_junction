@@ -8,7 +8,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ def _atomic_write_json(data: Any, file_path: Path) -> bool:
         return False
 
 
-def load_manual_blacklist(path: str = "data/manual/manual_blacklist.json") -> Set[str]:
+def load_manual_blacklist(path: str = "data/manual/manual_blacklist.json") -> set[str]:
     """Load manual blacklist terms from JSON file.
 
     Args:
@@ -80,7 +80,7 @@ def load_manual_blacklist(path: str = "data/manual/manual_blacklist.json") -> Se
 
 
 def save_manual_blacklist(
-    terms: Set[str],
+    terms: set[str],
     path: str = "data/manual/manual_blacklist.json",
 ) -> bool:
     """Save manual blacklist terms to JSON file.
@@ -103,7 +103,7 @@ def save_manual_blacklist(
 
 def load_manual_overrides(
     path: str = "data/manual/manual_dispositions.json",
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Load manual disposition overrides from JSON file.
 
     Args:
@@ -124,7 +124,7 @@ def load_manual_overrides(
 
         # Convert list to dict if needed (backward compatibility)
         if isinstance(overrides, list):
-            override_dict: Dict[str, Dict[str, Any]] = {}
+            override_dict: dict[str, dict[str, Any]] = {}
             for override in overrides:
                 if isinstance(override, dict):
                     record_id = override.get("record_id")
@@ -146,7 +146,7 @@ def load_manual_overrides(
 
 
 def save_manual_overrides(
-    overrides: Dict[str, Dict[str, Any]],
+    overrides: dict[str, dict[str, Any]],
     path: str = "data/manual/manual_dispositions.json",
 ) -> bool:
     """Save manual disposition overrides to JSON file.

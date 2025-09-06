@@ -4,8 +4,6 @@ This module provides consistent dtype definitions across the pipeline
 to minimize memory usage and ensure data type consistency.
 """
 
-from typing import Dict
-
 # Central dtype mapping for all pipeline dataframes
 DTYPES = {
     # Core account fields
@@ -107,7 +105,7 @@ INTERMEDIATE_COLUMNS_TO_DROP = {
 }
 
 
-def get_dtypes_for_schema(schema_name: str) -> Dict[str, str]:
+def get_dtypes_for_schema(schema_name: str) -> dict[str, str]:
     """Get dtype mapping for specific pipeline schema.
 
     Args:

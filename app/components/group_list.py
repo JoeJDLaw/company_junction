@@ -3,7 +3,7 @@
 This module handles the paginated display of groups with navigation controls.
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import streamlit as st
 
@@ -22,8 +22,8 @@ def render_group_list(
     sort_by: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
-) -> Tuple[List[Dict[str, Any]], int, int]:
+    filters: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int, int]:
     """Render the paginated group list with fragments.
 
     Args:
@@ -167,7 +167,7 @@ def render_group_list_fragment(
     sort_by: str,
     page: int,
     page_size: int,
-    filters: Dict[str, Any],
+    filters: dict[str, Any],
 ) -> None:
     """Render the group list within a fragment to prevent page-wide blocking.
 

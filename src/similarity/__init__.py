@@ -4,13 +4,12 @@ This module provides similarity scoring and blocking functionality.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import pandas as pd
 
 from src.utils.duckdb_utils import ensure_pandas_strings
 from src.utils.parallel_protocols import ExecutorLike
-from src.utils.parallel_utils import ParallelExecutor
 
 from .blocking import generate_candidate_pairs_soft_ban, get_stop_tokens
 from .diagnostics import generate_brand_suggestions, write_blocking_diagnostics
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def pair_scores(
     df_norm: pd.DataFrame,
-    settings: Dict,
+    settings: dict,
     enable_progress: bool = False,
     parallel_executor: Optional[ExecutorLike] = None,
     interim_dir: Optional[str] = None,

@@ -8,7 +8,7 @@ This module tests output persistence behavior:
 
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -21,7 +21,7 @@ from src.normalize import normalize_dataframe
 from src.similarity.scoring import score_pairs_bulk, score_pairs_parallel
 
 
-def _get_settings(overrides: dict = None) -> dict:
+def _get_settings(overrides: dict | None = None) -> dict:
     """Helper to create settings dict with optional overrides."""
     settings = {
         "similarity": {
@@ -211,8 +211,8 @@ class TestScoringOutputPersistence:
 
             # Should have same data types
             for key in bulk_result.keys():
-                assert type(bulk_result[key]) == type(
-                    parallel_result[key]
+                assert isinstance(
+                    bulk_result[key], type(parallel_result[key])
                 ), f"Field '{key}' should have same type"
 
     def test_output_empty_input(self):
@@ -223,7 +223,7 @@ class TestScoringOutputPersistence:
         )
 
         df_norm = normalize_dataframe(test_data, "Account Name")
-        candidate_pairs = []  # Empty list
+        candidate_pairs: list[tuple[int, int]] = []  # Empty list
         settings = _get_settings()
 
         # Test bulk scoring

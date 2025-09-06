@@ -9,7 +9,7 @@ This module tests configuration defaults and gate behavior:
 
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -22,7 +22,7 @@ from src.normalize import normalize_dataframe
 from src.similarity.scoring import compute_score_components, score_pairs_bulk
 
 
-def _get_settings(overrides: Dict[str, Any] = None) -> Dict[str, Any]:
+def _get_settings(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Helper to create settings dict with optional overrides."""
     settings = {
         "similarity": {
@@ -213,7 +213,7 @@ class TestScoringConfigDefaults:
         candidate_pairs = [(0, 1)]
 
         # Test with minimal config (missing penalty and scoring sections)
-        minimal_settings: Dict[str, Any] = {"similarity": {}}
+        minimal_settings: dict[str, Any] = {"similarity": {}}
         results_minimal = score_pairs_bulk(df_norm, candidate_pairs, minimal_settings)
 
         # Test with full config
@@ -235,7 +235,7 @@ class TestScoringConfigDefaults:
         candidate_pairs = [(0, 1)]
 
         # Test with empty penalty and scoring sections
-        empty_settings: Dict[str, Any] = {"similarity": {"penalty": {}, "scoring": {}}}
+        empty_settings: dict[str, Any] = {"similarity": {"penalty": {}, "scoring": {}}}
         results_empty = score_pairs_bulk(df_norm, candidate_pairs, empty_settings)
 
         # Should work with defaults

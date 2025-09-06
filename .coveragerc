@@ -1,0 +1,10 @@
+[run]
+source = src
+branch = True
+omit =
+    */__init__.py
+
+[report]
+show_missing = True
+skip_covered = False
+precision = 1

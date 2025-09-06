@@ -8,7 +8,7 @@ This module tests logging behavior:
 
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -21,7 +21,7 @@ from src.normalize import normalize_dataframe
 from src.similarity.scoring import score_pairs_bulk
 
 
-def _get_settings(overrides: dict = None) -> dict:
+def _get_settings(overrides: dict | None = None) -> dict:
     """Helper to create settings dict with optional overrides."""
     settings = {
         "similarity": {
@@ -99,14 +99,14 @@ class TestScoringLogging:
         )
 
         df_norm = normalize_dataframe(test_data, "Account Name")
-        candidate_pairs = []  # Empty list
+        candidate_pairs: list[tuple[int, int]] = []  # Empty list
         settings = _get_settings()
 
         # Clear any existing logs
         caplog.clear()
 
         # Run bulk scoring
-        results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+        score_pairs_bulk(df_norm, candidate_pairs, settings)
 
         # Should not have gate logs for empty candidates
         gate_logs = [
@@ -136,7 +136,7 @@ class TestScoringLogging:
             caplog.clear()
 
             # Run bulk scoring
-            results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+            score_pairs_bulk(df_norm, candidate_pairs, settings)
 
             # Collect gate log messages
             gate_logs = [

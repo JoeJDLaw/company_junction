@@ -4,10 +4,10 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any
 
 
-def extract_phase_headers(changelog_content: str) -> List[Tuple[str, str, str]]:
+def extract_phase_headers(changelog_content: str) -> list[tuple[str, str, str]]:
     """Extract all Phase headers and their dates from CHANGELOG.md content.
 
     Returns:
@@ -83,7 +83,7 @@ def test_changelog_date_format() -> None:
         error_msg = "Invalid dates found in CHANGELOG.md:\n"
         for invalid in invalid_dates:
             error_msg += f"  Phase {invalid['phase']}: '{invalid['date']}' in '{invalid['header']}'\n"
-        assert False, error_msg
+        raise AssertionError(error_msg)
 
     # All dates are valid
     print(f"✅ All {len(headers)} Phase headers have valid YYYY-MM-DD dates")
@@ -102,7 +102,7 @@ def test_changelog_date_consistency() -> None:
 
     # Parse dates and check chronological order
     dates = []
-    for phase_num, date_str, header_line in headers:
+    for phase_num, date_str, _header_line in headers:
         try:
             date_obj = datetime.strptime(date_str, "%Y-%m-%d")
             dates.append((phase_num, date_obj, date_str))
@@ -133,7 +133,7 @@ def test_changelog_date_consistency() -> None:
             if curr_date > prev_date:
                 error_msg = f"Changelog dates not in chronological order within Phase {major_minor}:\n"
                 error_msg += f"  Phase {group_dates[i-1][0]} ({group_dates[i-1][2]}) comes before Phase {group_dates[i][0]} ({group_dates[i][2]})\n"
-                assert False, error_msg
+                raise AssertionError(error_msg)
 
     print(
         "✅ All Phase headers are in correct chronological order within their major.minor groups",
@@ -153,7 +153,7 @@ def test_phase_number_format() -> None:
 
     # Validate Phase number format
     invalid_phases = []
-    for phase_num, date_str, header_line in headers:
+    for phase_num, _date_str, header_line in headers:
         # Expected format: major.minor[.patch][suffix]
         # Examples: 1.18, 1.18.1, 1.17.5c
         if not re.match(r"^\d+\.\d+(?:\.\d+)?(?:[a-z])?$", phase_num):
@@ -164,7 +164,7 @@ def test_phase_number_format() -> None:
         error_msg = "Invalid Phase number formats found in CHANGELOG.md:\n"
         for invalid in invalid_phases:
             error_msg += f"  '{invalid['phase']}' in '{invalid['header']}'\n"
-        assert False, error_msg
+        raise AssertionError(error_msg)
 
     print(f"✅ All {len(headers)} Phase numbers follow expected format")
 

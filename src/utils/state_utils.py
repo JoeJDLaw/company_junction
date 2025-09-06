@@ -5,7 +5,7 @@ without importing Streamlit directly. It accepts dict-like objects for flexibili
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -20,20 +20,20 @@ class PageState:
 class BackendState:
     """Backend selection state per run."""
 
-    groups: Dict[str, str] = field(default_factory=dict)
+    groups: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
 class DetailsState:
     """Group details state."""
 
-    requested: Dict[Tuple[str, str], bool] = field(
+    requested: dict[tuple[str, str], bool] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> bool
-    loaded: Dict[Tuple[str, str], bool] = field(
+    loaded: dict[tuple[str, str], bool] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> bool
-    data: Dict[Tuple[str, str], Dict[str, Any]] = field(
+    data: dict[tuple[str, str], dict[str, Any]] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> data
 
@@ -42,10 +42,10 @@ class DetailsState:
 class ExplainState:
     """Explain metadata state."""
 
-    requested: Dict[Tuple[str, str], bool] = field(
+    requested: dict[tuple[str, str], bool] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> bool
-    data: Dict[Tuple[str, str], Any] = field(
+    data: dict[tuple[str, str], Any] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> data
 
@@ -54,10 +54,10 @@ class ExplainState:
 class AliasesState:
     """Alias cross-references state."""
 
-    requested: Dict[Tuple[str, str], bool] = field(
+    requested: dict[tuple[str, str], bool] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> bool
-    data: Dict[Tuple[str, str], List[Dict[str, Any]]] = field(
+    data: dict[tuple[str, str], list[dict[str, Any]]] = field(
         default_factory=dict,
     )  # (run_id, group_id) -> data
 

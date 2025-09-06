@@ -60,7 +60,7 @@ class TestMiniDAGResume:
     def test_validate_intermediate_files_complete_pipeline(self, mini_dag, interim_dir):
         """Test intermediate file validation for complete pipeline."""
         # Create all intermediate files
-        for stage, files in STAGE_INTERMEDIATE_FILES.items():
+        for _stage, files in STAGE_INTERMEDIATE_FILES.items():
             for filename in files:
                 (interim_dir / filename).touch()
 
@@ -190,7 +190,7 @@ class TestMiniDAGResume:
     def test_resume_validation_timeout(self, mini_dag, interim_dir):
         """Test that resume validation completes within timeout."""
         # Create a large number of files to test performance
-        for stage, files in STAGE_INTERMEDIATE_FILES.items():
+        for _stage, files in STAGE_INTERMEDIATE_FILES.items():
             for filename in files:
                 (interim_dir / filename).touch()
 
