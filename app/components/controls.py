@@ -50,6 +50,32 @@ def render_controls(
         backend_state.groups[selected_run_id] = "duckdb"
         set_backend_state(st.session_state, backend_state)
 
+    # View Mode Selection (Edge Groups vs Similarity Clusters)
+    st.sidebar.write("**View Mode**")
+    
+    # Get current view mode from session state
+    view_mode_key = f"view_mode_{selected_run_id}"
+    current_view_mode = st.session_state.get(view_mode_key, "Similarity Clusters")
+    
+    view_mode = st.sidebar.selectbox(
+        "Grouping Method",
+        ["Edge Groups", "Similarity Clusters"],
+        index=1 if current_view_mode == "Similarity Clusters" else 0,
+        help="Edge Groups: Traditional edge-gated grouping. Similarity Clusters: Clustering-based grouping with configurable similarity thresholds.",
+        key=f"view_mode_select_{selected_run_id}",
+    )
+    
+    # Check if view mode changed and update state
+    if view_mode != current_view_mode:
+        st.session_state[view_mode_key] = view_mode
+        # Reset to page 1 when view mode changes
+        page_state.number = 1
+        set_page_state(st.session_state, page_state)
+        st.rerun()
+    
+    # Add view mode to filters
+    filters["view_mode"] = view_mode
+
     # Sorting controls (preserve existing labels and behavior)
     st.sidebar.write("**Sorting**")
 
@@ -125,6 +151,57 @@ def render_controls(
 
         # Update the Min Edge Strength input to match the similarity threshold
         st.session_state[f"min_edge_strength_{selected_run_id}"] = float(threshold)
+    
+    # Clustering-specific controls (only show for Similarity Clusters view)
+    if view_mode == "Similarity Clusters":
+        st.sidebar.write("**Clustering Settings**")
+        
+        # Clustering policy
+        policy_key = f"clustering_policy_{selected_run_id}"
+        current_policy = st.session_state.get(policy_key, "complete")
+        
+        clustering_policy = st.sidebar.selectbox(
+            "Clustering Policy",
+            ["complete", "single"],
+            index=0 if current_policy == "complete" else 1,
+            format_func=lambda x: "Complete-linkage (strict)" if x == "complete" else "Single-linkage (looser)",
+            help="Complete-linkage: All pairs in a cluster must meet the similarity threshold. Single-linkage: Any connection path above threshold is sufficient.",
+            key=f"clustering_policy_{selected_run_id}",
+        )
+        
+        # Check if policy changed and update state
+        if clustering_policy != current_policy:
+            st.session_state[policy_key] = clustering_policy
+            # Reset to page 1 when policy changes
+            page_state.number = 1
+            set_page_state(st.session_state, page_state)
+            st.rerun()
+        
+        # Min cluster size
+        min_cluster_size_key = f"min_cluster_size_{selected_run_id}"
+        current_min_size = st.session_state.get(min_cluster_size_key, 2)
+        
+        min_cluster_size = st.sidebar.number_input(
+            "Min Cluster Size",
+            min_value=1,
+            max_value=10,
+            value=current_min_size,
+            step=1,
+            help="Minimum number of records required to form a cluster. Smaller clusters become outliers.",
+            key=f"min_cluster_size_{selected_run_id}",
+        )
+        
+        # Check if min cluster size changed and update state
+        if min_cluster_size != current_min_size:
+            st.session_state[min_cluster_size_key] = min_cluster_size
+            # Reset to page 1 when min cluster size changes
+            page_state.number = 1
+            set_page_state(st.session_state, page_state)
+            st.rerun()
+        
+        # Add clustering parameters to filters
+        filters["clustering_policy"] = clustering_policy
+        filters["min_cluster_size"] = min_cluster_size
 
     # Pagination controls
     page_size_options = settings.get("ui", {}).get(

@@ -239,6 +239,23 @@ When working with similarity scoring:
 
 ---
 
+## 11) Git & PR Ownership
+
+- **Cursor must not run git commands, create branches, or open PRs**
+- Cursor may only provide:
+  - Target file path(s)
+  - Full final file content(s) 
+  - Unified diff
+  - Suggested commit message
+- **All Git/GitHub actions are handled by humans**:
+  - Branching, commits, PRs, merges
+  - Git history management
+  - Repository operations
+
+**Rationale**: Ensures human oversight of all version control operations and maintains clear separation of responsibilities between AI assistance and human decision-making.
+
+---
+
 ## Compliance Checklist
 - [ ] Centralized sort mapping, no per-function maps  
 - [ ] No hardcoded defaults (all from config)  
@@ -250,5 +267,38 @@ When working with similarity scoring:
 - [ ] Single-scope PRs with rollback plan  
 - [ ] No direct deletions — follow Rule 10 deprecations
 - [ ] Deprecated files moved to `deprecated/` with UTC timestamp prefix and `.bak` suffix
+- [ ] No git commands run by Cursor — all Git/GitHub operations handled by humans
+- [ ] Tag-centric workflow used (feature branches, squash merges, annotated tags; no generated artifacts committed)
 
 ---
+
+## 12) Tag-Centric Workflow
+
+- Work happens on feature branches; prefer **squash merges** into `main` so history stays clean.
+- Commits should represent **logical checkpoints**, not every small change or editor action.
+- Use **annotated (or signed) tags** to mark meaningful milestones; do not tag trivial WIP.
+- **Tag naming conventions:**
+  - `phase<major.minor.patch>-<topic>` (e.g., `phase2.0.0-plan-v1`)
+  - or release style `vX.Y.Z`
+- **Tag message must include:**
+  - Purpose/context of the milestone
+  - Coverage/CI gate snapshot if relevant
+  - Links to docs or PR numbers for traceability
+- **CI policy:**
+  - Run CI on **PRs** and on **tags**; avoid CI churn on micro-commits.
+  - For tiny WIP commits, add `[skip ci]` if your CI allows it.
+- **Generated artifacts:**
+  - Do **not** commit `coverage.xml`, `htmlcov/`, `.pytest_cache/`, `.mypy_cache/`, or other build/coverage caches. Use `.gitignore`.
+- **Agent guardrails:**
+  - Cursor **never** creates tags. Cursor may propose a tag name and message; **humans** create/push the tag.
+
+✅ **Examples**
+```bash
+# Create annotated tag
+git tag -a phase2.0.0-plan-v1 -m "Phase 2.0.0: Testing plan v1 approved
+Coverage: 45.2% lines; gates: 75% global / 90% critical
+Includes resume E2E spec, golden datasets schema, deterministic seeds"
+
+# Push tag
+git push origin phase2.0.0-plan-v1
+```

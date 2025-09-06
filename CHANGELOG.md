@@ -8,6 +8,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 2.0.0**: Similarity Clustering View + Complete Cleanup Utility Overhaul
+  - **Similarity Clustering System**: New clustering-based grouping to complement existing edge-based grouping
+    - **Clustering Algorithms**: Complete-linkage and Single-linkage clustering policies
+    - **Service Layer**: `src/services/group_service.py` with caching and DuckDB integration
+    - **Core Implementation**: `src/grouping/similarity_clusters.py` with union-find and connected components
+    - **UI Integration**: Toggle between "Edge Groups" and "Similarity Clusters" views
+    - **Clustering Controls**: Threshold slider (50-100%), policy selection, minimum cluster size
+    - **Performance**: Efficient DuckDB queries for candidate pairs above threshold
+    - **Deterministic Results**: Consistent clustering across runs with sorted outputs
+  - **Complete Cleanup Utility Overhaul**: Replaced heuristic-based system with explicit, type-driven approach
+    - **New CLI Tool**: `pipeline_cleanup.py` with simple commands (`--list`, `--delete-all`, `--delete-tests`, `--delete-prod`, `--dry-run`)
+    - **Typed API**: `src/utils/cleanup_api.py` wrapper for Streamlit UI integration
+    - **Run Type System**: Explicit tagging of runs as `dev`, `test`, or `prod` with `--run-type` flag
+    - **Safety Features**: Dry-run by default, confirmation prompts, fuse protection, running run protection, latest run protection
+    - **Streamlit Integration**: "Run Deletion" panel in "⚙️ Advanced: Maintenance" expander
+    - **Legacy Support**: Automatic handling of runs without run_type (treated as `dev`)
+    - **Comprehensive Logging**: Structured logging with deletion summaries and safety warnings
+  - **Blocking Strategy Enhancement**: Fixed PNC record clustering by adding `"pnc"` to `allowlist_tokens`
+    - **Root Cause**: PNC records were being filtered out during blocking due to missing allowlist token
+    - **Solution**: Added `"pnc"` to `config/settings.yaml` allowlist_tokens
+    - **Impact**: All PNC-related records now properly grouped together during blocking
+    - **Length Window**: Increased from 10 to 150 to accommodate longer name variations
+  - **UI/UX Improvements**: Enhanced group display and similarity analysis
+    - **Font Size**: Increased to 1.6rem for better readability
+    - **Primary Names**: Fixed "Unknown" names by loading account names from `review_ready.parquet`
+    - **Similarity Display**: Changed "100% similarity" to "Max Edge Score" with tooltips
+    - **Clustering Analysis**: Added "📊 Similarity Analysis" expander for score distribution
+    - **Help Documentation**: Added "ℹ️ About Similarity Clusters" expander with clustering policies
+    - **View Toggle**: Switch between edge-based grouping and similarity clustering
+  - **Performance Optimizations**: Multiple vectorized operations and caching improvements
+    - **Disposition Engine**: Vectorized blacklist detection, alias matching, and suffix mismatch
+    - **Regex Caching**: Module-level caches for compiled regex patterns
+    - **Atomic File Writes**: Using temporary files and `os.replace()` to prevent corruption
+    - **DuckDB Integration**: Enhanced group statistics with proper primary name resolution
+  - **Testing & Validation**: Comprehensive test coverage for all new functionality
+    - **Cleanup API Tests**: `tests/test_cleanup_api.py` with 15+ test cases
+    - **CLI Tests**: `tests/test_pipeline_cleanup_cli.py` with integration testing
+    - **Similarity Clusters Tests**: `tests/test_similarity_clusters.py` with algorithm validation
+    - **Legacy Test Migration**: Moved old cleanup tests to `deprecated/tests_legacy_cleanup/`
+  - **Documentation**: Complete documentation for new cleanup system
+    - **Cleanup Guide**: `docs/cleanup.md` with CLI usage, API reference, and troubleshooting
+    - **README Updates**: Enhanced cleanup section with run types, safety features, and best practices
+    - **Migration Guide**: Clear migration path from old cleanup script to new system
+
+### Changed
+- **Import Architecture**: Resolved import conflict by renaming `src/grouping.py` to `src/edge_grouping.py`
+- **Configuration**: Enhanced `config/settings.yaml` with similarity clustering and blocking improvements
+- **UI Components**: Updated `app/components/group_list.py` to support both edge groups and similarity clusters
+- **Cache Management**: Enhanced `src/utils/cache_utils.py` with atomic writes and run type support
+
+### Fixed
+- **PNC Clustering**: Fixed missing PNC records in similarity clusters by adding `"pnc"` to allowlist_tokens
+- **Primary Name Resolution**: Fixed DuckDB query to properly identify primary names using `COALESCE(MAX(CASE WHEN is_primary THEN account_name ELSE NULL END), MIN(account_name))`
+- **FutureWarning**: Fixed pandas `FutureWarning` in `src/utils/id_utils.py` by ensuring aligned indexes
+- **Legacy Test Conflicts**: Resolved import conflicts by moving legacy cleanup tests to deprecated directory
+- **UI Display Issues**: Fixed "Unknown" names, font size, and misleading similarity scores
+
+### Deprecated
+- **Old Cleanup Script**: `tools/cleanup_test_artifacts.py` moved to `deprecated/20250906-032955_tools_cleanup_test_artifacts.py.bak`
+- **Legacy Tests**: Moved `test_cleanup.py`, `test_cleanup_keep_at_least_guard.py`, `test_cleanup_reconcile.py` to `deprecated/tests_legacy_cleanup/`
+
+### Added
 - **Mypy Type Safety Improvements**: Major reduction in mypy type errors
   - **Error Reduction**: Reduced mypy errors from 263 to 43 (84% reduction)
   - **Files Fixed**: 42 files completely fixed, 1 partially fixed

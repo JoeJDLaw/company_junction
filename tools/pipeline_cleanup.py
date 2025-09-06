@@ -12,11 +12,13 @@ Usage:
     python pipeline_cleanup.py --delete-tests --dry-run
     python pipeline_cleanup.py --delete-prod --dry-run
     python pipeline_cleanup.py --delete-all --dry-run
+    python pipeline_cleanup.py --delete-run RUN_ID --dry-run
 
     # Actually delete (requires confirmation)
     python pipeline_cleanup.py --delete-tests
     python pipeline_cleanup.py --delete-prod
     python pipeline_cleanup.py --delete-all
+    python pipeline_cleanup.py --delete-run RUN_ID
 
 Exit codes:
     0 = No candidates found for deletion
@@ -237,6 +239,12 @@ def main() -> None:
         action="store_true",
         help="Delete production runs (with confirmation)",
     )
+    action_group.add_argument(
+        "--delete-run",
+        type=str,
+        metavar="RUN_ID",
+        help="Delete a specific run by ID (with confirmation)",
+    )
 
     # Dry-run flag
     parser.add_argument(
@@ -263,6 +271,9 @@ def main() -> None:
         elif args.delete_prod:
             run_type = "prod"
             run_ids = get_runs_by_type("prod")
+        elif args.delete_run:
+            run_type = f"run '{args.delete_run}'"
+            run_ids = [args.delete_run]
         else:
             # This shouldn't happen due to mutually exclusive group
             parser.error("No action specified")

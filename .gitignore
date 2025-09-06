@@ -9,6 +9,11 @@ __pycache__/
 venv/
 ENV/
 
+# Local env files
+.env
+.env.*
+.secrets/
+
 # macOS system files
 .DS_Store
 .AppleDouble
@@ -20,13 +25,21 @@ Icon?
 .vscode/
 .idea/
 
-# Data (don’t commit large or sensitive files)
+# Documentation (ignore all)
+docs/
+
+# Data (don't commit large or sensitive files)
 data/raw/*
 data/interim/*
 data/processed/*
 data/manual/*
 
-# Repo-local state (don’t version)
+# Local databases (optional)
+*.duckdb
+*.db
+*.sqlite
+
+# Repo-local state (don't version)
 data/run_index.json
 data/run_deletions.log
 
@@ -46,6 +59,7 @@ data/run_deletions.log
 # Coverage / reports
 htmlcov/
 .coverage
+coverage.xml
 # MyPy reports
 .mypy_report*.txt
 
@@ -61,6 +75,8 @@ dist/
 # Tool caches
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.mutmut-cache
 
 # Cursor prompt drafts
 prompts/
@@ -76,15 +92,6 @@ pipeline.log.bak
 # local benchmarks
 /data/benchmarks/*.json
 .cursor/
-
-/ # -----------------------------------------------------------------------------
-# Extra ignores added 2025-09-05 (reduce noise from local artifacts/backups)
-# -----------------------------------------------------------------------------
-
-# Archive folders and transient reports
-docs/reports/_archive/
-docs/reports/mypy_latest.txt
-docs/reports/mypy_session_summary_*.md
 
 # Python coverage & profilers (expand beyond base .coverage)
 .coverage.*

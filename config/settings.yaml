@@ -35,7 +35,7 @@ similarity:
   max_alias_pairs: 100000
   # Soft-ban blocking strategy (only strategy supported)
   blocking:
-    allowlist_tokens: ["99", "7", "24", "1-800", "360", "1", "2", "3", "4", "5", "6", "8", "9", "10"]
+    allowlist_tokens: ["99", "7", "24", "1-800", "360", "1", "2", "3", "4", "5", "6", "8", "9", "10", "pnc"]
     allowlist_bigrams: ["99 cents", "7 eleven", "24 hour", "1-800 got", "360 behavioral"]
     denylist_tokens: ["the", "and", "of", "for", "in", "on", "at", "to", "from", "a", "an", "as", "by", "is", "it", "or", "be", "are", "was", "were", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "must", "can", "shall"]
     stop_tokens: ["inc", "llc", "ltd"]  # Tokens to skip in first-token blocking
@@ -44,7 +44,7 @@ similarity:
       fallback_shard: "char_trigram"  # Fallback when second token still too large
       max_shard_size: 200  # Shard again if still > 200
       char_bigram_gate: 0.1  # Simple overlap ratio gate (0..1)
-      length_window: 10  # |len(a)-len(b)| <= 10
+      length_window: 150  # |len(a)-len(b)| <= 150 (wider to include long 'PNC Not Sure' variants)
       min_token_overlap: 1  # Require at least 1 shared token
       max_candidates_per_record: 50  # Cap pairs per record
       block_cap: 800  # Still honored for jumbo blocks
