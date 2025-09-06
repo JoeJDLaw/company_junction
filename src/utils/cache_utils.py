@@ -49,13 +49,13 @@ def generate_run_id(input_paths: list[str], config_paths: list[str]) -> str:
     input_hash = hashlib.sha256()
     for input_path in sorted(input_paths):
         if os.path.exists(input_path):
-            input_hash.update(compute_file_hash(input_path).encode())
+            input_hash.update(bytes.fromhex(compute_file_hash(input_path)))
 
     # Compute combined hash of all config files
     config_hash = hashlib.sha256()
     for config_path in sorted(config_paths):
         if os.path.exists(config_path):
-            config_hash.update(compute_file_hash(config_path).encode())
+            config_hash.update(bytes.fromhex(compute_file_hash(config_path)))
 
     # Generate timestamp
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -102,14 +102,23 @@ def load_run_index() -> dict[str, Any]:
 
 
 def save_run_index(run_index: dict[str, Any]) -> None:
-    """Save the run index to JSON file."""
+    """Save the run index to JSON file with atomic write."""
     os.makedirs(os.path.dirname(RUN_INDEX_PATH), exist_ok=True)
 
     try:
-        with open(RUN_INDEX_PATH, "w") as f:
+        # Write to temp file first, then atomically replace
+        temp_path = f"{RUN_INDEX_PATH}.tmp"
+        with open(temp_path, "w") as f:
             json.dump(run_index, f, indent=2)
+        os.replace(temp_path, RUN_INDEX_PATH)
     except OSError as e:
         logger.error(f"Failed to save run index: {e}")
+        # Clean up temp file if it exists
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 def add_run_to_index(
@@ -126,12 +135,12 @@ def add_run_to_index(
     input_hash = hashlib.sha256()
     for input_path in sorted(input_paths):
         if os.path.exists(input_path):
-            input_hash.update(compute_file_hash(input_path).encode())
+            input_hash.update(bytes.fromhex(compute_file_hash(input_path)))
 
     config_hash = hashlib.sha256()
     for config_path in sorted(config_paths):
         if os.path.exists(config_path):
-            config_hash.update(compute_file_hash(config_path).encode())
+            config_hash.update(bytes.fromhex(compute_file_hash(config_path)))
 
     run_index[run_id] = {
         "run_type": run_type,

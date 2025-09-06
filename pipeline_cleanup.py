@@ -2,13 +2,13 @@
 """Simple pipeline cleanup utility.
 
 This tool provides a clean, safe interface for managing pipeline runs.
-It operates in dry-run mode by default and requires explicit confirmation for deletions.
+Delete commands support --dry-run (recommended); without it, you'll be prompted for confirmation.
 
 Usage:
     # List all runs grouped by type
     python pipeline_cleanup.py --list
 
-    # Preview what would be deleted (dry-run)
+    # Preview what would be deleted (recommended first step)
     python pipeline_cleanup.py --delete-tests --dry-run
     python pipeline_cleanup.py --delete-prod --dry-run
     python pipeline_cleanup.py --delete-all --dry-run
@@ -26,7 +26,6 @@ Exit codes:
 
 import argparse
 import sys
-from typing import Any
 
 from src.utils.cleanup_api import DeleteResult, PreviewInfo, list_runs, preview_delete, delete_runs
 from src.utils.logging_utils import get_logger
@@ -39,12 +38,12 @@ def format_bytes(bytes_value: int) -> str:
     if bytes_value == 0:
         return "0 B"
     
-    for unit in ["B", "KB", "MB", "GB"]:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if bytes_value < 1024.0:
             return f"{bytes_value:.1f} {unit}"
         bytes_value /= 1024.0
     
-    return f"{bytes_value:.1f} TB"
+    return f"{bytes_value:.1f} PB"
 
 
 def print_runs_by_type() -> None:
