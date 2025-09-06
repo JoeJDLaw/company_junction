@@ -1,0 +1,32 @@
+src/utils/perf_utils.py:71: error: Unused "type: ignore" comment  [unused-ignore]
+tests/test_scoring_threshold_sort.py:25: error: Incompatible default for argument "overrides" (default has type "None", argument has type "dict[Any, Any]")  [assignment]
+tests/test_scoring_threshold_sort.py:25: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+tests/test_scoring_threshold_sort.py:25: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+tests/test_scoring_output_persistence.py:24: error: Incompatible default for argument "overrides" (default has type "None", argument has type "dict[Any, Any]")  [assignment]
+tests/test_scoring_output_persistence.py:24: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+tests/test_scoring_output_persistence.py:24: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+tests/test_scoring_output_persistence.py:226: error: Need type annotation for "candidate_pairs" (hint: "candidate_pairs: list[<type>] = ...")  [var-annotated]
+tests/test_scoring_degenerate.py:29: error: Incompatible default for argument "overrides" (default has type "None", argument has type "dict[Any, Any]")  [assignment]
+tests/test_scoring_degenerate.py:29: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+tests/test_scoring_degenerate.py:29: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+tests/test_scoring_degenerate.py:89: error: Need type annotation for "candidate_pairs" (hint: "candidate_pairs: list[<type>] = ...")  [var-annotated]
+tests/test_scoring_degenerate.py:115: error: Need type annotation for "candidate_pairs" (hint: "candidate_pairs: list[<type>] = ...")  [var-annotated]
+tests/test_scoring_degenerate.py:126: error: Argument 3 to "assert_frame_equal" has incompatible type "Literal['DataFrame should not be mutated with empty candidates']"; expected "bool | Literal['equiv']"  [arg-type]
+tests/test_scoring_degenerate.py:137: error: Need type annotation for "candidate_pairs" (hint: "candidate_pairs: list[<type>] = ...")  [var-annotated]
+tests/test_scoring_degenerate.py:173: error: Argument 1 to "compute_score_components" has incompatible type "None"; expected "str"  [arg-type]
+tests/test_scoring_contracts.py:27: error: Incompatible default for argument "overrides" (default has type "None", argument has type "dict[Any, Any]")  [assignment]
+tests/test_scoring_contracts.py:27: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+tests/test_scoring_contracts.py:27: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+tests/test_scoring_config_defaults.py:25: error: Incompatible default for argument "overrides" (default has type "None", argument has type "dict[str, Any]")  [assignment]
+tests/test_scoring_config_defaults.py:25: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+tests/test_scoring_config_defaults.py:25: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+tests/test_duckdb_group_stats_phase1354.py:154: error: Name "temp_dir" is not defined  [name-defined]
+tests/test_duckdb_group_stats_phase1354.py:200: error: Name "temp_dir" is not defined  [name-defined]
+tests/test_duckdb_group_stats_phase1354.py:207: error: Name "temp_dir" is not defined  [name-defined]
+tests/test_duckdb_group_stats_phase1354.py:286: error: Name "temp_dir" is not defined  [name-defined]
+tests/test_duckdb_group_stats_phase1354.py:348: error: Name "temp_dir" is not defined  [name-defined]
+tests/test_scoring_logging.py:24: error: Incompatible default for argument "overrides" (default has type "None", argument has type "dict[Any, Any]")  [assignment]
+tests/test_scoring_logging.py:24: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+tests/test_scoring_logging.py:24: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+tests/test_scoring_logging.py:102: error: Need type annotation for "candidate_pairs" (hint: "candidate_pairs: list[<type>] = ...")  [var-annotated]
+Found 19 errors in 8 files (checked 169 source files)
