@@ -17,6 +17,39 @@ from src.utils.schema_utils import DISPOSITION
 
 logger = logging.getLogger(__name__)
 
+# Module-level regex caches for performance optimization
+_TOKEN_REGEX_CACHE = {}
+_PHRASE_REGEX_CACHE = {}
+_SUSPICIOUS_REGEX_CACHE = {}
+
+
+def _get_token_regex(tokens: list[str]) -> re.Pattern:
+    """Get cached compiled regex for blacklist tokens."""
+    key = tuple(sorted(tokens))
+    if key not in _TOKEN_REGEX_CACHE:
+        pattern = r"\b(?:" + "|".join(map(re.escape, tokens)) + r")\b"
+        _TOKEN_REGEX_CACHE[key] = re.compile(pattern, re.IGNORECASE)
+    return _TOKEN_REGEX_CACHE[key]
+
+
+def _get_phrase_regex(phrases: tuple[str, ...]) -> Optional[re.Pattern]:
+    """Get cached compiled regex for blacklist phrases."""
+    if not phrases:
+        return None
+    
+    cache_key = tuple(sorted(phrases))
+    if cache_key not in _PHRASE_REGEX_CACHE:
+        pattern = "|".join(map(re.escape, phrases))
+        _PHRASE_REGEX_CACHE[cache_key] = re.compile(pattern, re.IGNORECASE)
+    return _PHRASE_REGEX_CACHE[cache_key]
+
+
+def _get_suspicious_regex(pattern: str) -> re.Pattern:
+    """Get cached compiled regex for suspicious singleton patterns."""
+    if pattern not in _SUSPICIOUS_REGEX_CACHE:
+        _SUSPICIOUS_REGEX_CACHE[pattern] = re.compile(pattern, re.IGNORECASE)
+    return _SUSPICIOUS_REGEX_CACHE[pattern]
+
 
 # Phase 1.35.3: Moved hardcoded blacklist to configuration
 # These are now loaded from settings.yaml disposition.blacklist section
@@ -181,21 +214,6 @@ def get_blacklist_terms(settings: Optional[dict[str, Any]] = None) -> list[str]:
     return BLACKLIST.copy()
 
 
-def _compile_blacklist_regex() -> re.Pattern[str]:
-    """Compile word-boundary regex for single-word tokens.
-
-    Returns:
-        Compiled regex pattern
-
-    """
-    import re
-
-    # Escape special regex characters and join with word boundaries
-    escaped_tokens = [re.escape(token) for token in BLACKLIST_TOKENS]
-    pattern = r"\b(?:" + "|".join(escaped_tokens) + r")\b"
-    return re.compile(pattern, re.IGNORECASE)
-
-
 def _is_blacklisted_improved(
     name: str,
     manual_terms: Optional[set[str]] = None,
@@ -215,8 +233,8 @@ def _is_blacklisted_improved(
 
     name_lower = str(name).lower()
 
-    # Check single-word tokens with word boundaries
-    token_regex = _compile_blacklist_regex()
+    # Check single-word tokens with word boundaries - use cached regex
+    token_regex = _get_token_regex(BLACKLIST_TOKENS)
     if token_regex.search(name):
         return True
 
@@ -488,27 +506,35 @@ def _apply_dispositions_vectorized(
         "account_name" if "account_name" in result_df.columns else "Account Name"
     )
 
-    # Create blacklist masks
+    # Create blacklist masks - OPTIMIZED VERSION
     name_series = result_df[account_name_col].fillna("").astype(str)
+    name_lower = name_series.str.lower()  # Precompute lowercase once
+    false_series = pd.Series(False, index=result_df.index)  # Prebuild false series
+    
+    # PROFILING: Start timing blacklist mask building
+    blacklist_start = time.time()
 
-    # Single-word token detection (word boundaries)
-    # Get the pattern string from compiled regex
-    token_pattern = _compile_blacklist_regex().pattern
-    token_mask = name_series.str.contains(
-        token_pattern,
-        case=False,
-        na=False,
-        regex=True,
-    )
+    # Split tokens and phrases correctly
+    tokens = [t for t in blacklist_terms if " " not in t]
+    phrases = tuple(p for p in blacklist_terms if " " in p)
 
-    # Multi-word phrase detection (substring)
-    phrase_mask = pd.Series([False] * len(result_df), index=result_df.index)
-    for phrase in blacklist_terms:
-        if " " in phrase:  # Multi-word phrase
-            phrase_mask |= name_series.str.contains(phrase, case=False, na=False)
+    # Single-word token detection (word boundaries) - use cached regex
+    token_regex = _get_token_regex(tokens)
+    token_mask = name_series.str.contains(token_regex, na=False)
+
+    # Multi-word phrase detection (substring) - vectorized
+    if phrases:
+        phrase_regex = _get_phrase_regex(phrases)
+        phrase_mask = name_lower.str.contains(phrase_regex, na=False)
+    else:
+        phrase_mask = false_series
 
     # Combined blacklist mask
     blacklist_mask = token_mask | phrase_mask
+    
+    # PROFILING: End timing blacklist mask building
+    blacklist_time = time.time() - blacklist_start
+    logger.info(f"disposition | profiling | blacklist_masks | duration={blacklist_time:.3f}s")
 
     # Phase 1.35.3: Vectorized disposition classification using np.select
     # Define conditions and choices for np.select
@@ -533,45 +559,46 @@ def _apply_dispositions_vectorized(
     conditions.append(multiple_names_mask.to_numpy())
     choices.append("Verify")
 
-    # Alias matches condition
-    alias_mask = result_df.get(
-        "alias_cross_refs",
-        pd.Series([[]] * len(result_df)),
-    ).apply(lambda x: len(x) > 0 if isinstance(x, list) else False)
+    # PROFILING: Start timing alias cross-refs mask
+    alias_start = time.time()
+    
+    # Alias matches condition - OPTIMIZED: use .map instead of .apply
+    alias_col = result_df.get("alias_cross_refs", pd.Series([[]] * len(result_df)))
+    alias_mask = alias_col.map(lambda x: bool(x) if isinstance(x, list) else False)
     conditions.append(alias_mask.to_numpy())
     choices.append("Verify")
+    
+    # PROFILING: End timing alias cross-refs mask
+    alias_time = time.time() - alias_start
+    logger.info(f"disposition | profiling | alias_cross_refs_mask | duration={alias_time:.3f}s")
 
-    # Suffix mismatch condition
-    suffix_mismatch_mask = pd.Series([False] * len(result_df), index=result_df.index)
-    for group_id, meta in group_metadata.items():
-        if meta.get("has_suffix_mismatch", False):
-            group_mask = result_df["group_id"] == group_id
-            suffix_mismatch_mask |= group_mask
-    conditions.append(suffix_mismatch_mask.to_numpy())
-    choices.append("Verify")
-
-    # Group size and primary status conditions
-    group_size_series = result_df["group_id"].map(
-        lambda x: group_metadata.get(x, {}).get("group_size", 1),
+    # PROFILING: Start timing suffix mismatch mask
+    suffix_start = time.time()
+    
+    # Vectorized group size and suffix mismatch - OPTIMIZED
+    group_size_series = result_df.groupby("group_id")["group_id"].transform("size")
+    suffix_mismatch_series = (
+        result_df.groupby("group_id")["suffix_class"].transform(lambda s: s.nunique() > 1)
     )
+    
+    conditions.append(suffix_mismatch_series.to_numpy())
+    choices.append("Verify")
+    
+    # PROFILING: End timing suffix mismatch mask
+    suffix_time = time.time() - suffix_start
+    logger.info(f"disposition | profiling | suffix_mismatch_mask | duration={suffix_time:.3f}s")
     is_primary_series = result_df.get("is_primary", pd.Series([False] * len(result_df)))
 
     # Singleton suspicious condition
     singleton_mask = (group_size_series == 1) & (~blacklist_mask)
-    suspicious_singleton_mask = pd.Series(
-        [False] * len(result_df),
-        index=result_df.index,
-    )
+    suspicious_singleton_mask = false_series
     if "disposition" in settings and "performance" in settings["disposition"]:
         suspicious_regex = settings["disposition"]["performance"].get(
             "suspicious_singleton_regex",
         )
         if suspicious_regex:
-            suspicious_singleton_mask = name_series.str.contains(
-                suspicious_regex,
-                case=False,
-                na=False,
-            )
+            comp = _get_suspicious_regex(suspicious_regex)
+            suspicious_singleton_mask = name_lower.str.contains(comp, na=False)
     singleton_suspicious = singleton_mask & suspicious_singleton_mask
     conditions.append(singleton_suspicious.to_numpy())
     choices.append("Verify")
@@ -594,27 +621,38 @@ def _apply_dispositions_vectorized(
     conditions.append(duplicate_mask.to_numpy())
     choices.append("Update")
 
-    # Apply np.select for vectorized classification
-    dispositions = np.select(conditions, choices, default="Keep")
+    # Apply np.select for vectorized classification - ensure object dtype
+    dispositions = np.select(conditions, choices, default="Keep").astype(object)
 
-    # Apply manual overrides
+    # Apply manual overrides - OPTIMIZED: vectorized reindex
     if manual_overrides:
-        for record_id, override in manual_overrides.items():
-            override_idx = result_df.index[result_df.index.astype(str) == record_id]
-            if len(override_idx) > 0:
-                dispositions[override_idx[0]] = override
+        idx_str = result_df.index.astype(str)
+        overrides_s = pd.Series(manual_overrides)  # index=record_id str
+        aligned = overrides_s.reindex(idx_str)
+        override_mask = aligned.notna().to_numpy()
+        dispositions = np.where(override_mask, aligned.to_numpy(object), dispositions)
 
     # Add disposition column
     result_df[DISPOSITION] = dispositions
 
-    # Phase 1.35.3: Vectorized reason generation
+    # PROFILING: Start timing reason generation
+    reasons_start = time.time()
+    
+    # Phase 1.35.3: Vectorized reason generation - reuse computed masks
     reasons = _generate_disposition_reasons_vectorized(
         result_df,
-        group_metadata,
-        blacklist_mask,
-        manual_overrides,
-        settings,
+        blacklist_mask=blacklist_mask,
+        manual_overrides=manual_overrides,
+        settings=settings,
+        group_size_series=group_size_series,
+        suffix_mismatch_series=suffix_mismatch_series,
+        alias_mask=alias_mask,
+        suspicious_singleton_mask=suspicious_singleton_mask,
     )
+    
+    # PROFILING: End timing reason generation
+    reasons_time = time.time() - reasons_start
+    logger.info(f"disposition | profiling | reason_generation | duration={reasons_time:.3f}s")
     result_df["disposition_reason"] = reasons
 
     # Log performance metrics
@@ -631,6 +669,13 @@ def _apply_dispositions_vectorized(
         logger.warning(
             f"disposition | summary | column '{DISPOSITION}' not found in result_df.columns: {list(result_df.columns)}",
         )
+
+    # Stage summary for performance monitoring
+    logger.info(
+        f"disposition | stage_summary | blacklist={blacklist_time:.3f}s | alias={alias_time:.3f}s | "
+        f"suffix={suffix_time:.3f}s | reasons={reasons_time:.3f}s | total={duration:.3f}s | "
+        f"throughput={len(result_df)/duration:.0f}rec/s"
+    )
 
     return result_df
 
@@ -788,19 +833,25 @@ def get_disposition_reason(
 
 def _generate_disposition_reasons_vectorized(
     df: pd.DataFrame,
-    group_metadata: dict[int, dict[str, Any]],
     blacklist_mask: pd.Series,
     manual_overrides: dict[str, str],
     settings: dict[str, Any],
+    group_size_series: pd.Series,
+    suffix_mismatch_series: pd.Series,
+    alias_mask: pd.Series,
+    suspicious_singleton_mask: pd.Series,
 ) -> pd.Series:
     """Generate disposition reasons using vectorized operations.
 
     Args:
         df: DataFrame with dispositions
-        group_metadata: Group metadata
         blacklist_mask: Boolean mask for blacklisted records
         manual_overrides: Manual override mapping
         settings: Configuration settings
+        group_size_series: Pre-computed group sizes
+        suffix_mismatch_series: Pre-computed suffix mismatch flags
+        alias_mask: Pre-computed alias match flags
+        suspicious_singleton_mask: Pre-computed suspicious singleton flags
 
     Returns:
         Series with disposition reasons
@@ -811,12 +862,13 @@ def _generate_disposition_reasons_vectorized(
     # Initialize reasons array
     reasons = np.full(len(df), "unknown", dtype=object)
 
-    # Manual override reasons
+    # Manual override reasons - OPTIMIZED: vectorized reindex
     if manual_overrides:
-        for record_id, override in manual_overrides.items():
-            override_idx = df.index[df.index.astype(str) == record_id]
-            if len(override_idx) > 0:
-                reasons[override_idx[0]] = f"manual_override:{override}"
+        idx_str = df.index.astype(str)
+        overrides_s = pd.Series(manual_overrides)
+        aligned = overrides_s.reindex(idx_str)
+        has_override = aligned.notna()
+        reasons[has_override.to_numpy()] = ("manual_override:" + aligned[has_override]).to_numpy(object)
 
     # Blacklist reasons
     reasons[blacklist_mask] = "blacklisted_name"
@@ -825,45 +877,19 @@ def _generate_disposition_reasons_vectorized(
     multiple_names_mask = df.get("has_multiple_names", pd.Series([False] * len(df)))
     reasons[multiple_names_mask] = "multi_name_string_requires_split"
 
-    # Alias match reasons
-    alias_mask = df.get("alias_cross_refs", pd.Series([[]] * len(df))).apply(
-        lambda x: len(x) > 0 if isinstance(x, list) else False,
-    )
+    # Alias match reasons - use pre-computed mask
     reasons[alias_mask] = "alias_matches_detected"
 
-    # Suffix mismatch reasons
-    suffix_mismatch_mask = pd.Series([False] * len(df), index=df.index)
-    for group_id, meta in group_metadata.items():
-        if meta.get("has_suffix_mismatch", False):
-            group_mask = df["group_id"] == group_id
-            suffix_mismatch_mask |= group_mask
-    reasons[suffix_mismatch_mask] = "suffix_mismatch"
+    # Suffix mismatch reasons - use pre-computed series
+    reasons[suffix_mismatch_series] = "suffix_mismatch"
 
-    # Group size and primary status reasons
-    group_size_series = df["group_id"].map(
-        lambda x: group_metadata.get(x, {}).get("group_size", 1),
-    )
+    # Group size and primary status reasons - use pre-computed series
     is_primary_series = df.get("is_primary", pd.Series([False] * len(df)))
 
-    # Singleton reasons
+    # Singleton reasons - use pre-computed series
     singleton_mask = (group_size_series == 1) & (~blacklist_mask)
-    account_name_col = (
-        "account_name" if "account_name" in df.columns else "Account Name"
-    )
-    name_series = df[account_name_col].fillna("").astype(str)
 
-    suspicious_singleton_mask = pd.Series([False] * len(df), index=df.index)
-    if "disposition" in settings and "performance" in settings["disposition"]:
-        suspicious_regex = settings["disposition"]["performance"].get(
-            "suspicious_singleton_regex",
-        )
-        if suspicious_regex:
-            suspicious_singleton_mask = name_series.str.contains(
-                suspicious_regex,
-                case=False,
-                na=False,
-            )
-
+    # Use pre-computed suspicious singleton mask
     singleton_suspicious = singleton_mask & suspicious_singleton_mask
     reasons[singleton_suspicious] = "suspicious_singleton"
 
