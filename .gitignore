@@ -82,9 +82,7 @@ pipeline.log.bak
 # -----------------------------------------------------------------------------
 
 # Archive folders and transient reports
-docs/reports/_archive/
-docs/reports/mypy_latest.txt
-docs/reports/mypy_session_summary_*.md
+docs/
 
 # Python coverage & profilers (expand beyond base .coverage)
 .coverage.*
