@@ -67,7 +67,8 @@ class TestMiniDAGResume:
         # All stages should validate
         for stage in PIPELINE_STAGES:
             assert mini_dag.validate_intermediate_files(
-                stage, interim_dir,
+                stage,
+                interim_dir,
             ), f"Stage {stage} failed validation"
 
     def test_validate_resume_capability_no_previous_run(self, mini_dag, interim_dir):
@@ -173,7 +174,9 @@ class TestMiniDAGResume:
         assert resume_stage == "filtering"
 
     def test_get_smart_resume_stage_with_validation_failure(
-        self, mini_dag, interim_dir,
+        self,
+        mini_dag,
+        interim_dir,
     ):
         """Test smart resume when validation fails."""
         # Mark stage as completed but don't create files

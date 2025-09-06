@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Wrapper script to run Streamlit with better interrupt handling.
-"""
+"""Wrapper script to run Streamlit with better interrupt handling."""
 
 import logging
 import signal

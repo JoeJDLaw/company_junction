@@ -55,7 +55,9 @@ class TestCleaning(unittest.TestCase):
     def test_load_salesforce_data_csv(self) -> None:
         """Test loading CSV data."""
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".csv", delete=False,
+            mode="w",
+            suffix=".csv",
+            delete=False,
         ) as tmp_file:
             self.sample_data.to_csv(tmp_file.name, index=False)
             tmp_path = tmp_file.name

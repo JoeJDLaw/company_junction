@@ -67,7 +67,8 @@ def test_estimate_memory_per_worker() -> None:
 @patch("src.utils.resource_monitor.psutil.virtual_memory")
 @patch("src.utils.resource_monitor.psutil.Process")
 def test_calculate_optimal_workers_mock(
-    mock_process: Any, mock_virtual_memory: Any,
+    mock_process: Any,
+    mock_virtual_memory: Any,
 ) -> None:
     """Test worker calculation with mocked psutil."""
     # Mock memory info
@@ -246,7 +247,8 @@ def test_error_handling() -> None:
 
     # Test memory estimation with exceptions
     with patch(
-        "src.utils.resource_monitor.psutil.Process", side_effect=Exception("Test error"),
+        "src.utils.resource_monitor.psutil.Process",
+        side_effect=Exception("Test error"),
     ):
         with patch("src.utils.resource_monitor.PSUTIL_AVAILABLE", True):
             memory = estimate_memory_per_worker()

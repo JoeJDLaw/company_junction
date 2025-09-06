@@ -97,7 +97,10 @@ class TestAliasMatchingParallelism:
 
         # Call compute_alias_matches with ParallelExecutor
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor,
+            self.df_norm,
+            self.df_groups,
+            self.settings,
+            parallel_executor=mock_executor,
         )
 
         # Verify ParallelExecutor was used
@@ -120,7 +123,10 @@ class TestAliasMatchingParallelism:
 
         # Call compute_alias_matches
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor,
+            self.df_norm,
+            self.df_groups,
+            self.settings,
+            parallel_executor=mock_executor,
         )
 
         # Should use sequential processing
@@ -133,7 +139,9 @@ class TestAliasMatchingParallelism:
         """Test fallback to sequential processing when no executor provided."""
         # Call compute_alias_matches without parallel_executor
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings,
+            self.df_norm,
+            self.df_groups,
+            self.settings,
         )
 
         # Should work without errors
@@ -218,7 +226,10 @@ class TestAliasMatchingParallelism:
         ]
 
         result_df, stats = compute_alias_matches(
-            self.df_norm, self.df_groups, self.settings, parallel_executor=mock_executor,
+            self.df_norm,
+            self.df_groups,
+            self.settings,
+            parallel_executor=mock_executor,
         )
 
         # Should flatten results correctly

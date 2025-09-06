@@ -190,7 +190,9 @@ class TestScoringBulkParity:
         # Both methods should not mutate the original dataframe
         bulk_results = score_pairs_bulk(df_norm_no_suffix, candidate_pairs, settings)
         parallel_results = score_pairs_parallel(
-            df_norm_no_suffix, candidate_pairs, settings,
+            df_norm_no_suffix,
+            candidate_pairs,
+            settings,
         )
 
         # Verify immutability

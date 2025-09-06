@@ -33,7 +33,10 @@ class TestSortContextConsistency:
 
     @pytest.mark.parametrize("sort_key,context,expected_column_family", TEST_CASES)
     def test_order_by_and_sort_expression_consistency(
-        self, sort_key, context, expected_column_family,
+        self,
+        sort_key,
+        context,
+        expected_column_family,
     ):
         """Test that get_order_by and build_sort_expression use consistent column mappings."""
         # Get ORDER BY clause

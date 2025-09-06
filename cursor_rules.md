@@ -197,6 +197,48 @@ git mv "src/utils/test.py" "deprecated/${ts}_${safe_path}.bak"
 
 ---
 
+## Known Limitations & Baseline Behavior
+
+> **Important**: These are documented behaviors and limitations discovered through comprehensive testing. They represent the current system state and should be considered when making changes.
+
+### Similarity Scoring System
+
+**Gate Cutoff Behavior**:
+- The bulk scoring gate uses `token_set_ratio` for initial filtering, not final composite scores
+- This means pairs can pass the gate but have final scores below the gate cutoff due to penalties
+- **Impact**: Gate cutoff of 72 filters on `token_set_ratio >= 72`, but final scores may be lower
+
+**Punctuation Penalty Limitations**:
+- Punctuation penalties work correctly in unit tests (direct `compute_score_components` calls)
+- In production pipeline, punctuation penalties are largely ineffective because `normalize_dataframe` strips punctuation before scoring
+- **Impact**: Punctuation mismatch penalties rarely fire in actual usage
+
+**Sort Order Behavior**:
+- Results are NOT currently sorted by the scoring functions
+- **Impact**: Output order is not deterministic and may vary between runs
+- **Expected Contract**: Future implementation should sort by (id_a, id_b asc; score desc)
+
+**Input Validation Limitations**:
+- `None` inputs to `compute_score_components` cause `AttributeError` crashes
+- **Impact**: System is not resilient to None inputs from upstream processing
+- **Recommendation**: Add input validation or handle gracefully
+
+**Configuration Handling**:
+- Config sections set to `None` cause `AttributeError` when accessing nested properties
+- **Impact**: Invalid config structures crash the system rather than falling back to defaults
+- **Recommendation**: Add defensive config parsing
+
+### Usage Guidelines
+
+When working with similarity scoring:
+1. **Gate Cutoff**: Understand it filters on `token_set_ratio`, not final scores
+2. **Punctuation**: Don't rely on punctuation penalties in production flows
+3. **Sorting**: Don't assume results are sorted - implement sorting if needed
+4. **Input Validation**: Ensure inputs are not None before calling scoring functions
+5. **Config Validation**: Ensure config structures are valid dictionaries, not None
+
+---
+
 ## Compliance Checklist
 - [ ] Centralized sort mapping, no per-function maps  
 - [ ] No hardcoded defaults (all from config)  

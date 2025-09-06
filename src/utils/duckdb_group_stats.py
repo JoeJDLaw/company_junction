@@ -76,7 +76,8 @@ class DuckDBGroupStatsEngine:
             self.memoization_enabled = memo_config.get("enable", True)
             self.cache_ttl_hours = memo_config.get("cache_ttl_hours", 24)
             self.min_cache_hit_percentage = memo_config.get(
-                "min_cache_hit_percentage", 30,
+                "min_cache_hit_percentage",
+                30,
             )
 
         # Initialize DuckDB connection
@@ -300,7 +301,10 @@ class DuckDBGroupStatsEngine:
         return group_stats_df, metadata
 
     def write_optimized_parquet(
-        self, df: pd.DataFrame, output_path: str, target_size_mb: Optional[float] = None,
+        self,
+        df: pd.DataFrame,
+        output_path: str,
+        target_size_mb: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Write DataFrame to optimized Parquet using DuckDB.
 
@@ -381,7 +385,8 @@ class DuckDBGroupStatsEngine:
 
 
 def create_duckdb_group_stats_engine(
-    settings: Dict[str, Any], run_id: str,
+    settings: Dict[str, Any],
+    run_id: str,
 ) -> DuckDBGroupStatsEngine:
     """Factory function to create DuckDB group stats engine."""
     return DuckDBGroupStatsEngine(settings, run_id)

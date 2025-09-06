@@ -72,11 +72,13 @@ def get_ui_perf(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
         "force_pyarrow": ui_perf.get("force_pyarrow", env_force_pyarrow),
         "force_duckdb": ui_perf.get("force_duckdb", env_force_duckdb),
         "groups": {
-            "use_stats_parquet": True, "duckdb_prefer_over_pyarrow": False,
+            "use_stats_parquet": True,
+            "duckdb_prefer_over_pyarrow": False,
             **ui_perf.get("groups", {}),
         },
         "details": {
-            "use_details_parquet": True, "allow_pyarrow_fallback": False,
+            "use_details_parquet": True,
+            "allow_pyarrow_fallback": False,
             **ui_perf.get("details", {}),
         },
     }

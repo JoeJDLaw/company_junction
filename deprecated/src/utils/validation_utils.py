@@ -1,5 +1,4 @@
-"""Validation utilities for the company junction pipeline.
-"""
+"""Validation utilities for the company junction pipeline."""
 
 import logging
 from typing import List

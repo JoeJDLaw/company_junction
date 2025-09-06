@@ -22,7 +22,9 @@ if PROMETHEUS_AVAILABLE:
         )
 
         details_req = Counter(
-            "details_page_requests_total", "Details page requests", ["backend", "ok"],
+            "details_page_requests_total",
+            "Details page requests",
+            ["backend", "ok"],
         )
 
         # Latency histograms
@@ -42,12 +44,16 @@ if PROMETHEUS_AVAILABLE:
 
         # Backend choice tracking
         backend_choice = Counter(
-            "backend_choice_total", "Backend choice decisions", ["reason", "backend"],
+            "backend_choice_total",
+            "Backend choice decisions",
+            ["reason", "backend"],
         )
 
         # Error tracking
         timeouts = Counter(
-            "timeouts_total", "Timeout occurrences", ["backend", "where"],
+            "timeouts_total",
+            "Timeout occurrences",
+            ["backend", "where"],
         )
 
         # Configuration tracking
@@ -55,7 +61,8 @@ if PROMETHEUS_AVAILABLE:
 
         # Active connections gauge
         active_connections = Gauge(
-            "duckdb_active_connections", "Number of active DuckDB connections",
+            "duckdb_active_connections",
+            "Number of active DuckDB connections",
         )
 
         logger.info("Prometheus metrics initialized successfully")
@@ -74,7 +81,10 @@ else:
 
 
 def record_groups_request(
-    backend: str, source: str, success: bool, duration: float,
+    backend: str,
+    source: str,
+    success: bool,
+    duration: float,
 ) -> None:
     """Record a groups page request."""
     if not PROMETHEUS_AVAILABLE or groups_req is None:

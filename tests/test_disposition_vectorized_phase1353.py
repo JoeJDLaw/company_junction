@@ -195,7 +195,9 @@ def test_feature_flag_rollback():
 
     # Both should produce identical results
     pd.testing.assert_series_equal(
-        result_disabled["disposition"], result_enabled["disposition"], check_names=False,
+        result_disabled["disposition"],
+        result_enabled["disposition"],
+        check_names=False,
     )
 
 

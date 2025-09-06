@@ -64,7 +64,11 @@ def pair_scores(
     try:
         # Generate candidate pairs using soft-ban strategy
         pairs = generate_candidate_pairs_soft_ban(
-            df_norm, enable_progress, parallel_executor, interim_dir, settings,
+            df_norm,
+            enable_progress,
+            parallel_executor,
+            interim_dir,
+            settings,
         )
 
         if not pairs:
@@ -83,7 +87,11 @@ def pair_scores(
         else:
             logger.info("Using parallel scoring")
             scores = score_pairs_parallel(
-                df_norm, pairs, settings, enable_progress, parallel_executor,
+                df_norm,
+                pairs,
+                settings,
+                enable_progress,
+                parallel_executor,
             )
 
         if not scores:
@@ -99,7 +107,8 @@ def pair_scores(
 
         # Sort explicitly: id_a, id_b ascending, score descending
         pairs_df = pairs_df.sort_values(
-            ["id_a", "id_b", "score"], ascending=[True, True, False],
+            ["id_a", "id_b", "score"],
+            ascending=[True, True, False],
         )
 
         # Ensure string types for consistency

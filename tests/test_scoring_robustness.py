@@ -287,7 +287,8 @@ class TestScoringRobustness:
         # Current implementation crashes on None inputs
         # This documents the current behavior - None inputs cause AttributeError
         with pytest.raises(
-            AttributeError, match="'NoneType' object has no attribute 'split'",
+            AttributeError,
+            match="'NoneType' object has no attribute 'split'",
         ):
             compute_score_components(
                 name_a,  # type: ignore[arg-type]

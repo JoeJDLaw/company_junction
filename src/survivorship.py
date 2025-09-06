@@ -36,7 +36,10 @@ def select_primary_records(
     if not settings.get("survivorship", {}).get("optimized", True):
         logger.info("Selecting primary records for each group (original)")
         return _select_primary_records_original(
-            df_groups, relationship_ranks, settings, enable_progress,
+            df_groups,
+            relationship_ranks,
+            settings,
+            enable_progress,
         )
 
     # Enable profiling if requested
@@ -58,12 +61,18 @@ def select_primary_records(
     if use_vectorized:
         logger.info("Selecting primary records for each group (vectorized)")
         result = _select_primary_records_vectorized(
-            df_groups, relationship_ranks, settings, enable_progress,
+            df_groups,
+            relationship_ranks,
+            settings,
+            enable_progress,
         )
     else:
         logger.info("Selecting primary records for each group (optimized)")
         result = _select_primary_records_optimized(
-            df_groups, relationship_ranks, settings, enable_progress,
+            df_groups,
+            relationship_ranks,
+            settings,
+            enable_progress,
         )
 
     # Stop profiling and save report if enabled
@@ -166,7 +175,9 @@ def _select_primary_records_optimized(
         group_data = df.loc[group_mask]
 
         primary_idx = _select_primary_from_group(
-            group_data, relationship_ranks, settings,
+            group_data,
+            relationship_ranks,
+            settings,
         )
 
         df.loc[group_mask, "is_primary"] = False
@@ -220,7 +231,8 @@ def _select_primary_records_vectorized(
 
     # Get tie-breakers
     tie_breakers = settings.get("survivorship", {}).get(
-        "tie_breakers", ["created_date", "account_id"],
+        "tie_breakers",
+        ["created_date", "account_id"],
     )
 
     # Build sort columns
@@ -259,8 +271,7 @@ def _select_primary_records_original(
     settings: Dict[str, Any],
     enable_progress: bool = False,
 ) -> pd.DataFrame:
-    """Original primary selection logic (fallback when optimization is disabled).
-    """
+    """Original primary selection logic (fallback when optimization is disabled)."""
     logger.info("Selecting primary records for each group (original)")
 
     result_df = df_groups.copy()
@@ -303,7 +314,9 @@ def _select_primary_records_original(
 
         # Select primary for multi-record group
         primary_idx = _select_primary_from_group(
-            group_data, relationship_ranks, settings,
+            group_data,
+            relationship_ranks,
+            settings,
         )
 
         # Update primary flag
@@ -337,7 +350,8 @@ def _select_primary_from_group(
     for _, record in group_data.iterrows():
         relationship = record.get("Relationship", "Other/Miscellaneous")
         rank = relationship_ranks.get(
-            relationship, 60,
+            relationship,
+            60,
         )  # Default rank for unknown relationships
         relationship_ranks_list.append(rank)
 
@@ -346,7 +360,8 @@ def _select_primary_from_group(
 
     # Sort by primary criteria
     tie_breakers = settings.get("survivorship", {}).get(
-        "tie_breakers", ["created_date", "account_id"],
+        "tie_breakers",
+        ["created_date", "account_id"],
     )
 
     # Start with relationship rank (lower is better)
@@ -414,14 +429,18 @@ def generate_merge_preview(
     if generate_by_group:
         # Generate per-group previews (more efficient for large datasets)
         return _generate_merge_preview_by_group(
-            df_groups, available_fields, skip_clean_groups, preview_output,
+            df_groups,
+            available_fields,
+            skip_clean_groups,
+            preview_output,
         )
     # Original row-by-row preview generation
     return _generate_merge_preview_original(df_groups, available_fields)
 
 
 def _generate_merge_preview_original(
-    df_groups: pd.DataFrame, available_fields: List[str],
+    df_groups: pd.DataFrame,
+    available_fields: List[str],
 ) -> pd.DataFrame:
     """Original row-by-row merge preview generation.
 
@@ -453,7 +472,8 @@ def _generate_merge_preview_original(
 
         # Add merge preview to all records in the group
         result_df.loc[group_data.index, "merge_preview_json"] = json.dumps(
-            merge_preview, indent=2,
+            merge_preview,
+            indent=2,
         )
 
     return result_df
@@ -532,7 +552,8 @@ def _generate_merge_preview_by_group(
 
                 if len(group_data) > 1:
                     merge_preview = _generate_group_merge_preview(
-                        group_data, available_fields,
+                        group_data,
+                        available_fields,
                     )
                     preview_json = json_dumps(merge_preview)
 
@@ -566,7 +587,8 @@ def _generate_merge_preview_by_group(
 
 
 def _generate_group_merge_preview(
-    group_data: pd.DataFrame, fields: List[str],
+    group_data: pd.DataFrame,
+    fields: List[str],
 ) -> Dict[str, Any]:
     """Generate merge preview for a specific group.
 

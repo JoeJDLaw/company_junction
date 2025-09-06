@@ -444,7 +444,8 @@ class TestLegacyColumnHandling:
         )
 
     def test_duckdb_handles_missing_legacy_columns(
-        self, sample_data_without_legacy_columns,
+        self,
+        sample_data_without_legacy_columns,
     ):
         """Test that DuckDB backend handles missing legacy columns gracefully."""
         with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp_file:
@@ -477,7 +478,8 @@ class TestLegacyColumnHandling:
                 os.unlink(tmp_file.name)
 
     def test_pyarrow_handles_missing_legacy_columns(
-        self, sample_data_without_legacy_columns,
+        self,
+        sample_data_without_legacy_columns,
     ):
         """Test that PyArrow backend handles missing legacy columns gracefully."""
         with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp_file:
@@ -498,7 +500,8 @@ class TestLegacyColumnHandling:
                 os.unlink(tmp_file.name)
 
     def test_duckdb_handles_present_legacy_columns(
-        self, sample_data_with_legacy_columns,
+        self,
+        sample_data_with_legacy_columns,
     ):
         """Test that DuckDB backend works with present legacy columns."""
         with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp_file:
@@ -533,7 +536,8 @@ class TestLegacyColumnHandling:
                 os.unlink(tmp_file.name)
 
     def test_pyarrow_handles_present_legacy_columns(
-        self, sample_data_with_legacy_columns,
+        self,
+        sample_data_with_legacy_columns,
     ):
         """Test that PyArrow backend works with present legacy columns."""
         with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp_file:
@@ -546,7 +550,8 @@ class TestLegacyColumnHandling:
                 # Test filtering by min_edge_strength (should work with legacy columns)
                 filtered = table.filter(
                     pa.compute.greater_equal(
-                        table["weakest_edge_to_primary"], pa.scalar(0.8),
+                        table["weakest_edge_to_primary"],
+                        pa.scalar(0.8),
                     ),
                 )
                 assert filtered.num_rows == 3
@@ -561,7 +566,8 @@ class TestLegacyColumnHandling:
                 os.unlink(tmp_file.name)
 
     def test_conditional_filtering_skips_missing_columns(
-        self, sample_data_without_legacy_columns,
+        self,
+        sample_data_without_legacy_columns,
     ):
         """Test that conditional filtering silently skips missing columns."""
         with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp_file:
@@ -586,7 +592,8 @@ class TestLegacyColumnHandling:
                 os.unlink(tmp_file.name)
 
     def test_conditional_filtering_works_with_present_columns(
-        self, sample_data_with_legacy_columns,
+        self,
+        sample_data_with_legacy_columns,
     ):
         """Test that conditional filtering works when columns are present."""
         with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp_file:

@@ -1,5 +1,4 @@
-"""Test alias matching functionality.
-"""
+"""Test alias matching functionality."""
 
 import pandas as pd
 
@@ -68,7 +67,8 @@ class TestAliasMatching:
         ]
         self.df_norm = ensure_required_columns(self.df_norm, required_columns)
         self.df_groups = ensure_required_columns(
-            self.df_groups, ["group_id", "account_id"],
+            self.df_groups,
+            ["group_id", "account_id"],
         )
 
         self.settings = {

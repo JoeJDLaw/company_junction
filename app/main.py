@@ -182,19 +182,25 @@ def main() -> None:
     # Disposition filter
     dispositions = ["Keep", "Update", "Delete", "Verify"]
     selected_dispositions = st.sidebar.multiselect(
-        "Disposition", dispositions, default=dispositions,
+        "Disposition",
+        dispositions,
+        default=dispositions,
     )
 
     # Group size filter (currently affects Export only)
     min_group_size = st.sidebar.number_input(
-        "Min Group Size (Export only)", min_value=1, value=1, step=1,
+        "Min Group Size (Export only)",
+        min_value=1,
+        value=1,
+        step=1,
     )
 
     # (Similarity is controlled in controls.py; no shadow control here)
 
     # Additional filters
     show_suffix_mismatch = st.sidebar.checkbox(
-        "Show Suffix Mismatch Only (Export only)", value=False,
+        "Show Suffix Mismatch Only (Export only)",
+        value=False,
     )
     has_aliases = st.sidebar.checkbox("Has Aliases Only (Export only)", value=False)
 
@@ -252,7 +258,9 @@ def main() -> None:
         default_index = 0  # First other run
 
     selected_run_display = st.sidebar.selectbox(
-        "Select Run", run_options, index=default_index,
+        "Select Run",
+        run_options,
+        index=default_index,
     )
 
     # Find selected run ID
@@ -352,7 +360,9 @@ def main() -> None:
 
     # Render controls first to get similarity_threshold
     filters, sort_by, page, page_size, similarity_threshold = render_controls(
-        selected_run_id, settings, filters,
+        selected_run_id,
+        settings,
+        filters,
     )
 
     # Render maintenance in sidebar

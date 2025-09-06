@@ -18,7 +18,8 @@ class TestMiniDAGStateTransitions:
 
             # Create a MiniDAG instance with correct parameters
             mini_dag = MiniDAG(
-                state_file=temp_path / "mini_dag_state.json", run_id="test_run_123",
+                state_file=temp_path / "mini_dag_state.json",
+                run_id="test_run_123",
             )
 
             # Register stages
@@ -58,7 +59,8 @@ class TestMiniDAGStateTransitions:
             temp_path = Path(temp_dir)
 
             mini_dag = MiniDAG(
-                state_file=temp_path / "mini_dag_state.json", run_id="test_run_456",
+                state_file=temp_path / "mini_dag_state.json",
+                run_id="test_run_456",
             )
 
             # Register stages
@@ -99,7 +101,8 @@ class TestMiniDAGStateTransitions:
             temp_path = Path(temp_dir)
 
             mini_dag = MiniDAG(
-                state_file=temp_path / "mini_dag_state.json", run_id="test_run_999",
+                state_file=temp_path / "mini_dag_state.json",
+                run_id="test_run_999",
             )
 
             # Valid stage registration should work

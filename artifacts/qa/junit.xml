@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="2.429" timestamp="2025-09-05T17:00:01.203390-07:00" hostname="Joe-Juneau-L218"><testcase classname="tests.contracts.test_parquet_contracts.TestParquetContracts" name="test_required_columns_exist" time="0.001"><failure message="KeyError: 'actual_columns'">self = &lt;tests.contracts.test_parquet_contracts.TestParquetContracts object at 0x104d65d00&gt;
+artifact_paths = {'group_details_parquet': '/path/to/group_details.parquet', 'group_stats_parquet': '/path/to/group_stats.parquet', 'review_ready_parquet': '/path/to/review_ready.parquet'}
+
+    def test_required_columns_exist(self, artifact_paths):
+        """Test that all required columns exist in parquet files."""
+        for parquet_type, required in REQUIRED_COLUMNS.items():
+            if parquet_type in artifact_paths:
+                file_path = artifact_paths[parquet_type]
+                result = validate_parquet_schema(file_path, parquet_type)
+    
+                assert result["valid"], (
+                    f"{parquet_type} schema validation failed: {result['error']}\n"
+                    f"Required: {required}\n"
+&gt;                   f"Actual: {result['actual_columns']}\n"
+                               ^^^^^^^^^^^^^^^^^^^^^^^^
+                    f"Missing: {result['missing_columns']}"
+                )
+E               KeyError: 'actual_columns'
+
+tests/contracts/test_parquet_contracts.py:145: KeyError</failure></testcase></testsuite></testsuites>

@@ -1,5 +1,4 @@
-"""Tests for the latest similarity improvements: lowercasing, safety rails, and bigram prepass.
-"""
+"""Tests for the latest similarity improvements: lowercasing, safety rails, and bigram prepass."""
 
 import sys
 from pathlib import Path

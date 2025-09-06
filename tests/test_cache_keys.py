@@ -1,5 +1,4 @@
-"""Tests for cache key functionality in cache_keys.py.
-"""
+"""Tests for cache key functionality in cache_keys.py."""
 
 import os
 import tempfile
@@ -269,7 +268,9 @@ class TestBuildDetailsCacheKey:
     def test_build_details_cache_key_basic(self):
         """Test build_details_cache_key with basic parameters."""
         result = build_details_cache_key(
-            run_id="test_run", group_id="group1", backend="duckdb",
+            run_id="test_run",
+            group_id="group1",
+            backend="duckdb",
         )
 
         # Should return MD5 hash (32 hex chars)
@@ -446,11 +447,19 @@ def test_deterministic_pagination() -> None:
 
                 # Get page 1
                 page1_data, total1 = get_groups_page(
-                    "test_run", "Group Size (Asc)", 1, page_size, {},
+                    "test_run",
+                    "Group Size (Asc)",
+                    1,
+                    page_size,
+                    {},
                 )
                 # Get page 2
                 page2_data, total2 = get_groups_page(
-                    "test_run", "Group Size (Asc)", 2, page_size, {},
+                    "test_run",
+                    "Group Size (Asc)",
+                    2,
+                    page_size,
+                    {},
                 )
 
                 # Verify total count
@@ -470,7 +479,11 @@ def test_deterministic_pagination() -> None:
 
                 # Verify stable ordering when re-fetching same page
                 page1_data_again, _ = get_groups_page(
-                    "test_run", "Group Size (Asc)", 1, page_size, {},
+                    "test_run",
+                    "Group Size (Asc)",
+                    1,
+                    page_size,
+                    {},
                 )
                 assert page1_data == page1_data_again, "Page 1 results should be stable"
 
@@ -714,7 +727,13 @@ def test_pyarrow_details_group_id_filtering() -> None:
 
         # Test PyArrow path with group_id filtering
         result, total = _get_group_details_pyarrow(
-            parquet_path, "g1", "account_name ASC", 1, 10, {}, mock_settings,
+            parquet_path,
+            "g1",
+            "account_name ASC",
+            1,
+            10,
+            {},
+            mock_settings,
         )
 
         # Verify results
@@ -831,7 +850,8 @@ def test_force_backend_flags_precedence() -> None:
 
     # Test both flags set - should default to DuckDB with warning
     with unittest.mock.patch.dict(
-        os.environ, {"CJ_FORCE_PYARROW": "1", "CJ_FORCE_DUCKDB": "1"},
+        os.environ,
+        {"CJ_FORCE_PYARROW": "1", "CJ_FORCE_DUCKDB": "1"},
     ):
         try:
             # This should force DuckDB backend due to precedence rule
@@ -852,12 +872,18 @@ def test_force_backend_flags_precedence_details() -> None:
 
     # Test both flags set - should default to DuckDB with warning
     with unittest.mock.patch.dict(
-        os.environ, {"CJ_FORCE_PYARROW": "1", "CJ_FORCE_DUCKDB": "1"},
+        os.environ,
+        {"CJ_FORCE_PYARROW": "1", "CJ_FORCE_DUCKDB": "1"},
     ):
         try:
             # This should force DuckDB backend due to precedence rule
             _result = get_group_details(
-                "test_run", "test_group", "account_name ASC", 1, 10, {},
+                "test_run",
+                "test_group",
+                "account_name ASC",
+                1,
+                10,
+                {},
             )
             # If we get here, DuckDB was forced (or we hit an expected error)
             print("✅ Force flag precedence working in group_details (DuckDB wins)")
@@ -915,12 +941,17 @@ def test_stats_path_threads_cap() -> None:
     mock_settings = {"ui": {"duckdb_threads": 64, "max_page_size": 250}}
 
     with unittest.mock.patch(
-        "src.utils.settings.get_settings", return_value=mock_settings,
+        "src.utils.settings.get_settings",
+        return_value=mock_settings,
     ):
         try:
             # This should cap threads to 32 in the PRAGMA
             _result = get_groups_page_from_stats_duckdb(
-                "test_run", "account_name ASC", 1, 10, {},
+                "test_run",
+                "account_name ASC",
+                1,
+                10,
+                {},
             )
             print("✅ Stats path threads cap working")
         except Exception as e:

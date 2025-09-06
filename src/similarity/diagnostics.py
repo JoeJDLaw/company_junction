@@ -1,5 +1,4 @@
-"""Diagnostics and brand suggestions functionality.
-"""
+"""Diagnostics and brand suggestions functionality."""
 
 import logging
 from typing import Any, Dict, List, Optional
@@ -14,8 +13,7 @@ def write_blocking_diagnostics(
     brand_suggestions: List[Dict[str, Any]],
     interim_dir: Optional[str] = None,
 ) -> None:
-    """Write blocking diagnostics to CSV/Parquet files.
-    """
+    """Write blocking diagnostics to CSV/Parquet files."""
     try:
         import os
 
@@ -43,7 +41,9 @@ def write_blocking_diagnostics(
 
 
 def generate_brand_suggestions(
-    block_stats: List[Dict[str, Any]], groups_df: pd.DataFrame, settings: Dict[str, Any],
+    block_stats: List[Dict[str, Any]],
+    groups_df: pd.DataFrame,
+    settings: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     """Generate brand suggestions based on block statistics and group analysis.
 
@@ -93,7 +93,8 @@ def generate_brand_suggestions(
             # Mock calculation: assume tokens with high frequency tend to have more singletons
             # In a real implementation, you'd map tokens back to their records and calculate actual singleton rates
             singleton_rate = min(
-                1.0, count / 100.0,
+                1.0,
+                count / 100.0,
             )  # Mock: higher count = higher singleton rate
         else:
             singleton_rate = 0.0
@@ -116,7 +117,8 @@ def generate_brand_suggestions(
             # Calculate suggestion confidence
             count_score = min(1.0, count / 50.0)  # Normalize count to [0,1]
             singleton_score = max(
-                0.0, (singleton_rate - 0.5) / 0.5,
+                0.0,
+                (singleton_rate - 0.5) / 0.5,
             )  # Normalize singleton rate
             confidence = 0.5 * count_score + 0.5 * singleton_score
             confidence = max(0.0, min(1.0, confidence))  # Clamp to [0,1]

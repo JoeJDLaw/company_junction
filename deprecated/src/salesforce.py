@@ -33,7 +33,10 @@ class SalesforceCLI:
         """Check if Salesforce CLI is installed and accessible."""
         try:
             result = subprocess.run(
-                ["sf", "--version"], capture_output=True, text=True, check=True,
+                ["sf", "--version"],
+                capture_output=True,
+                text=True,
+                check=True,
             )
             logger.info(f"Salesforce CLI version: {result.stdout.strip()}")
         except (subprocess.CalledProcessError, FileNotFoundError):
@@ -73,7 +76,10 @@ class SalesforceCLI:
         return self._run_command(command)
 
     def update_record(
-        self, object_type: str, record_id: str, fields: Dict[str, Any],
+        self,
+        object_type: str,
+        record_id: str,
+        fields: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Update a single Salesforce record.
 
@@ -118,7 +124,9 @@ class SalesforceCLI:
         return {"success": True, "message": "Delete operation simulated"}
 
     def batch_update(
-        self, object_type: str, records: List[Dict[str, Any]],
+        self,
+        object_type: str,
+        records: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """Perform batch update of multiple records.
 
@@ -140,7 +148,9 @@ class SalesforceCLI:
 
 
 def sync_cleaned_data_to_salesforce(
-    cleaned_df: pd.DataFrame, object_type: str, org_alias: Optional[str] = None,
+    cleaned_df: pd.DataFrame,
+    object_type: str,
+    org_alias: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Sync cleaned and merged data back to Salesforce.
 

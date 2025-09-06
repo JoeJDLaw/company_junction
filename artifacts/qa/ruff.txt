@@ -1,0 +1,4299 @@
+E501 Line too long (139 > 100)
+   --> app/components/controls.py:103:101
+    |
+101 | …
+102 | …
+103 | …res above this threshold. 100% = exact duplicates, 0% = completely different names.",
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+104 | …,
+105 | …
+    |
+
+E501 Line too long (134 > 100)
+  --> app/components/export.py:19:100
+   |
+17 | …
+18 | …
+19 | … only groups with edge strength ≥ {similarity_threshold}% (same as current view)",
+   |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+20 | …
+21 | …
+   |
+
+E501 Line too long (136 > 100)
+   --> app/components/group_details.py:190:101
+    |
+188 | …}")
+189 | …
+190 | …p_id`, `account_id`, `account_name`, `suffix_class`, `created_date`, `disposition`",
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+191 | …
+192 | …
+    |
+
+E501 Line too long (106 > 100)
+  --> app/components/group_list.py:42:101
+   |
+40 |     # Get backend state
+41 |     backend_state = get_backend_state(st.session_state)
+42 |     # backend = backend_state.groups.get(selected_run_id, "pyarrow")  # Not used in current implementation
+   |                                                                                                     ^^^^^^
+43 |
+44 |     # Get total groups count
+   |
+
+E501 Line too long (118 > 100)
+  --> app/components/group_list.py:95:100
+   |
+94 |         st.info(
+95 |             "💡 **Tip:** For large datasets, try reducing the page size or applying filters to reduce the data load.",
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^
+96 |         )
+97 |         return [], 0, 1
+   |
+
+E501 Line too long (101 > 100)
+   --> app/components/group_list.py:147:100
+    |
+145 |             active_threshold = int(filters.get("min_edge_strength", 0) or 0)
+146 |             st.success(
+147 |                 f"⚡ **Fast stats mode**: Using pre-computed group statistics for instant loading · "
+    |                                                                                                     ^
+148 |                 f"Similarity ≥ {active_threshold:.0f}%",
+149 |                 icon="⚡",
+    |
+
+E501 Line too long (130 > 100)
+   --> app/components/group_list.py:237:101
+    |
+235 |             # Add dynamic font scaling for the primary name inside the expander
+236 |             st.markdown(
+237 |                 f"<div style='font-size:{font_size:.1f}rem; font-weight:700; margin-bottom:0.5rem;'>{primary_name_display}</div>",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+238 |                 unsafe_allow_html=True,
+239 |             )
+    |
+
+E501 Line too long (155 > 100)
+  --> app/components/maintenance.py:29:101
+   |
+28 | …
+29 | …want to ensure fresh results. Clears cached group lists and details for the current run only."
+   |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+30 | … behaves unexpectedly. Resets all UI state and forces a fresh start."
+31 | …
+   |
+
+E501 Line too long (130 > 100)
+  --> app/components/maintenance.py:30:101
+   |
+28 | …
+29 | …ale data or want to ensure fresh results. Clears cached group lists and details for the current run only."
+30 | …ems stuck or behaves unexpectedly. Resets all UI state and forces a fresh start."
+   |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+31 | …
+32 | …ng runs are excluded for safety."
+   |
+
+E501 Line too long (107 > 100)
+   --> app/main.py:294:102
+    |
+292 |     if selected_run is not None and selected_run["status"] != "complete":
+293 |         st.warning(
+294 |             f"⚠️ Run {selected_run_id} has status: {selected_run['status'] if selected_run else 'unknown'}",
+    |                                                                                                     ^^^^^^^
+295 |         )
+296 |         return
+    |
+
+E501 Line too long (110 > 100)
+   --> app/main.py:374:101
+    |
+372 |         else:
+373 |             warn_once(
+374 |                 "Similarity export filter skipped: 'weakest_edge_to_primary' column not present in this run.",
+    |                                                                                                     ^^^^^^^^^^
+375 |             )
+    |
+
+E501 Line too long (102 > 100)
+  --> deprecated/src/controls_simplified.py:93:101
+   |
+91 |         step=5.0,
+92 |         format="%.0f%%",
+93 |         help="Minimum edge strength for displaying groups. Higher values show only stronger matches.",
+   |                                                                                                     ^^
+94 |     )
+   |
+
+E501 Line too long (122 > 100)
+  --> scripts/benchmark_comparison.py:36:101
+   |
+35 |     # Run pipeline and capture output
+36 |     cmd = f"python -m src.cleaning --input {input_file} --outdir {outdir} --config {config} --run-id {run_id} --workers 4"
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^
+37 |     result = os.system(cmd)
+   |
+
+E501 Line too long (135 > 100)
+  --> scripts/benchmark_comparison.py:68:101
+   |
+67 |     # Run the full pipeline to generate group_stats artifacts
+68 |     cmd = f"python -m src.cleaning --input {input_file} --outdir data/interim/{run_id} --config config/settings.yaml --run-id {run_id}"
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+69 |     result = subprocess.run(cmd, check=False, shell=True, env=env, capture_output=True, text=True)
+   |
+
+W291 Trailing whitespace
+   --> scripts/benchmark_comparison.py:196:52
+    |
+194 |     benchmark_content = f"""# Phase 1.35.4 Benchmark Report
+195 |
+196 | **Generated**: {time.strftime("%Y-%m-%d %H:%M:%S")}  
+    |                                                    ^^
+197 | **Dataset Size**: {dataset_size} ({len(run_times)} runs)  
+198 | **Backend**: DuckDB  
+    |
+help: Remove trailing whitespace
+
+W291 Trailing whitespace
+   --> scripts/benchmark_comparison.py:197:57
+    |
+196 | **Generated**: {time.strftime("%Y-%m-%d %H:%M:%S")}  
+197 | **Dataset Size**: {dataset_size} ({len(run_times)} runs)  
+    |                                                         ^^
+198 | **Backend**: DuckDB  
+199 | **Run ID**: {run_id}
+    |
+help: Remove trailing whitespace
+
+W291 Trailing whitespace
+   --> scripts/benchmark_comparison.py:198:20
+    |
+196 | **Generated**: {time.strftime("%Y-%m-%d %H:%M:%S")}  
+197 | **Dataset Size**: {dataset_size} ({len(run_times)} runs)  
+198 | **Backend**: DuckDB  
+    |                    ^^
+199 | **Run ID**: {run_id}
+    |
+help: Remove trailing whitespace
+
+E501 Line too long (104 > 100)
+   --> scripts/benchmark_comparison.py:222:101
+    |
+221 | - **Cache Hit**: Run 1 (cold), Run 2+ (warm)
+222 | - **Speedup**: {((run_times[0] - median_time) / run_times[0] * 100):.1f}% improvement on subsequent runs
+    |                                                                                                     ^^^^
+223 | """
+    |
+
+E501 Line too long (132 > 100)
+  --> scripts/check_alias_results.py:47:101
+   |
+45 |             expected_cols = ["alias_text", "match_group_id"]
+46 |         else:
+47 |             # Full schema: ['record_id', 'alias_text', 'alias_source', 'match_record_id', 'match_group_id', 'score', 'suffix_match']
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+48 |             logger.info("Using full schema (all columns)")
+49 |             expected_cols = [
+   |
+
+E501 Line too long (101 > 100)
+ --> scripts/inspect_blocking.py:2:101
+  |
+1 | #!/usr/bin/env python3
+2 | """Blocking Inspector CLI - Quick utility to inspect blocking behavior and suggest allowlist updates.
+  |                                                                                                     ^
+3 |
+4 | Usage:
+  |
+
+E501 Line too long (135 > 100)
+  --> scripts/inspect_blocking.py:95:101
+   |
+93 |         if token not in current_allowlist and len(token) > 1:  # Skip single characters
+94 |             print(
+95 |                 f"  {token}: {row['count']} records, {row['singleton_rate']:.1%} singleton rate, score: {row['suggestion_score']:.1f}",
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+96 |             )
+   |
+
+E501 Line too long (126 > 100)
+   --> scripts/inspect_blocking.py:123:101
+    |
+121 |         confidence = row.get("suggestion_confidence", 0.0)
+122 |         print(
+123 |             f"  {row['token']}: {row['count']} records, {row['pct_singletons']:.1%} singletons, confidence: {confidence:.2f}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+124 |         )
+    |
+
+E501 Line too long (111 > 100)
+   --> scripts/run_modes_benchmark.py:456:100
+    |
+454 |         print(f"Success Rate: {summary.get('success_rate', 0):.1%}")
+455 |         print(
+456 |             f"Parity Validation: {'✅ PASS' if summary.get('parity_validation_passed', False) else '❌ FAIL'}",
+    |                                                                                                     ^^^^^^^^^^^
+457 |         )
+458 |         print(
+    |
+
+E501 Line too long (109 > 100)
+   --> scripts/run_modes_benchmark.py:459:99
+    |
+457 |         )
+458 |         print(
+459 |             f"Benchmark Sanity: {'✅ PASS' if summary.get('benchmark_sanity_passed', False) else '❌ FAIL'}",
+    |                                                                                                     ^^^^^^^^^
+460 |         )
+    |
+
+E501 Line too long (104 > 100)
+ --> scripts/score_pair.py:6:101
+  |
+4 | Usage:
+5 |     python scripts/score_pair.py "99 Cents Only Stores LLC" "99 Cents Store Inc"
+6 |     python scripts/score_pair.py "7-Eleven Store #123" "7 Eleven Inc" --suffix-a "NONE" --suffix-b "INC"
+  |                                                                                                     ^^^^
+7 | """
+  |
+
+E501 Line too long (103 > 100)
+   --> scripts/score_pair.py:128:101
+    |
+126 |     base = 0.45 * ratio_name + 0.35 * ratio_set + 20.0 * jaccard
+127 |     print(
+128 |         f"   Base score: 0.45 × {ratio_name} + 0.35 × {ratio_set} + 20.0 × {jaccard:.3f} = {base:.1f}",
+    |                                                                                                     ^^^
+129 |     )
+    |
+
+E501 Line too long (106 > 100)
+   --> src/alias_matching.py:238:101
+    |
+236 |             if debug:
+237 |                 logger.info(
+238 |                     f"[DEBUG]   Match: {candidate_name} (score={score}, idx={mapped_idx}→{original_idx})",
+    |                                                                                                     ^^^^^^
+239 |                 )
+240 |                 logger.info(
+    |
+
+E501 Line too long (126 > 100)
+   --> src/alias_matching.py:241:101
+    |
+239 |                 )
+240 |                 logger.info(
+241 |                     f"[DEBUG]   Index mapping: result_idx={result_idx}, mapped_idx={mapped_idx}, original_idx={original_idx}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+242 |                 )
+243 |                 logger.info(
+    |
+
+E501 Line too long (106 > 100)
+   --> src/alias_matching.py:426:101
+    |
+424 |             ):
+425 |                 logger.info(
+426 |                     f"Using ParallelExecutor for alias matching with {parallel_executor.workers} workers",
+    |                                                                                                     ^^^^^^
+427 |                 )
+    |
+
+E501 Line too long (101 > 100)
+   --> src/cleaning.py:508:101
+    |
+506 |     if no_resume:
+507 |         logger.info(
+508 |             "Auto-resume decision: --no-resume specified - forcing full run | reason=NO_RESUME_FLAG",
+    |                                                                                                     ^
+509 |         )
+510 |         resume_from = None
+    |
+
+E501 Line too long (165 > 100)
+   --> src/cleaning.py:522:101
+    |
+520 | …
+521 | …
+522 | …om}' | last_completed='{dag.get_last_completed_stage()}' | input_hash=PASS | reason=SMART_DETECT",
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+523 | …
+524 | …
+    |
+
+E501 Line too long (130 > 100)
+   --> src/cleaning.py:526:101
+    |
+524 |             else:
+525 |                 logger.info(
+526 |                     "Auto-resume decision: input_hash=FAIL - forcing full run due to input/config changes | reason=HASH_MISMATCH",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+527 |                 )
+528 |                 resume_from = None
+    |
+
+E501 Line too long (104 > 100)
+   --> src/cleaning.py:531:101
+    |
+529 |         else:
+530 |             logger.info(
+531 |                 "Auto-resume decision: no previous run found - starting fresh | reason=NO_PREVIOUS_RUN",
+    |                                                                                                     ^^^^
+532 |             )
+533 |             resume_from = None
+    |
+
+E501 Line too long (122 > 100)
+   --> src/cleaning.py:542:101
+    |
+540 |             if force:  # Use force flag instead of enable_progress
+541 |                 logger.warning(
+542 |                     "Input hash mismatch detected but --force specified - proceeding with resume | reason=FORCE_OVERRIDE",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^
+543 |                 )
+544 |             else:
+    |
+
+E501 Line too long (137 > 100)
+   --> src/cleaning.py:546:101
+    |
+544 | …
+545 | …
+546 | …e --force to override or run without --resume-from | reason=HASH_MISMATCH_NO_FORCE",
+    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+547 | …
+548 | …
+    |
+
+E501 Line too long (114 > 100)
+   --> src/cleaning.py:551:101
+    |
+549 |         else:
+550 |             logger.info(
+551 |                 f"Manual resume decision: resume_from='{resume_from}' | input_hash=PASS | reason=MANUAL_OVERRIDE",
+    |                                                                                                     ^^^^^^^^^^^^^^
+552 |             )
+    |
+
+E501 Line too long (105 > 100)
+   --> src/cleaning.py:555:101
+    |
+554 |     # Update state metadata with current run
+555 |     cmdline = f"python src/cleaning.py --input {input_path} --outdir {output_dir} --config {config_path}"
+    |                                                                                                     ^^^^^
+556 |     dag._update_state_metadata(Path(input_path), Path(config_path), cmdline)
+    |
+
+E501 Line too long (107 > 100)
+   --> src/cleaning.py:711:101
+    |
+709 |         if len(df) < initial_count:
+710 |             logger.warning(
+711 |                 f"Removed {initial_count - len(df)} duplicate {ACCOUNT_ID} records after canonicalization",
+    |                                                                                                     ^^^^^^^
+712 |             )
+    |
+
+E501 Line too long (126 > 100)
+   --> src/cleaning.py:819:101
+    |
+817 |                     )
+818 |                     logger.info(
+819 |                         f"filtering | existing_file_present | fallback_path={filtered_out_path} | reason=no_overwrite_policy",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+820 |                     )
+    |
+
+E501 Line too long (138 > 100)
+   --> src/cleaning.py:824:101
+    |
+822 | …     filtered_out_df.to_parquet(filtered_out_path, index=False)
+823 | …     logger.info(
+824 | …         f"filtering | written=accounts_filtered_out.parquet | records={len(filtered_out_records)} | path={filtered_out_path}",
+    |                                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+825 | …     )
+    |
+
+E501 Line too long (118 > 100)
+   --> src/cleaning.py:897:101
+    |
+895 |                 df_norm.to_parquet(unique_path, index=False)
+896 |                 logger.info(
+897 |                     f"exact_equals | written=unique_normalized.parquet | records={len(df_norm)} | path={unique_path}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^
+898 |                 )
+    |
+
+E501 Line too long (102 > 100)
+    --> src/cleaning.py:1062:101
+     |
+1061 |                     logger.info(
+1062 |                         "group_stats | duckdb_complete | elapsed_sec=%.3f | groups=%s | records=%s | "
+     |                                                                                                     ^^
+1063 |                         "throughput=%s recs/sec | memoize=%s | cache_hit=%s"
+1064 |                         % (
+     |
+
+E501 Line too long (119 > 100)
+    --> src/cleaning.py:1085:101
+     |
+1083 |                     logger.info(
+1084 |                         f"group_stats | parquet_write_complete | path={group_stats_path} | "
+1085 |                         f"size_mb={parquet_metadata['size_mb']:.2f} | compression={parquet_metadata['compression']} | "
+     |                                                                                                     ^^^^^^^^^^^^^^^^^^^
+1086 |                         f"dictionary_encoding={parquet_metadata['dictionary_encoding']}",
+1087 |                     )
+     |
+
+E501 Line too long (104 > 100)
+    --> src/cleaning.py:1117:101
+     |
+1115 |                         df_group_stats.to_parquet(duckdb_specific_path, index=False)
+1116 |                         logger.info(
+1117 |                             f"group_stats | duckdb_specific_file_written | path={duckdb_specific_path}",
+     |                                                                                                     ^^^^
+1118 |                         )
+     |
+
+E501 Line too long (109 > 100)
+    --> src/cleaning.py:1132:101
+     |
+1130 | …                     # This is a cache miss, log for future reference
+1131 | …                     logger.info(
+1132 | …                         f"group_stats | memoization_cache_miss | key={duckdb_metadata['cache_key']}",
+     |                                                                                               ^^^^^^^^^
+1133 | …                     )
+     |
+
+E501 Line too long (117 > 100)
+    --> src/cleaning.py:1166:101
+     |
+1164 |                         else:
+1165 |                             logger.error(
+1166 |                                 f"group_stats | parity_validation_failed | mismatches={parity_report['mismatches']}",
+     |                                                                                                     ^^^^^^^^^^^^^^^^^
+1167 |                             )
+     |
+
+E501 Line too long (108 > 100)
+    --> src/cleaning.py:1248:101
+     |
+1246 | …                     )
+1247 | …                     f.write(
+1248 | …                         f"**Dataset Size**: {benchmark_report['dataset_size']:,} records\n",
+     |                                                                                       ^^^^^^^^
+1249 | …                     )
+1250 | …                     f.write(
+     |
+
+E501 Line too long (108 > 100)
+    --> src/cleaning.py:1255:101
+     |
+1253 | …                     f.write("## Performance Results\n\n")
+1254 | …                     f.write(
+1255 | …                         f"- **DuckDB Runtime**: {benchmark_report['duckdb_timing']:.3f}s\n",
+     |                                                                                       ^^^^^^^^
+1256 | …                     )
+1257 | …                     f.write(
+     |
+
+E501 Line too long (123 > 100)
+    --> src/cleaning.py:1261:100
+     |
+1259 | …                     )
+1260 | …                     f.write(
+1261 | …                         f"- **Target Met**: {'✅ YES' if benchmark_report['target_met'] else '❌ NO'}\n\n",
+     |                                                                                       ^^^^^^^^^^^^^^^^^^^^^^^
+1262 | …                     )
+1263 | …                     f.write("## Memoization\n\n")
+     |
+
+E501 Line too long (105 > 100)
+    --> src/cleaning.py:1265:101
+     |
+1263 | …                     f.write("## Memoization\n\n")
+1264 | …                     f.write(
+1265 | …                         f"- **Enabled**: {benchmark_report['memoization']['enabled']}\n",
+     |                                                                                       ^^^^^
+1266 | …                     )
+1267 | …                     f.write(
+     |
+
+E501 Line too long (109 > 100)
+    --> src/cleaning.py:1268:101
+     |
+1266 | …                     )
+1267 | …                     f.write(
+1268 | …                         f"- **Cache Hit**: {benchmark_report['memoization']['cache_hit']}\n",
+     |                                                                                       ^^^^^^^^^
+1269 | …                     )
+1270 | …                     f.write(
+     |
+
+E501 Line too long (111 > 100)
+    --> src/cleaning.py:1271:101
+     |
+1269 | …                     )
+1270 | …                     f.write(
+1271 | …                         f"- **Cache Key**: {benchmark_report['memoization']['cache_key']}\n\n",
+     |                                                                                       ^^^^^^^^^^^
+1272 | …                     )
+1273 | …                     f.write("## Environment\n\n")
+     |
+
+E501 Line too long (119 > 100)
+    --> src/cleaning.py:1275:101
+     |
+1273 | …                     f.write("## Environment\n\n")
+1274 | …                     f.write(
+1275 | …                         f"- **DuckDB Threads**: {benchmark_report['environment']['duckdb_threads']}\n",
+     |                                                                                       ^^^^^^^^^^^^^^^^^^^
+1276 | …                     )
+1277 | …                     f.write(
+     |
+
+E501 Line too long (117 > 100)
+    --> src/cleaning.py:1278:101
+     |
+1276 | …                     )
+1277 | …                     f.write(
+1278 | …                         f"- **DuckDB Memory**: {benchmark_report['environment']['duckdb_memory']}\n",
+     |                                                                                       ^^^^^^^^^^^^^^^^^
+1279 | …                     )
+1280 | …                     f.write(
+     |
+
+E501 Line too long (113 > 100)
+    --> src/cleaning.py:1281:101
+     |
+1279 | …                     )
+1280 | …                     f.write(
+1281 | …                         f"- **Compression**: {benchmark_report['environment']['compression']}\n",
+     |                                                                                       ^^^^^^^^^^^^^
+1282 | …                     )
+1283 | …                     f.write(
+     |
+
+E501 Line too long (129 > 100)
+    --> src/cleaning.py:1284:101
+     |
+1282 | …                     )
+1283 | …                     f.write(
+1284 | …                         f"- **Dictionary Encoding**: {benchmark_report['environment']['dictionary_encoding']}\n",
+     |                                                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1285 | …                     )
+     |
+
+E501 Line too long (104 > 100)
+    --> src/cleaning.py:1288:101
+     |
+1287 |                                 logger.info(
+1288 |                                     f"group_stats | benchmark_report_generated | path={benchmark_path}",
+     |                                                                                                     ^^^^
+1289 |                                 )
+1290 |                         except Exception as e:
+     |
+
+E501 Line too long (110 > 100)
+    --> src/cleaning.py:1328:101
+     |
+1327 |                 logger.info(
+1328 |                     f"group_stats | pandas_complete | groups={len(df_group_stats)} | path={group_stats_path}",
+     |                                                                                                     ^^^^^^^^^^
+1329 |                 )
+     |
+
+E501 Line too long (112 > 100)
+    --> src/cleaning.py:1341:101
+     |
+1339 |                 df_group_stats.to_parquet(group_stats_path, index=False)
+1340 |                 logger.info(
+1341 |                     f"group_stats | fallback_complete | groups={len(df_group_stats)} | path={group_stats_path}",
+     |                                                                                                     ^^^^^^^^^^^^
+1342 |                 )
+1343 |             except Exception as fallback_e:
+     |
+
+E501 Line too long (107 > 100)
+    --> src/cleaning.py:1464:101
+     |
+1462 |                 )
+1463 |                 logger.info(
+1464 |                     f"Group details size: {df_details.memory_usage(deep=True).sum() / 1024 / 1024:.2f} MB",
+     |                                                                                                     ^^^^^^^
+1465 |                 )
+1466 |             else:
+     |
+
+E501 Line too long (137 > 100)
+    --> src/cleaning.py:1538:101
+     |
+1536 | …
+1537 | …
+1538 | ….get('pairs_generated', 0)} (capped blocks: {alias_stats.get('capped_blocks', 0)})",
+     |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1539 | …
+1540 | …
+     |
+
+E501 Line too long (114 > 100)
+    --> src/cleaning.py:1541:101
+     |
+1539 |             )
+1540 |             logger.info(
+1541 |                 f"Alias matches accepted (score ≥ high & suffix match): {alias_stats.get('accepted_matches', 0)}",
+     |                                                                                                     ^^^^^^^^^^^^^^
+1542 |             )
+1543 |             logger.info(
+     |
+
+E501 Line too long (104 > 100)
+    --> src/cleaning.py:1590:101
+     |
+1588 |         active_stage = dag.get_current_stage() or "unknown"
+1589 |         logger.warning(
+1590 |             f"Run interrupted by user | run_id={run_id}, stage={active_stage}, saved_state=interrupted",
+     |                                                                                                     ^^^^
+1591 |         )
+     |
+
+E501 Line too long (109 > 100)
+    --> src/cleaning.py:1696:101
+     |
+1694 |             except ValueError:
+1695 |                 logger.error(
+1696 |                     f"Invalid column override format: {override_str}. Expected 'canonical_name=actual_name'",
+     |                                                                                                     ^^^^^^^^^
+1697 |                 )
+1698 |                 sys.exit(1)
+     |
+
+E501 Line too long (118 > 100)
+   --> src/disposition.py:171:101
+    |
+169 |             if tokens or phrases:
+170 |                 logger.info(
+171 |                     f"disposition | loaded_blacklist | tokens={len(tokens)} | phrases={len(phrases)} | source=config",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^
+172 |                 )
+173 |                 return tokens + phrases
+    |
+
+E501 Line too long (127 > 100)
+   --> src/disposition.py:177:101
+    |
+175 |     # Fallback to built-in blacklist
+176 |     logger.info(
+177 |         f"disposition | loaded_blacklist | tokens={len(BLACKLIST_TOKENS)} | phrases={len(BLACKLIST_PHRASES)} | source=builtin",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+178 |     )
+179 |     return BLACKLIST.copy()
+    |
+
+E501 Line too long (153 > 100)
+   --> src/disposition.py:606:101
+    |
+604 | …
+605 | …
+606 | …ion:.2f}s | records={len(result_df)} | throughput={len(result_df)/duration:.0f}records/sec",
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+607 | …
+    |
+
+E501 Line too long (120 > 100)
+   --> src/disposition.py:615:101
+    |
+613 |     else:
+614 |         logger.warning(
+615 |             f"disposition | summary | column '{DISPOSITION}' not found in result_df.columns: {list(result_df.columns)}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^
+616 |         )
+    |
+
+E501 Line too long (112 > 100)
+   --> src/grouping.py:208:101
+    |
+206 |     if not has_id_a_b and not has_account_id_1_2:
+207 |         raise ValueError(
+208 |             "Candidate pairs DataFrame must have either 'id_a'/'id_b' or 'account_id_1'/'account_id_2' columns",
+    |                                                                                                     ^^^^^^^^^^^^
+209 |         )
+    |
+
+E501 Line too long (102 > 100)
+   --> src/grouping.py:403:101
+    |
+401 |         if not exact_pairs.empty:
+402 |             logger.info(
+403 |                 f"grouping | processing_exact_equals | pairs={len(exact_pairs)} | backend=union_find",
+    |                                                                                                     ^^
+404 |             )
+    |
+
+E501 Line too long (104 > 100)
+   --> src/grouping.py:421:101
+    |
+420 |             logger.info(
+421 |                 f"grouping | exact_equals_complete | unions={exact_equals_unions} | backend=union_find",
+    |                                                                                                     ^^^^
+422 |             )
+    |
+
+E501 Line too long (113 > 100)
+   --> src/grouping.py:430:101
+    |
+428 |         ].copy()
+429 |         logger.info(
+430 |             f"grouping | filtered_exact_equals | remaining_pairs={len(candidate_pairs_df)} | backend=union_find",
+    |                                                                                                     ^^^^^^^^^^^^^
+431 |         )
+    |
+
+E501 Line too long (114 > 100)
+   --> src/grouping.py:506:101
+    |
+504 |         ):
+505 |             logger.debug(
+506 |                 f"Canopy bound rejected {candidate_id} joining {primary_id}'s group (size: {current_group_size})",
+    |                                                                                                     ^^^^^^^^^^^^^^
+507 |             )
+508 |             canopy_rejections += 1
+    |
+
+E501 Line too long (112 > 100)
+   --> src/grouping.py:665:101
+    |
+663 |     else:
+664 |         raise ValueError(
+665 |             "Candidate pairs DataFrame must have either 'account_id_1'/'account_id_2' or 'id_a'/'id_b' columns",
+    |                                                                                                     ^^^^^^^^^^^^
+666 |         )
+    |
+
+F401 `typing.Any` imported but unused
+ --> src/similarity/__init__.py:7:20
+  |
+6 | import logging
+7 | from typing import Any, Dict, Optional
+  |                    ^^^
+8 |
+9 | import pandas as pd
+  |
+help: Remove unused import: `typing.Any`
+
+F401 `src.utils.parallel_utils.ParallelExecutor` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+  --> src/similarity/__init__.py:13:38
+   |
+11 | from src.utils.duckdb_utils import ensure_pandas_strings
+12 | from src.utils.parallel_protocols import ExecutorLike
+13 | from src.utils.parallel_utils import ParallelExecutor
+   |                                      ^^^^^^^^^^^^^^^^
+14 |
+15 | from .blocking import generate_candidate_pairs_soft_ban, get_stop_tokens
+   |
+help: Add unused import `ParallelExecutor` to __all__
+
+E501 Line too long (103 > 100)
+  --> src/similarity/diagnostics.py:90:101
+   |
+89 |         # Calculate singleton rate for this token
+90 |         # NOTE: This is a placeholder heuristic - in practice, you'd need to map tokens back to records
+   |                                                                                                     ^^^
+91 |         # to get true singleton rates. This mock calculation is for demonstration purposes only.
+92 |         if not groups_df.empty and "group_size" in groups_df.columns:
+   |
+
+E501 Line too long (115 > 100)
+  --> src/similarity/diagnostics.py:94:101
+   |
+92 |         if not groups_df.empty and "group_size" in groups_df.columns:
+93 |             # Mock calculation: assume tokens with high frequency tend to have more singletons
+94 |             # In a real implementation, you'd map tokens back to their records and calculate actual singleton rates
+   |                                                                                                     ^^^^^^^^^^^^^^^
+95 |             singleton_rate = min(
+96 |                 1.0, count / 100.0,
+   |
+
+E501 Line too long (113 > 100)
+   --> src/similarity/scoring.py:249:101
+    |
+247 |     gate_survivors = [i for i, s in enumerate(gate_scores) if s >= gate_cutoff]
+248 |     logger.info(
+249 |         f"Bulk gate: {len(gate_survivors)}/{len(candidate_pairs)} pairs passed token_set_ratio >= {gate_cutoff}",
+    |                                                                                                     ^^^^^^^^^^^^^
+250 |     )
+    |
+
+E501 Line too long (166 > 100)
+   --> src/survivorship.py:131:101
+    |
+129 | …_groups > 0 else 0
+130 | …
+131 | …ngletons={singleton_count} ({singleton_pct:.1f}%) | multi_groups={total_groups - singleton_count}",
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+132 | …
+    |
+
+E501 Line too long (131 > 100)
+   --> src/survivorship.py:149:101
+    |
+147 |         p90_size = sorted(multi_group_sizes)[int(len(multi_group_sizes) * 0.9)]
+148 |         logger.info(
+149 |             f"multi_group_stats | count={len(multi_groups)} | avg_size={avg_size:.1f} | p50_size={p50_size} | p90_size={p90_size}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+150 |         )
+    |
+
+E501 Line too long (112 > 100)
+   --> src/survivorship.py:247:101
+    |
+246 |     logger.info(
+247 |         f"Vectorized survivorship: {total_groups} groups, {singletons} singletons, {multi_groups} multi-groups",
+    |                                                                                                     ^^^^^^^^^^^^
+248 |     )
+    |
+
+E501 Line too long (112 > 100)
+   --> src/survivorship.py:505:101
+    |
+504 |     logger.info(
+505 |         f"Merge preview analysis: {len(conflicted_groups)} conflicted groups, {len(clean_groups)} clean groups",
+    |                                                                                                     ^^^^^^^^^^^^
+506 |     )
+    |
+
+E731 Do not assign a `lambda` expression, use a `def`
+   --> src/survivorship.py:520:13
+    |
+518 |             import orjson
+519 |
+520 |             json_dumps = lambda x: orjson.dumps(x).decode("utf-8")
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+521 |         except ImportError:
+522 |             json_dumps = lambda x: json.dumps(x)
+    |
+help: Rewrite `json_dumps` as a `def`
+
+E731 Do not assign a `lambda` expression, use a `def`
+   --> src/survivorship.py:522:13
+    |
+520 |             json_dumps = lambda x: orjson.dumps(x).decode("utf-8")
+521 |         except ImportError:
+522 |             json_dumps = lambda x: json.dumps(x)
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+523 |
+524 |         # Process groups in batches for better performance
+    |
+help: Rewrite `json_dumps` as a `def`
+
+F811 Redefinition of unused `optimize_dataframe_memory` from line 10
+  --> src/utils/__init__.py:34:5
+   |
+32 |     # to_arrow_strings,  # DEPRECATED: PyArrow backend removed
+33 |     narrow_sort,
+34 |     optimize_dataframe_memory,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^ `optimize_dataframe_memory` redefined here
+35 |     parse_name_core_tokens,
+36 | )
+   |
+  ::: src/utils/__init__.py:10:5
+   |
+ 8 |     drop_intermediate_columns,
+ 9 |     get_dtypes_for_schema,
+10 |     optimize_dataframe_memory,
+   |     ------------------------- previous definition of `optimize_dataframe_memory` here
+11 | )
+12 | from .hash_utils import (
+   |
+help: Remove definition: `optimize_dataframe_memory`
+
+E501 Line too long (187 > 100)
+   --> src/utils/cache_keys.py:164:101
+    |
+162 | …
+163 | …
+164 | …{source} backend={backend} fingerprint={parquet_fingerprint} page={page} size={page_size} sort="{sort_key}"',
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+165 | …
+    |
+
+E501 Line too long (132 > 100)
+   --> src/utils/cache_utils.py:596:101
+    |
+594 |     if total_duplicates > 0:
+595 |         logger.info(
+596 |             f"Run deduplication: removed {total_duplicates} duplicates from {len(deduplicated_runs) + total_duplicates} total runs",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+597 |         )
+    |
+
+E501 Line too long (107 > 100)
+   --> src/utils/dtypes.py:134:101
+    |
+132 |         result = df.drop(columns=list(columns_to_drop))
+133 |         logger.debug(
+134 |             f"Dropped {len(columns_to_drop)} intermediate columns from {context}: {list(columns_to_drop)}",
+    |                                                                                                     ^^^^^^^
+135 |         )
+136 |         return result
+    |
+
+E501 Line too long (115 > 100)
+   --> src/utils/duckdb_group_stats.py:118:101
+    |
+117 |         logger.info(
+118 |             f"duckdb_group_stats | connection_created | threads={self.threads} | memory_limit={self.memory_limit}",
+    |                                                                                                     ^^^^^^^^^^^^^^^
+119 |         )
+120 |         return conn
+    |
+
+E501 Line too long (220 > 100)
+   --> src/utils/duckdb_group_stats.py:173:101
+    |
+171 | …
+172 | …
+173 | …self.memoization_enabled} | cache_key=generating | cache_hit=false | config_digest={config_digest} | request_id={request_id}",
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+174 | …
+    |
+
+E501 Line too long (369 > 100)
+   --> src/utils/duckdb_group_stats.py:208:101
+    |
+206 | …
+207 | …
+208 | …sec={cache_time:.3f} | rows={rows} | groups={groups} | compression=zstd | dict_encoding=true | file_size_mb=cached | memoize=true | cache_key={cache_key} | cache_hit=true | duckdb_copy_options={duckdb_copy_options} | config_digest={config_digest} | request_id={request_id}",
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+209 | …
+    |
+
+W291 Trailing whitespace
+   --> src/utils/duckdb_group_stats.py:234:15
+    |
+232 |         # SQL query for group statistics
+233 |         query = f"""
+234 |         SELECT 
+    |               ^
+235 |             {GROUP_ID},
+236 |             COUNT(*) as {GROUP_SIZE},
+    |
+help: Remove trailing whitespace
+
+E501 Line too long (124 > 100)
+   --> src/utils/duckdb_group_stats.py:237:101
+    |
+235 |             {GROUP_ID},
+236 |             COUNT(*) as {GROUP_SIZE},
+237 |             MAX(CASE WHEN {WEAKEST_EDGE_TO_PRIMARY} IS NOT NULL THEN {WEAKEST_EDGE_TO_PRIMARY} ELSE 0.0 END) as {MAX_SCORE},
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+238 |             FIRST(CASE WHEN {IS_PRIMARY} THEN {ACCOUNT_NAME} ELSE NULL END) as {PRIMARY_NAME},
+239 |             FIRST(CASE WHEN {IS_PRIMARY} THEN {DISPOSITION} ELSE 'Update' END) as disposition_col
+    |
+
+W291 Trailing whitespace
+   --> src/utils/duckdb_group_stats.py:240:23
+    |
+238 |             FIRST(CASE WHEN {IS_PRIMARY} THEN {ACCOUNT_NAME} ELSE NULL END) as {PRIMARY_NAME},
+239 |             FIRST(CASE WHEN {IS_PRIMARY} THEN {DISPOSITION} ELSE 'Update' END) as disposition_col
+240 |         FROM groups_df 
+    |                       ^
+241 |         GROUP BY {GROUP_ID}
+242 |         ORDER BY {GROUP_ID}
+    |
+help: Remove trailing whitespace
+
+E501 Line too long (409 > 100)
+   --> src/utils/duckdb_group_stats.py:287:101
+    |
+286 | …
+287 | …_time:.3f} | rows={rows} | groups={groups} | compression=zstd | dict_encoding={self.dictionary_compression} | file_size_mb=computed | memoize={self.memoization_enabled} | cache_key={cache_key} | cache_hit=false | duckdb_copy_options={duckdb_copy_options} | config_digest={config_digest} | request_id={request_id}",
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+288 | …
+    |
+
+W291 Trailing whitespace
+   --> src/utils/duckdb_group_stats.py:341:58
+    |
+340 |         copy_sql = f"""
+341 |         COPY (SELECT * FROM output_df) TO '{output_path}' 
+    |                                                          ^
+342 |         ({', '.join(copy_options)})
+343 |         """
+    |
+help: Remove trailing whitespace
+
+E501 Line too long (103 > 100)
+   --> src/utils/exact_equals.py:195:101
+    |
+193 |     logger.info(
+194 |         f"exact_equals | built_groups={total_reps} | total_members={total_members} | "
+195 |         f"reps={total_reps} | singletons={singletons} | representative_policy={representative_policy}",
+    |                                                                                                     ^^^
+196 |     )
+    |
+
+E501 Line too long (112 > 100)
+   --> src/utils/exact_equals.py:237:101
+    |
+235 |             new_path = str(Path(base_path).parent / new_name)
+236 |             logger.info(
+237 |                 f"exact_equals | existing_file_present | fallback_path={new_path} | reason=no_overwrite_policy",
+    |                                                                                                     ^^^^^^^^^^^^
+238 |             )
+239 |             return new_path
+    |
+
+E501 Line too long (122 > 100)
+   --> src/utils/exact_equals.py:248:101
+    |
+246 |         exact_raw_groups.to_parquet(safe_groups_path, index=False)
+247 |         logger.info(
+248 |             f"exact_equals | written=exact_raw_groups.parquet | groups={len(exact_raw_groups)} | path={safe_groups_path}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^
+249 |         )
+    |
+
+E501 Line too long (115 > 100)
+   --> src/utils/exact_equals.py:257:101
+    |
+255 |         raw_exact_map.to_parquet(safe_map_path, index=False)
+256 |         logger.info(
+257 |             f"exact_equals | written=raw_exact_map.parquet | mappings={len(raw_exact_map)} | path={safe_map_path}",
+    |                                                                                                     ^^^^^^^^^^^^^^^
+258 |         )
+    |
+
+E501 Line too long (138 > 100)
+   --> src/utils/exact_equals.py:266:101
+    |
+264 | …rs_path, index=False)
+265 | …
+266 | …exact_raw.parquet | pairs={len(candidate_pairs_exact_raw)} | path={safe_pairs_path}",
+    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+267 | …
+    |
+
+E501 Line too long (102 > 100)
+  --> src/utils/filtering.py:58:101
+   |
+56 |             "Max Score (Asc)": f"{MAX_SCORE} ASC",
+57 |             "Account Name (Asc)": f"{ACCOUNT_NAME} ASC",  # Use ACCOUNT_NAME instead of PRIMARY_NAME
+58 |             "Account Name (Desc)": f"{ACCOUNT_NAME} DESC",  # Use ACCOUNT_NAME instead of PRIMARY_NAME
+   |                                                                                                     ^^
+59 |         }
+60 |     else:
+   |
+
+E501 Line too long (128 > 100)
+  --> src/utils/fragment_utils.py:30:101
+   |
+28 | # Log the choice once at module import
+29 | logger.info(
+30 |     f"Using fragment API: {'st.fragment' if _USE_STABLE_FRAGMENT else 'st.experimental_fragment'} | streamlit={st.__version__}",
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+31 | )
+   |
+
+E501 Line too long (108 > 100)
+   --> src/utils/group_details.py:259:101
+    |
+257 |             raise
+258 |
+259 |     # Strategy: prefer DuckDB for details (joins, filters, sorts), but allow PyArrow fallback if configured.
+    |                                                                                                     ^^^^^^^^
+260 |     prefer_duckdb = (
+261 |         settings.get("ui_perf", {})
+    |
+
+E501 Line too long (108 > 100)
+   --> src/utils/group_pagination.py:151:101
+    |
+149 |     start_time = time.time()
+150 |     logger.info(
+151 |         f"get_groups_page called | run_id={run_id} sort_key='{sort_key}' page={page} page_size={page_size}",
+    |                                                                                                     ^^^^^^^^
+152 |     )
+    |
+
+E501 Line too long (116 > 100)
+   --> src/utils/group_pagination.py:299:101
+    |
+297 |     """
+298 |     logger.info(
+299 |         f"get_groups_page_pyarrow called | run_id={run_id} sort_key='{sort_key}' page={page} page_size={page_size}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^
+300 |     )
+    |
+
+E501 Line too long (105 > 100)
+   --> src/utils/group_pagination.py:331:101
+    |
+329 |         if elapsed > max_pyarrow_seconds:
+330 |             raise PageFetchTimeout(
+331 |                 f"PyArrow page fetch exceeded {max_pyarrow_seconds} second timeout after {elapsed:.1f}s",
+    |                                                                                                     ^^^^^
+332 |             )
+    |
+
+E501 Line too long (113 > 100)
+   --> src/utils/group_pagination.py:336:101
+    |
+334 |     # Log start
+335 |     logger.info(
+336 |         f'PyArrow groups page fetch start | run_id={run_id} sort="{sort_key}" page={page} page_size={page_size}',
+    |                                                                                                     ^^^^^^^^^^^^^
+337 |     )
+    |
+
+E501 Line too long (111 > 100)
+   --> src/utils/group_pagination.py:380:101
+    |
+379 |     logger.info(
+380 |         f"PyArrow filters applied | run_id={run_id} rows={filtered_table.num_rows} elapsed={filter_time:.3f}s",
+    |                                                                                                     ^^^^^^^^^^^
+381 |     )
+    |
+
+E501 Line too long (106 > 100)
+   --> src/utils/group_pagination.py:391:101
+    |
+390 |     logger.info(
+391 |         f"PyArrow sort expression built | run_id={run_id} sort_keys={sort_keys} elapsed={sort_time:.3f}s",
+    |                                                                                                     ^^^^^^
+392 |     )
+    |
+
+E501 Line too long (139 > 100)
+   --> src/utils/group_pagination.py:464:101
+    |
+462 | …
+463 | …
+464 | …{offset} page_size={page_size} rows={len(page_data)} elapsed={pagination_time:.3f}s",
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+465 | …
+    |
+
+E501 Line too long (134 > 100)
+   --> src/utils/group_pagination.py:469:101
+    |
+467 |     elapsed = time.time() - start_time
+468 |     logger.info(
+469 |         f'PyArrow groups page loaded | run_id={run_id} rows={len(page_data)} offset={offset} sort="{sort_key}" elapsed={elapsed:.3f}',
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+470 |     )
+    |
+
+E501 Line too long (112 > 100)
+   --> src/utils/group_pagination.py:535:101
+    |
+533 |     # Log start
+534 |     logger.info(
+535 |         f'DuckDB groups page fetch start | run_id={run_id} sort="{sort_key}" page={page} page_size={page_size}',
+    |                                                                                                     ^^^^^^^^^^^^
+536 |     )
+    |
+
+E501 Line too long (104 > 100)
+   --> src/utils/group_pagination.py:551:101
+    |
+550 |         logger.info(
+551 |             f"DuckDB connection | run_id={run_id} threads={duckdb_threads} elapsed={connect_time:.3f}s",
+    |                                                                                                     ^^^^
+552 |         )
+    |
+
+E501 Line too long (135 > 100)
+   --> src/utils/group_pagination.py:566:101
+    |
+565 | …
+566 | …ort_key='{sort_key}' order_by='{order_by_clause}' backend=duckdb global_sort=true",
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+567 | …
+    |
+
+E501 Line too long (108 > 100)
+   --> src/utils/group_pagination.py:601:101
+    |
+599 |         # Build primary name selection based on available columns
+600 |         if IS_PRIMARY in available_columns and ACCOUNT_NAME in available_columns:
+601 |             primary_name_select = f"any_value({ACCOUNT_NAME}) FILTER (WHERE {IS_PRIMARY}) AS {PRIMARY_NAME}"
+    |                                                                                                     ^^^^^^^^
+602 |         elif ACCOUNT_NAME in available_columns:
+603 |             primary_name_select = f"any_value({ACCOUNT_NAME}) AS {PRIMARY_NAME}"
+    |
+
+E501 Line too long (143 > 100)
+   --> src/utils/group_pagination.py:651:101
+    |
+650 | …
+651 | …_clause="{where_clause}" order_by="{order_by_clause}" elapsed={query_build_time:.3f}s',
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+652 | …
+    |
+
+E501 Line too long (137 > 100)
+   --> src/utils/group_pagination.py:696:101
+    |
+694 | …
+695 | …
+696 | …_id} rows={len(page_data)} offset={offset} sort="{sort_key}" elapsed={elapsed:.3f}',
+    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+697 | …
+    |
+
+E501 Line too long (126 > 100)
+   --> src/utils/group_pagination.py:727:101
+    |
+725 |     start_time = time.time()
+726 |     logger.info(
+727 |         f"get_groups_page_from_stats_duckdb called | run_id={run_id} sort_key='{sort_key}' page={page} page_size={page_size}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+728 |     )
+    |
+
+E501 Line too long (105 > 100)
+   --> src/utils/group_pagination.py:772:101
+    |
+770 |             conn_time = time.time() - start_time
+771 |             logger.info(
+772 |                 f"DuckDB connection | run_id={run_id} threads={duckdb_threads} elapsed={conn_time:.3f}s",
+    |                                                                                                     ^^^^^
+773 |             )
+    |
+
+E501 Line too long (152 > 100)
+   --> src/utils/group_pagination.py:785:101
+    |
+784 | …
+785 | …n_id} sort_key='{sort_key}' order_by_resolved='{order_by}' backend=duckdb global_sort=true",
+    |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+786 | …
+    |
+
+E501 Line too long (152 > 100)
+   --> src/utils/group_pagination.py:834:101
+    |
+833 | …
+834 | …rs='{where_clause}' order_by_resolved='{order_by}' elapsed={time.time() - step_start:.3f}s",
+    |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+835 | …
+    |
+
+E501 Line too long (111 > 100)
+   --> src/utils/group_pagination.py:850:101
+    |
+848 |             pandas_time = time.time() - step_start
+849 |             logger.info(
+850 |                 f"DuckDB pandas conversion | run_id={run_id} rows={len(df_result)} elapsed={pandas_time:.3f}s",
+    |                                                                                                     ^^^^^^^^^^^
+851 |             )
+    |
+
+E501 Line too long (102 > 100)
+   --> src/utils/group_pagination.py:865:101
+    |
+863 |             count_time = time.time() - step_start
+864 |             logger.info(
+865 |                 f"Total count query | run_id={run_id} total={total_groups} elapsed={count_time:.3f}s",
+    |                                                                                                     ^^
+866 |             )
+    |
+
+E501 Line too long (161 > 100)
+   --> src/utils/group_pagination.py:873:101
+    |
+871 | …
+872 | …
+873 | … rows={len(page_data)} offset={(page - 1) * page_size} sort="{sort_key}" elapsed={elapsed:.3f}',
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+874 | …
+    |
+
+W291 Trailing whitespace
+  --> src/utils/group_stats.py:75:19
+   |
+73 |             query = (
+74 |                 """
+75 |             SELECT 
+   |                   ^
+76 |                 """
+77 |                 + GROUP_ID
+   |
+help: Remove trailing whitespace
+
+W291 Trailing whitespace
+  --> src/utils/group_stats.py:96:27
+   |
+94 |                 + PRIMARY_NAME
+95 |                 + """
+96 |             FROM groups_df 
+   |                           ^
+97 |             GROUP BY """
+98 |                 + GROUP_ID
+   |
+help: Remove trailing whitespace
+
+E501 Line too long (102 > 100)
+   --> src/utils/parallel_utils.py:357:101
+    |
+355 |         if input_size < self.small_input_threshold:
+356 |             logger.info(
+357 |                 f"Input size {input_size} < threshold {self.small_input_threshold}, using sequential",
+    |                                                                                                     ^^
+358 |             )
+359 |             return False
+    |
+
+E501 Line too long (120 > 100)
+  --> src/utils/parity_validator.py:55:101
+   |
+53 |         """
+54 |         logger.info(
+55 |             f"parity_validator | starting_validation | duckdb_groups={len(duckdb_df)} | pandas_groups={len(pandas_df)}",
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^
+56 |         )
+   |
+
+E501 Line too long (103 > 100)
+  --> src/utils/parity_validator.py:79:101
+   |
+77 |         # Check row count parity
+78 |         if len(duckdb_sorted) != len(pandas_sorted):
+79 |             error_msg = f"Row count mismatch: DuckDB={len(duckdb_sorted)}, Pandas={len(pandas_sorted)}"
+   |                                                                                                     ^^^
+80 |             logger.error(f"parity_validator | validation_failed | error={error_msg}")
+81 |             return False, {"error": error_msg}
+   |
+
+E501 Line too long (111 > 100)
+   --> src/utils/parity_validator.py:116:101
+    |
+114 |         if is_parity_valid:
+115 |             logger.info(
+116 |                 f"parity_validator | validation_passed | rows={parity_report['rows_compared']} | mismatches=0",
+    |                                                                                                     ^^^^^^^^^^^
+117 |             )
+118 |         else:
+    |
+
+E501 Line too long (139 > 100)
+   --> src/utils/parity_validator.py:120:101
+    |
+118 | …
+119 | …
+120 | … | rows={parity_report['rows_compared']} | mismatches={parity_report['mismatches']}",
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+121 | …
+    |
+
+E501 Line too long (123 > 100)
+   --> src/utils/parity_validator.py:330:101
+    |
+328 |                 output_path = output_dir / f"parity_report_group_stats_{timestamp}.json"
+329 |                 logger.info(
+330 |                     f"parity_validator | existing_file_present | fallback_path={output_path} | reason=no_overwrite_policy",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^
+331 |                 )
+    |
+
+E501 Line too long (115 > 100)
+   --> src/utils/parity_validator.py:338:101
+    |
+337 |             logger.info(
+338 |                 f"parity_validator | report_saved | path={output_path} | mismatches={parity_report['mismatches']}",
+    |                                                                                                     ^^^^^^^^^^^^^^^
+339 |             )
+    |
+
+E501 Line too long (115 > 100)
+   --> src/utils/parquet_size_reporter.py:237:101
+    |
+235 |         """
+236 |         logger.info(
+237 |             f"parquet_size_reporter | starting_comparison | original={original_path} | optimized={optimized_path}",
+    |                                                                                                     ^^^^^^^^^^^^^^^
+238 |         )
+    |
+
+E501 Line too long (128 > 100)
+   --> src/utils/parquet_size_reporter.py:308:101
+    |
+306 |                 output_path = output_dir / f"parquet_size_report_{timestamp}.json"
+307 |                 logger.info(
+308 |                     f"parquet_size_reporter | existing_file_present | fallback_path={output_path} | reason=no_overwrite_policy",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+309 |                 )
+    |
+
+E501 Line too long (138 > 100)
+  --> src/utils/progress.py:58:101
+   |
+56 | …
+57 | …
+58 | …elf.total is not None else '?'} it | {rate:,.0f} it/s | elapsed={elapsed:,.0f}s{eta}"
+   |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+59 | …
+60 | …
+   |
+
+E501 Line too long (120 > 100)
+   --> src/utils/resource_monitor.py:201:101
+    |
+199 |     if "error" not in memory_info:
+200 |         logger.info(
+201 |             f"Memory: {memory_info['used_gb']:.1f}GB / {memory_info['total_gb']:.1f}GB ({memory_info['percent']:.1f}%)",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^
+202 |         )
+203 |         logger.info(f"Process memory: {memory_info['process_rss_gb']:.1f}GB RSS")
+    |
+
+E501 Line too long (107 > 100)
+   --> src/utils/resource_monitor.py:207:101
+    |
+205 |     if "total_disk_gb" in system_info:
+206 |         logger.info(
+207 |             f"Disk: {system_info['free_disk_gb']:.1f}GB free / {system_info['total_disk_gb']:.1f}GB total",
+    |                                                                                                     ^^^^^^^
+208 |         )
+    |
+
+E501 Line too long (105 > 100)
+   --> src/utils/schema_utils.py:552:101
+    |
+550 |         # Log one-time notice about legacy header normalization
+551 |         logger.info(
+552 |             f"normalize_legacy_headers | legacy_headers_found={legacy_found} | normalizing_to_canonical",
+    |                                                                                                     ^^^^^
+553 |         )
+    |
+
+E501 Line too long (101 > 100)
+   --> src/utils/schema_utils.py:565:101
+    |
+563 | ) -> pd.DataFrame:
+564 |     """Rename columns from ACTUAL -> CANONICAL using the inverted mapping.
+565 |     This must be called immediately after resolving schema and BEFORE any canonical constant is used.
+    |                                                                                                     ^
+566 |
+567 |     Args:
+    |
+
+E501 Line too long (105 > 100)
+   --> tests/contracts/test_parquet_contracts.py:188:101
+    |
+186 |                             assert (
+187 |                                 "string" in actual_type.lower()
+188 |                             ), f"Column {col_name} in {parquet_type} should be string, got {actual_type}"
+    |                                                                                                     ^^^^^
+189 |                         elif expected_type == "bool":
+190 |                             assert (
+    |
+
+E501 Line too long (103 > 100)
+   --> tests/contracts/test_parquet_contracts.py:192:101
+    |
+190 |                             assert (
+191 |                                 "bool" in actual_type.lower()
+192 |                             ), f"Column {col_name} in {parquet_type} should be bool, got {actual_type}"
+    |                                                                                                     ^^^
+193 |                         elif expected_type == "int64":
+194 |                             assert (
+    |
+
+E501 Line too long (102 > 100)
+   --> tests/contracts/test_parquet_contracts.py:196:101
+    |
+194 |                             assert (
+195 |                                 "int" in actual_type.lower()
+196 |                             ), f"Column {col_name} in {parquet_type} should be int, got {actual_type}"
+    |                                                                                                     ^^
+197 |                         elif expected_type == "double":
+198 |                             assert (
+    |
+
+E501 Line too long (111 > 100)
+   --> tests/contracts/test_parquet_contracts.py:201:101
+    |
+199 |                                 "double" in actual_type.lower()
+200 |                                 or "float" in actual_type.lower()
+201 |                             ), f"Column {col_name} in {parquet_type} should be double/float, got {actual_type}"
+    |                                                                                                     ^^^^^^^^^^^
+202 |
+203 |     def test_no_extra_required_columns(self, artifact_paths):
+    |
+
+E501 Line too long (145 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:163:101
+    |
+161 | …ry_name references in details context:\n"
+162 | …
+163 | …='group_details') or build_sort_expression(sort_key, context='group_details') instead.",
+    |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+164 | …
+    |
+
+E501 Line too long (101 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:200:101
+    |
+198 |                         ):
+199 |                             violations.append(
+200 |                                 f"{file_path.relative_to(project_root)}:{line_num} - {line_content}",
+    |                                                                                                     ^
+201 |                             )
+    |
+
+E501 Line too long (108 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:205:101
+    |
+203 |         if violations:
+204 |             pytest.fail(
+205 |                 f"Found {len(violations)} WEAKEST_EDGE_TO_PRIMARY references without availability checks:\n"
+    |                                                                                                     ^^^^^^^^
+206 |                 + "\n".join(violations)
+207 |                 + "\n\nUse conditional filtering with available_columns or context-aware functions.",
+    |
+
+E501 Line too long (101 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:207:101
+    |
+205 |                 f"Found {len(violations)} WEAKEST_EDGE_TO_PRIMARY references without availability checks:\n"
+206 |                 + "\n".join(violations)
+207 |                 + "\n\nUse conditional filtering with available_columns or context-aware functions.",
+    |                                                                                                     ^
+208 |             )
+    |
+
+E501 Line too long (101 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:246:101
+    |
+244 |                         ):
+245 |                             violations.append(
+246 |                                 f"{file_path.relative_to(project_root)}:{line_num} - {line_content}",
+    |                                                                                                     ^
+247 |                             )
+    |
+
+E501 Line too long (101 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:253:101
+    |
+251 |                 f"Found {len(violations)} IS_PRIMARY references without availability checks:\n"
+252 |                 + "\n".join(violations)
+253 |                 + "\n\nUse conditional filtering with available_columns or context-aware functions.",
+    |                                                                                                     ^
+254 |             )
+    |
+
+E501 Line too long (126 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:269:101
+    |
+267 |             if "get_order_by" in content and "context=" not in content:
+268 |                 pytest.fail(
+269 |                     f"get_order_by should be called with context parameter in {group_details_file.relative_to(project_root)}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+270 |                 )
+    |
+
+E501 Line too long (135 > 100)
+   --> tests/lints/test_no_schema_fragile_hardcoding.py:280:101
+    |
+278 | …d "context=" not in content:
+279 | …
+280 | …e called with context parameter in {group_details_file.relative_to(project_root)}",
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+281 | …
+    |
+
+E501 Line too long (161 > 100)
+  --> tests/lints/test_no_ui_helpers_import.py:26:101
+   |
+24 | …
+25 | …
+26 | …grep -nH 'from\s\+src\.utils\.ui_helpers\s\+import\|import\s\+src\.utils\.ui_helpers' || true""",
+   |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+27 | …
+   |
+
+E501 Line too long (117 > 100)
+   --> tests/test_alias_matching_parallelism.py:231:101
+    |
+229 |     def test_settings_integration(self):
+230 |         """Test that settings are properly passed through to ParallelExecutor."""
+231 |         # Test with different worker counts (only > 1 since the function only uses ParallelExecutor when workers > 1)
+    |                                                                                                     ^^^^^^^^^^^^^^^^^
+232 |         for workers in [2, 4]:
+233 |             test_settings = self.settings.copy()
+    |
+
+E501 Line too long (107 > 100)
+   --> tests/test_alias_validation.py:184:101
+    |
+183 | @pytest.mark.skip(
+184 |     reason="TODO: Phase 1.26.1 - Temporarily skipped for QA efficiency, will re-enable after Phase 1.25.1",
+    |                                                                                                     ^^^^^^^
+185 | )
+186 | @pytest.mark.parametrize(
+    |
+
+E501 Line too long (102 > 100)
+  --> tests/test_changelog_dates.py:86:101
+   |
+84 |         error_msg = "Invalid dates found in CHANGELOG.md:\n"
+85 |         for invalid in invalid_dates:
+86 |             error_msg += f"  Phase {invalid['phase']}: '{invalid['date']}' in '{invalid['header']}'\n"
+   |                                                                                                     ^^
+87 |         assert False, error_msg
+   |
+
+E501 Line too long (103 > 100)
+   --> tests/test_changelog_dates.py:135:101
+    |
+134 | …     if curr_date > prev_date:
+135 | …         error_msg = f"Changelog dates not in chronological order within Phase {major_minor}:\n"
+    |                                                                                               ^^^
+136 | …         error_msg += f"  Phase {group_dates[i-1][0]} ({group_dates[i-1][2]}) comes before Phase {group_dates[i][0]} ({group_dates[i…
+137 | …         assert False, error_msg
+    |
+
+E501 Line too long (148 > 100)
+   --> tests/test_changelog_dates.py:136:101
+    |
+134 | …
+135 | …ological order within Phase {major_minor}:\n"
+136 | …]} ({group_dates[i-1][2]}) comes before Phase {group_dates[i][0]} ({group_dates[i][2]})\n"
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+137 | …
+    |
+
+E501 Line too long (123 > 100)
+   --> tests/test_cli_builder.py:205:101
+    |
+203 |             config="settings.yaml",
+204 |         )
+205 |         expected = "python src/cleaning.py --input data/raw/test.csv --outdir data/processed --config config/settings.yaml"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^
+206 |         assert cmd == expected
+    |
+
+E501 Line too long (182 > 100)
+   --> tests/test_cli_builder.py:217:101
+    |
+215 | …
+216 | …
+217 | …ir data/processed --config config/settings.yaml --workers 4 --parallel-backend threading --chunk-size 1000"
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+218 | …
+    |
+
+E501 Line too long (137 > 100)
+   --> tests/test_cli_builder.py:227:101
+    |
+225 | …
+226 | …
+227 | …ta/raw/test.csv --outdir data/processed --config config/settings.yaml --no-parallel"
+    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+228 | …
+    |
+
+E501 Line too long (173 > 100)
+   --> tests/test_cli_builder.py:239:101
+    |
+237 | …
+238 | …
+239 | …outdir data/processed --config config/settings.yaml --no-resume --run-id custom_run_123 --keep-runs 5"
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+240 | …
+    |
+
+E501 Line too long (141 > 100)
+   --> tests/test_cli_builder.py:249:101
+    |
+247 | …
+248 | …
+249 | …/raw/test.csv --outdir data/processed --config config/settings.yaml --verbose --debug"
+    |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+250 | …
+    |
+
+E501 Line too long (122 > 100)
+   --> tests/test_cli_builder.py:259:101
+    |
+257 |             outdir="custom/output",
+258 |         )
+259 |         expected = "python src/cleaning.py --input data/raw/test.csv --outdir custom/output --config config/settings.yaml"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^
+260 |         assert cmd == expected
+    |
+
+E501 Line too long (137 > 100)
+  --> tests/test_details_fast_path.py:54:101
+   |
+52 | …
+53 | …
+54 | …> 0 and key[0] == run_id) or (isinstance(key, str) and key.startswith(f"{run_id}:")):
+   |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+55 | …
+   |
+
+E501 Line too long (102 > 100)
+   --> tests/test_disposition_vectorized_phase1353.py:286:101
+    |
+284 |     improvement = (legacy_time - vectorized_time) / legacy_time * 100
+285 |     print(
+286 |         f"Performance improvement: {improvement:.1f}% ({legacy_time:.3f}s -> {vectorized_time:.3f}s)",
+    |                                                                                                     ^^
+287 |     )
+    |
+
+F821 Undefined name `temp_dir`
+   --> tests/test_duckdb_group_stats_phase1354.py:154:75
+    |
+152 |             "engine": {"duckdb": {"threads": 2}},
+153 |             "io": {"parquet": {"compression": "zstd"}},
+154 |             "group_stats": {"memoization": {"enable": True}, "cache_dir": temp_dir},
+    |                                                                           ^^^^^^^^
+155 |         }
+156 |         run_id = "test_run"
+    |
+
+E501 Line too long (123 > 100)
+   --> tests/test_duckdb_group_stats_phase1354.py:166:101
+    |
+164 |             cache_key2 = engine._generate_cache_key(df, config_digest)
+165 |             print(
+166 |                 f"DEBUG: direct_cache_key_test | key1={cache_key1} | key2={cache_key2} | equal={cache_key1 == cache_key2}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^
+167 |             )
+    |
+
+E501 Line too long (118 > 100)
+   --> tests/test_duckdb_group_stats_phase1354.py:185:101
+    |
+183 |             # For small datasets, disk I/O may be slower than computation
+184 |             print(
+185 |                 f"Performance: cache_miss={metadata1['elapsed_sec']:.3f}s, cache_hit={metadata2['elapsed_sec']:.3f}s",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^
+186 |             )
+    |
+
+F821 Undefined name `temp_dir`
+   --> tests/test_duckdb_group_stats_phase1354.py:200:75
+    |
+198 |             "engine": {"duckdb": {"threads": 2}},
+199 |             "io": {"parquet": {"compression": "zstd"}},
+200 |             "group_stats": {"memoization": {"enable": True}, "cache_dir": temp_dir},
+    |                                                                           ^^^^^^^^
+201 |         }
+202 |         run_id = "test_run"
+    |
+
+F821 Undefined name `temp_dir`
+   --> tests/test_duckdb_group_stats_phase1354.py:207:30
+    |
+205 |         try:
+206 |             # Write optimized parquet
+207 |             output_path = f"{temp_dir}/test_output.parquet"
+    |                              ^^^^^^^^
+208 |             metadata = engine.write_optimized_parquet(df, output_path)
+    |
+
+F821 Undefined name `temp_dir`
+   --> tests/test_duckdb_group_stats_phase1354.py:282:24
+    |
+280 |     with tempfile.TemporaryDirectory() as _temp_dir:
+281 |         # Create test parquet file
+282 |         test_path = f"{temp_dir}/test.parquet"
+    |                        ^^^^^^^^
+283 |         df.to_parquet(test_path, compression="snappy")
+    |
+
+F821 Undefined name `temp_dir`
+   --> tests/test_duckdb_group_stats_phase1354.py:344:75
+    |
+342 |             "engine": {"duckdb": {"threads": 2}},
+343 |             "io": {"parquet": {"compression": "zstd"}},
+344 |             "group_stats": {"memoization": {"enable": True}, "cache_dir": temp_dir},
+    |                                                                           ^^^^^^^^
+345 |         }
+    |
+
+E501 Line too long (120 > 100)
+   --> tests/test_duckdb_group_stats_phase1354.py:369:101
+    |
+367 |             improvement = (pandas_time - duckdb_time) / pandas_time * 100
+368 |             print(
+369 |                 f"Performance improvement: {improvement:.1f}% (pandas: {pandas_time:.3f}s, duckdb: {duckdb_time:.3f}s)",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^
+370 |             )
+    |
+
+E501 Line too long (121 > 100)
+   --> tests/test_e2e_run_id_and_determinism.py:168:100
+    |
+166 |                 ), f"Number of groups differs for {filename}: {seq_groups} vs {par_groups}"
+167 |                 print(
+168 |                     f"✅ Functional equivalence verified for {filename}: {seq_groups} groups, {seq_df.shape[0]} records",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^
+169 |                 )
+170 |             continue
+    |
+
+E501 Line too long (103 > 100)
+   --> tests/test_group_stats_memoization.py:223:101
+    |
+221 |                 assert len(df2) > 0, "Second run should produce results"
+222 |
+223 |                 # Note: We can't easily test cache_hit=False without seeing the internal implementation
+    |                                                                                                     ^^^
+224 |                 # But we can verify the results are still correct
+225 |                 pd.testing.assert_frame_equal(df1, df2, check_dtype=False)
+    |
+
+E501 Line too long (111 > 100)
+   --> tests/test_interrupt_resume.py:175:101
+    |
+174 |             # Check that output files were created in the run-scoped directory
+175 |             # Note: Pipeline always creates run-scoped subdirectories under the default data/processed location
+    |                                                                                                     ^^^^^^^^^^^
+176 |             expected_output_dir = f"data/processed/{run_id}"
+177 |             assert os.path.exists(
+    |
+
+E501 Line too long (108 > 100)
+  --> tests/test_no_hardcoding.py:41:101
+   |
+39 |     # Hardcoded artifact filenames (only in src/ and app/)
+40 |     "artifact_names": {
+41 |         "pattern": r'["\'](group_stats|group_details|review_ready|pipeline_state)\.(parquet|csv|json)["\']',
+   |                                                                                                     ^^^^^^^^
+42 |         "description": "Hardcoded artifact name - use get_artifact_path()",
+43 |         "files": ["src/", "app/"],
+   |
+
+E501 Line too long (106 > 100)
+   --> tests/test_readonly_safety.py:261:101
+    |
+259 |         assert (
+260 |             check_maintenance_ui_copy()
+261 |         ), "Maintenance UI must show: 'Run deletion functionality will be implemented in a future phase.'"
+    |                                                                                                     ^^^^^^
+262 |
+263 |     def test_maintenance_rendered_in_sidebar(self) -> None:
+    |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:33:1
+   |
+31 |         name_a = "acme store"
+32 |         name_b = "acme store"  # Identical names should score 100
+33 |         
+   | ^^^^^^^^
+34 |         result = compute_score_components(
+35 |             name_a,
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:41:1
+   |
+39 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+40 |         )
+41 |         
+   | ^^^^^^^^
+42 |         # Score should be exactly 100 for identical names
+43 |         assert result["score"] == 100, f"Identical names should score 100, got {result['score']}"
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:51:1
+   |
+49 |         name_a = "acme store"
+50 |         name_b = "xyz corporation"  # Very different names
+51 |         
+   | ^^^^^^^^
+52 |         # Use extremely high penalties to force negative base score
+53 |         result = compute_score_components(
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:60:1
+   |
+58 |             {"num_style_mismatch": 0, "suffix_mismatch": 200, "punctuation_mismatch": 0},
+59 |         )
+60 |         
+   | ^^^^^^^^
+61 |         # Score should be clamped to 0
+62 |         assert result["score"] >= 0, f"Score should be >= 0, got {result['score']}"
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:70:1
+   |
+68 |         name_a = "acme store"
+69 |         name_b = "acme shop"  # Similar but not identical
+70 |         
+   | ^^^^^^^^
+71 |         result = compute_score_components(
+72 |             name_a,
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:78:1
+   |
+76 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+77 |         )
+78 |         
+   | ^^^^^^^^
+79 |         # Score should be an integer (rounded)
+80 |         assert isinstance(result["score"], (int, np.integer)), f"Score should be integer, got {type(result['score'])}"
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (118 > 100)
+  --> tests/test_scoring_bounds.py:80:101
+   |
+79 |         # Score should be an integer (rounded)
+80 |         assert isinstance(result["score"], (int, np.integer)), f"Score should be integer, got {type(result['score'])}"
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^
+81 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:82:1
+   |
+80 |         assert isinstance(result["score"], (int, np.integer)), f"Score should be integer, got {type(result['score'])}"
+81 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+82 |         
+   | ^^^^^^^^
+83 |         # Base score might be fractional, but final score should be rounded
+84 |         if isinstance(result["base_score"], (int, float, np.number)):
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (110 > 100)
+  --> tests/test_scoring_bounds.py:85:101
+   |
+83 |         # Base score might be fractional, but final score should be rounded
+84 |         if isinstance(result["base_score"], (int, float, np.number)):
+85 |             assert 0 <= result["base_score"] <= 100, f"Base score should be 0-100, got {result['base_score']}"
+   |                                                                                                     ^^^^^^^^^^
+86 |
+87 |     def test_score_rounding_edge_cases(self):
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bounds.py:96:1
+   |
+94 |             ("acme store", "xyz corp"),    # Should be low
+95 |         ]
+96 |         
+   | ^^^^^^^^
+97 |         for name_a, name_b in test_cases:
+98 |             result = compute_score_components(
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:105:1
+    |
+103 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+104 |             )
+105 |             
+    | ^^^^^^^^^^^^
+106 |             # All scores should be integers in valid range
+107 |             assert isinstance(result["score"], (int, np.integer)), f"Score should be integer for {name_a} vs {name_b}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (118 > 100)
+   --> tests/test_scoring_bounds.py:107:101
+    |
+106 |             # All scores should be integers in valid range
+107 |             assert isinstance(result["score"], (int, np.integer)), f"Score should be integer for {name_a} vs {name_b}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^
+108 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for {name_a} vs {name_b}, got {result['score']}"
+    |
+
+E501 Line too long (120 > 100)
+   --> tests/test_scoring_bounds.py:108:101
+    |
+106 |             # All scores should be integers in valid range
+107 |             assert isinstance(result["score"], (int, np.integer)), f"Score should be integer for {name_a} vs {name_b}"
+108 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for {name_a} vs {name_b}, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^
+109 |
+110 |     def test_component_score_bounds(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:114:1
+    |
+112 |         name_a = "acme store"
+113 |         name_b = "acme shop"
+114 |         
+    | ^^^^^^^^
+115 |         result = compute_score_components(
+116 |             name_a,
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:122:1
+    |
+120 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+121 |         )
+122 |         
+    | ^^^^^^^^
+123 |         # Check component score bounds
+124 |         assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100, got {result['ratio_name']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (106 > 100)
+   --> tests/test_scoring_bounds.py:124:101
+    |
+123 |         # Check component score bounds
+124 |         assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100, got {result['ratio_name']}"
+    |                                                                                                     ^^^^^^
+125 |         assert 0 <= result["ratio_set"] <= 100, f"ratio_set should be 0-100, got {result['ratio_set']}"
+126 |         assert 0 <= result["jaccard"] <= 1.0, f"jaccard should be 0-1.0, got {result['jaccard']}"
+    |
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_bounds.py:125:101
+    |
+123 |         # Check component score bounds
+124 |         assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100, got {result['ratio_name']}"
+125 |         assert 0 <= result["ratio_set"] <= 100, f"ratio_set should be 0-100, got {result['ratio_set']}"
+    |                                                                                                     ^^^
+126 |         assert 0 <= result["jaccard"] <= 1.0, f"jaccard should be 0-1.0, got {result['jaccard']}"
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:127:1
+    |
+125 |         assert 0 <= result["ratio_set"] <= 100, f"ratio_set should be 0-100, got {result['ratio_set']}"
+126 |         assert 0 <= result["jaccard"] <= 1.0, f"jaccard should be 0-1.0, got {result['jaccard']}"
+127 |         
+    | ^^^^^^^^
+128 |         # Base score should be calculated from components
+129 |         expected_base = 0.45 * result["ratio_name"] + 0.35 * result["ratio_set"] + 20.0 * result["jaccard"]
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (107 > 100)
+   --> tests/test_scoring_bounds.py:129:101
+    |
+128 | …     # Base score should be calculated from components
+129 | …     expected_base = 0.45 * result["ratio_name"] + 0.35 * result["ratio_set"] + 20.0 * result["jaccard"]
+    |                                                                                                   ^^^^^^^
+130 | …     assert abs(result["base_score"] - expected_base) < 0.01, f"Base score calculation incorrect: {result['base_score']} vs {expecte…
+    |
+
+E501 Line too long (143 > 100)
+   --> tests/test_scoring_bounds.py:130:101
+    |
+128 | …s
+129 | …35 * result["ratio_set"] + 20.0 * result["jaccard"]
+130 | … < 0.01, f"Base score calculation incorrect: {result['base_score']} vs {expected_base}"
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+131 | …
+132 | …
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:136:1
+    |
+134 |         name_a = "acme store"
+135 |         name_b = "acme shop"
+136 |         
+    | ^^^^^^^^
+137 |         # Test with various penalty values
+138 |         penalty_values = [0, 5, 10, 25, 50]
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:139:1
+    |
+137 |         # Test with various penalty values
+138 |         penalty_values = [0, 5, 10, 25, 50]
+139 |         
+    | ^^^^^^^^
+140 |         for penalty in penalty_values:
+141 |             result = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:148:1
+    |
+146 |                 {"num_style_mismatch": 0, "suffix_mismatch": penalty, "punctuation_mismatch": 0},
+147 |             )
+148 |             
+    | ^^^^^^^^^^^^
+149 |             # Score should always be in valid range regardless of penalties
+150 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 with penalty {penalty}, got {result['score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (118 > 100)
+   --> tests/test_scoring_bounds.py:150:101
+    |
+149 |             # Score should always be in valid range regardless of penalties
+150 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 with penalty {penalty}, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^
+151 |             
+152 |             # Higher penalties should result in lower scores
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:151:1
+    |
+149 |             # Score should always be in valid range regardless of penalties
+150 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 with penalty {penalty}, got {result['score']}"
+151 |             
+    | ^^^^^^^^^^^^
+152 |             # Higher penalties should result in lower scores
+153 |             if penalty > 0:
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (160 > 100)
+   --> tests/test_scoring_bounds.py:155:101
+    |
+153 | …
+154 | …nly reduce scores)
+155 | …f"Score {result['score']} should be <= base_score {result['base_score']} with penalty {penalty}"
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+156 | …
+157 | …
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:161:1
+    |
+159 |         name_a = "acme store"
+160 |         name_b = "acme shop"
+161 |         
+    | ^^^^^^^^
+162 |         result = compute_score_components(
+163 |             name_a,
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:169:1
+    |
+167 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+168 |         )
+169 |         
+    | ^^^^^^^^
+170 |         # Verify base score calculation formula
+171 |         expected_base = 0.45 * result["ratio_name"] + 0.35 * result["ratio_set"] + 20.0 * result["jaccard"]
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (107 > 100)
+   --> tests/test_scoring_bounds.py:171:101
+    |
+170 | …     # Verify base score calculation formula
+171 | …     expected_base = 0.45 * result["ratio_name"] + 0.35 * result["ratio_set"] + 20.0 * result["jaccard"]
+    |                                                                                                   ^^^^^^^
+172 | …     assert abs(result["base_score"] - expected_base) < 0.01, f"Base score calculation incorrect: {result['base_score']} vs {expecte…
+    |
+
+E501 Line too long (143 > 100)
+   --> tests/test_scoring_bounds.py:172:101
+    |
+170 | …
+171 | …35 * result["ratio_set"] + 20.0 * result["jaccard"]
+172 | … < 0.01, f"Base score calculation incorrect: {result['base_score']} vs {expected_base}"
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+173 | …
+174 | …s
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:173:1
+    |
+171 | …     expected_base = 0.45 * result["ratio_name"] + 0.35 * result["ratio_set"] + 20.0 * result["jaccard"]
+172 | …     assert abs(result["base_score"] - expected_base) < 0.01, f"Base score calculation incorrect: {result['base_score']} vs {expecte…
+173 | …     
+    ^^^^^^^^
+174 | …     # Base score should be positive for similar names
+175 | …     assert result["base_score"] > 0, f"Base score should be positive for similar names, got {result['base_score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (119 > 100)
+   --> tests/test_scoring_bounds.py:175:101
+    |
+174 |         # Base score should be positive for similar names
+175 |         assert result["base_score"] > 0, f"Base score should be positive for similar names, got {result['base_score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^
+176 |
+177 |     def test_penalty_subtraction_accuracy(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:182:1
+    |
+180 |         name_a = "acme store"
+181 |         name_b = "acme shop"
+182 |         
+    | ^^^^^^^^
+183 |         # Test without penalties (same suffix classes - no penalty applied)
+184 |         result_no_penalty = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:191:1
+    |
+189 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+190 |         )
+191 |         
+    | ^^^^^^^^
+192 |         # Test with suffix penalty (different suffix classes - penalty applied)
+193 |         result_with_penalty = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:200:1
+    |
+198 |             {"num_style_mismatch": 0, "suffix_mismatch": 25, "punctuation_mismatch": 0},
+199 |         )
+200 |         
+    | ^^^^^^^^
+201 |         # Base scores should be different (penalties are applied to base_score)
+202 |         # The difference should be approximately the penalty amount
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (108 > 100)
+   --> tests/test_scoring_bounds.py:204:101
+    |
+202 |         # The difference should be approximately the penalty amount
+203 |         base_difference = result_no_penalty["base_score"] - result_with_penalty["base_score"]
+204 |         assert abs(base_difference - 25) <= 1, f"Base score difference should be ~25, got {base_difference}"
+    |                                                                                                     ^^^^^^^^
+205 |         
+206 |         # Final score should be reduced by penalty amount
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:205:1
+    |
+203 |         base_difference = result_no_penalty["base_score"] - result_with_penalty["base_score"]
+204 |         assert abs(base_difference - 25) <= 1, f"Base score difference should be ~25, got {base_difference}"
+205 |         
+    | ^^^^^^^^
+206 |         # Final score should be reduced by penalty amount
+207 |         score_difference = result_no_penalty["score"] - result_with_penalty["score"]
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:209:1
+    |
+207 |         score_difference = result_no_penalty["score"] - result_with_penalty["score"]
+208 |         assert score_difference >= 0, "Score with penalty should be <= score without penalty"
+209 |         
+    | ^^^^^^^^
+210 |         # The difference should be approximately the penalty amount (allowing for rounding)
+211 |         assert abs(score_difference - 25) <= 1, f"Score difference should be ~25, got {score_difference}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (105 > 100)
+   --> tests/test_scoring_bounds.py:211:101
+    |
+210 |         # The difference should be approximately the penalty amount (allowing for rounding)
+211 |         assert abs(score_difference - 25) <= 1, f"Score difference should be ~25, got {score_difference}"
+    |                                                                                                     ^^^^^
+212 |
+213 |     def test_score_precision(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:218:1
+    |
+216 |         name_a = "acme store"
+217 |         name_b = "acme shop"
+218 |         
+    | ^^^^^^^^
+219 |         result = compute_score_components(
+220 |             name_a,
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:226:1
+    |
+224 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+225 |         )
+226 |         
+    | ^^^^^^^^
+227 |         # All numeric values should be valid numbers
+228 |         assert isinstance(result["score"], (int, float, np.number)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (104 > 100)
+   --> tests/test_scoring_bounds.py:229:101
+    |
+227 |         # All numeric values should be valid numbers
+228 |         assert isinstance(result["score"], (int, float, np.number)), "Score should be numeric"
+229 |         assert isinstance(result["base_score"], (int, float, np.number)), "Base score should be numeric"
+    |                                                                                                     ^^^^
+230 |         assert isinstance(result["ratio_name"], (int, float, np.number)), "ratio_name should be numeric"
+231 |         assert isinstance(result["ratio_set"], (int, float, np.number)), "ratio_set should be numeric"
+    |
+
+E501 Line too long (104 > 100)
+   --> tests/test_scoring_bounds.py:230:101
+    |
+228 |         assert isinstance(result["score"], (int, float, np.number)), "Score should be numeric"
+229 |         assert isinstance(result["base_score"], (int, float, np.number)), "Base score should be numeric"
+230 |         assert isinstance(result["ratio_name"], (int, float, np.number)), "ratio_name should be numeric"
+    |                                                                                                     ^^^^
+231 |         assert isinstance(result["ratio_set"], (int, float, np.number)), "ratio_set should be numeric"
+232 |         assert isinstance(result["jaccard"], (int, float, np.number)), "jaccard should be numeric"
+    |
+
+E501 Line too long (102 > 100)
+   --> tests/test_scoring_bounds.py:231:101
+    |
+229 |         assert isinstance(result["base_score"], (int, float, np.number)), "Base score should be numeric"
+230 |         assert isinstance(result["ratio_name"], (int, float, np.number)), "ratio_name should be numeric"
+231 |         assert isinstance(result["ratio_set"], (int, float, np.number)), "ratio_set should be numeric"
+    |                                                                                                     ^^
+232 |         assert isinstance(result["jaccard"], (int, float, np.number)), "jaccard should be numeric"
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:233:1
+    |
+231 |         assert isinstance(result["ratio_set"], (int, float, np.number)), "ratio_set should be numeric"
+232 |         assert isinstance(result["jaccard"], (int, float, np.number)), "jaccard should be numeric"
+233 |         
+    | ^^^^^^^^
+234 |         # No NaN or infinite values
+235 |         assert not np.isnan(result["score"]), "Score should not be NaN"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:244:1
+    |
+242 |         name_a = "acme store"
+243 |         name_b = "acme shop"
+244 |         
+    | ^^^^^^^^
+245 |         # Test with very large penalties (use different suffix classes to trigger penalty)
+246 |         extreme_penalties = [100, 200, 500, 1000]
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:247:1
+    |
+245 |         # Test with very large penalties (use different suffix classes to trigger penalty)
+246 |         extreme_penalties = [100, 200, 500, 1000]
+247 |         
+    | ^^^^^^^^
+248 |         for penalty in extreme_penalties:
+249 |             result = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:256:1
+    |
+254 |                 {"num_style_mismatch": 0, "suffix_mismatch": penalty, "punctuation_mismatch": 0},
+255 |             )
+256 |             
+    | ^^^^^^^^^^^^
+257 |             # Score should be clamped to 0 with extreme penalties
+258 |             assert result["score"] >= 0, f"Score should be >= 0 with penalty {penalty}, got {result['score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (110 > 100)
+   --> tests/test_scoring_bounds.py:258:101
+    |
+257 |             # Score should be clamped to 0 with extreme penalties
+258 |             assert result["score"] >= 0, f"Score should be >= 0 with penalty {penalty}, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^
+259 |             assert result["score"] <= 100, f"Score should be <= 100 with penalty {penalty}, got {result['score']}"
+    |
+
+E501 Line too long (114 > 100)
+   --> tests/test_scoring_bounds.py:259:101
+    |
+257 |             # Score should be clamped to 0 with extreme penalties
+258 |             assert result["score"] >= 0, f"Score should be >= 0 with penalty {penalty}, got {result['score']}"
+259 |             assert result["score"] <= 100, f"Score should be <= 100 with penalty {penalty}, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^
+260 |             
+261 |             # With very large penalties, score should be 0
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:260:1
+    |
+258 |             assert result["score"] >= 0, f"Score should be >= 0 with penalty {penalty}, got {result['score']}"
+259 |             assert result["score"] <= 100, f"Score should be <= 100 with penalty {penalty}, got {result['score']}"
+260 |             
+    | ^^^^^^^^^^^^
+261 |             # With very large penalties, score should be 0
+262 |             if penalty >= 100:
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (119 > 100)
+   --> tests/test_scoring_bounds.py:263:101
+    |
+261 |             # With very large penalties, score should be 0
+262 |             if penalty >= 100:
+263 |                 assert result["score"] == 0, f"Score should be 0 with extreme penalty {penalty}, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^
+264 |
+265 |     def test_zero_penalty_values(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:269:1
+    |
+267 |         name_a = "acme store"
+268 |         name_b = "acme shop"
+269 |         
+    | ^^^^^^^^
+270 |         # Test with zero penalties
+271 |         result = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:278:1
+    |
+276 | …         {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+277 | …     )
+278 | …     
+    ^^^^^^^^
+279 | …     # Score should be the same as base score (no penalties applied)
+280 | …     assert result["score"] == result["base_score"], f"Score should equal base_score with zero penalties: {result['score']} vs {resu…
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (153 > 100)
+   --> tests/test_scoring_bounds.py:280:101
+    |
+279 | …s applied)
+280 | …re should equal base_score with zero penalties: {result['score']} vs {result['base_score']}"
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+281 | …
+282 | …
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:281:1
+    |
+279 | …     # Score should be the same as base score (no penalties applied)
+280 | …     assert result["score"] == result["base_score"], f"Score should equal base_score with zero penalties: {result['score']} vs {resu…
+281 | …     
+    ^^^^^^^^
+282 | …     # Score should be positive for similar names
+283 | …     assert result["score"] > 0, f"Score should be positive for similar names with zero penalties, got {result['score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (124 > 100)
+   --> tests/test_scoring_bounds.py:283:101
+    |
+282 |         # Score should be positive for similar names
+283 |         assert result["score"] > 0, f"Score should be positive for similar names with zero penalties, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+284 |
+285 |     def test_negative_penalty_values(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:289:1
+    |
+287 |         name_a = "acme store"
+288 |         name_b = "acme shop"
+289 |         
+    | ^^^^^^^^
+290 |         # Test with negative penalties (should increase scores)
+291 |         result = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:298:1
+    |
+296 |             {"num_style_mismatch": 0, "suffix_mismatch": -10, "punctuation_mismatch": 0},
+297 |         )
+298 |         
+    | ^^^^^^^^
+299 |         # Score should still be in valid range
+300 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100 with negative penalty, got {result['score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (113 > 100)
+   --> tests/test_scoring_bounds.py:300:101
+    |
+299 |         # Score should still be in valid range
+300 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100 with negative penalty, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^
+301 |         
+302 |         # Score should be >= base_score (negative penalty increases score)
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:301:1
+    |
+299 | …     # Score should still be in valid range
+300 | …     assert 0 <= result["score"] <= 100, f"Score should be 0-100 with negative penalty, got {result['score']}"
+301 | …     
+    ^^^^^^^^
+302 | …     # Score should be >= base_score (negative penalty increases score)
+303 | …     assert result["score"] >= result["base_score"], f"Score {result['score']} should be >= base_score {result['base_score']} with n…
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (151 > 100)
+   --> tests/test_scoring_bounds.py:303:101
+    |
+302 | …creases score)
+303 | …ore {result['score']} should be >= base_score {result['base_score']} with negative penalty"
+    |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+304 | …
+305 | …
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:304:1
+    |
+302 | …     # Score should be >= base_score (negative penalty increases score)
+303 | …     assert result["score"] >= result["base_score"], f"Score {result['score']} should be >= base_score {result['base_score']} with n…
+304 | …     
+    ^^^^^^^^
+305 | …     # But should be clamped to 100 maximum
+306 | …     assert result["score"] <= 100, f"Score should be <= 100 even with negative penalty, got {result['score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (114 > 100)
+   --> tests/test_scoring_bounds.py:306:101
+    |
+305 |         # But should be clamped to 100 maximum
+306 |         assert result["score"] <= 100, f"Score should be <= 100 even with negative penalty, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^
+307 |
+308 |     def test_combined_penalty_bounds(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:312:1
+    |
+310 |         name_a = "acme store"
+311 |         name_b = "acme shop"
+312 |         
+    | ^^^^^^^^
+313 |         # Test with multiple penalties
+314 |         result = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:321:1
+    |
+319 |             {"num_style_mismatch": 5, "suffix_mismatch": 25, "punctuation_mismatch": 3},
+320 |         )
+321 |         
+    | ^^^^^^^^
+322 |         # Score should be in valid range
+323 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100 with combined penalties, got {result['score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (115 > 100)
+   --> tests/test_scoring_bounds.py:323:101
+    |
+322 |         # Score should be in valid range
+323 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100 with combined penalties, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^
+324 |         
+325 |         # Score should be <= base_score (penalties reduce score)
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:324:1
+    |
+322 | …     # Score should be in valid range
+323 | …     assert 0 <= result["score"] <= 100, f"Score should be 0-100 with combined penalties, got {result['score']}"
+324 | …     
+    ^^^^^^^^
+325 | …     # Score should be <= base_score (penalties reduce score)
+326 | …     assert result["score"] <= result["base_score"], f"Score {result['score']} should be <= base_score {result['base_score']} with c…
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (153 > 100)
+   --> tests/test_scoring_bounds.py:326:101
+    |
+325 | …re)
+326 | …re {result['score']} should be <= base_score {result['base_score']} with combined penalties"
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+327 | …
+328 | …
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:327:1
+    |
+325 | …     # Score should be <= base_score (penalties reduce score)
+326 | …     assert result["score"] <= result["base_score"], f"Score {result['score']} should be <= base_score {result['base_score']} with c…
+327 | …     
+    ^^^^^^^^
+328 | …     # Penalty flags should be set correctly
+329 | …     assert isinstance(result["suffix_match"], bool), "suffix_match should be boolean"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (105 > 100)
+   --> tests/test_scoring_bounds.py:331:101
+    |
+329 |         assert isinstance(result["suffix_match"], bool), "suffix_match should be boolean"
+330 |         assert isinstance(result["num_style_match"], bool), "num_style_match should be boolean"
+331 |         assert isinstance(result["punctuation_mismatch"], bool), "punctuation_mismatch should be boolean"
+    |                                                                                                     ^^^^^
+332 |
+333 |     def test_edge_case_score_boundaries(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:342:1
+    |
+340 |             ("", ""),                          # Should be 0 or 100
+341 |         ]
+342 |         
+    | ^^^^^^^^
+343 |         for name_a, name_b in test_cases:
+344 |             result = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:351:1
+    |
+349 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+350 |             )
+351 |             
+    | ^^^^^^^^^^^^
+352 |             # All scores should be in valid range
+353 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (124 > 100)
+   --> tests/test_scoring_bounds.py:353:101
+    |
+352 |             # All scores should be in valid range
+353 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+354 |             
+355 |             # All component scores should be in valid ranges
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bounds.py:354:1
+    |
+352 |             # All scores should be in valid range
+353 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+354 |             
+    | ^^^^^^^^^^^^
+355 |             # All component scores should be in valid ranges
+356 |             assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100 for '{name_a}' vs '{name_b}'"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (111 > 100)
+   --> tests/test_scoring_bounds.py:356:101
+    |
+355 |             # All component scores should be in valid ranges
+356 |             assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100 for '{name_a}' vs '{name_b}'"
+    |                                                                                                     ^^^^^^^^^^^
+357 |             assert 0 <= result["ratio_set"] <= 100, f"ratio_set should be 0-100 for '{name_a}' vs '{name_b}'"
+358 |             assert 0 <= result["jaccard"] <= 1.0, f"jaccard should be 0-1.0 for '{name_a}' vs '{name_b}'"
+    |
+
+E501 Line too long (109 > 100)
+   --> tests/test_scoring_bounds.py:357:101
+    |
+355 |             # All component scores should be in valid ranges
+356 |             assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100 for '{name_a}' vs '{name_b}'"
+357 |             assert 0 <= result["ratio_set"] <= 100, f"ratio_set should be 0-100 for '{name_a}' vs '{name_b}'"
+    |                                                                                                     ^^^^^^^^^
+358 |             assert 0 <= result["jaccard"] <= 1.0, f"jaccard should be 0-1.0 for '{name_a}' vs '{name_b}'"
+    |
+
+E501 Line too long (105 > 100)
+   --> tests/test_scoring_bounds.py:358:101
+    |
+356 |             assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100 for '{name_a}' vs '{name_b}'"
+357 |             assert 0 <= result["ratio_set"] <= 100, f"ratio_set should be 0-100 for '{name_a}' vs '{name_b}'"
+358 |             assert 0 <= result["jaccard"] <= 1.0, f"jaccard should be 0-1.0 for '{name_a}' vs '{name_b}'"
+    |                                                                                                     ^^^^^
+    |
+
+W292 [*] No newline at end of file
+   --> tests/test_scoring_bounds.py:358:106
+    |
+356 |             assert 0 <= result["ratio_name"] <= 100, f"ratio_name should be 0-100 for '{name_a}' vs '{name_b}'"
+357 |             assert 0 <= result["ratio_set"] <= 100, f"ratio_set should be 0-100 for '{name_a}' vs '{name_b}'"
+358 |             assert 0 <= result["jaccard"] <= 1.0, f"jaccard should be 0-1.0 for '{name_a}' vs '{name_b}'"
+    |                                                                                                          ^
+    |
+help: Add trailing newline
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bulk_gate.py:37:1
+   |
+35 |         df_norm = normalize_dataframe(test_data, "Account Name")
+36 |         candidate_pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+37 |         
+   | ^^^^^^^^
+38 |         # Test with different gate cutoffs
+39 |         gate_cutoffs = [50, 72, 80, 90]
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bulk_gate.py:40:1
+   |
+38 |         # Test with different gate cutoffs
+39 |         gate_cutoffs = [50, 72, 80, 90]
+40 |         
+   | ^^^^^^^^
+41 |         for cutoff in gate_cutoffs:
+42 |             settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": cutoff}}})
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bulk_gate.py:44:1
+   |
+42 |             settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": cutoff}}})
+43 |             results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+44 |             
+   | ^^^^^^^^^^^^
+45 |             # All results should have ratio_set >= cutoff
+46 |             for result in results:
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (124 > 100)
+  --> tests/test_scoring_bulk_gate.py:47:101
+   |
+45 |             # All results should have ratio_set >= cutoff
+46 |             for result in results:
+47 |                 assert result["ratio_set"] >= cutoff, f"Result should have ratio_set >= {cutoff}, got {result['ratio_set']}"
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+48 |
+49 |     def test_bulk_gate_filtering_logic(self, settings_from_config):
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bulk_gate.py:59:1
+   |
+57 |         df_norm = normalize_dataframe(test_data, "Account Name")
+58 |         candidate_pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+59 |         
+   | ^^^^^^^^
+60 |         # Use medium gate cutoff
+61 |         settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": 72}}})
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bulk_gate.py:63:1
+   |
+61 |         settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": 72}}})
+62 |         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+63 |         
+   | ^^^^^^^^
+64 |         # Should filter based on token_set_ratio
+65 |         for result in results:
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (110 > 100)
+  --> tests/test_scoring_bulk_gate.py:66:101
+   |
+64 |         # Should filter based on token_set_ratio
+65 |         for result in results:
+66 |             assert result["ratio_set"] >= 72, f"Result should have ratio_set >= 72, got {result['ratio_set']}"
+   |                                                                                                     ^^^^^^^^^^
+67 |
+68 |     def test_bulk_gate_performance(self, settings_from_config):
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_bulk_gate.py:71:1
+   |
+69 |         """Test bulk gate performance."""
+70 |         import time
+71 |         
+   | ^^^^^^^^
+72 |         # Create larger test data
+73 |         test_data = pd.DataFrame({
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bulk_gate.py:101:1
+    |
+ 99 |         df_norm = normalize_dataframe(test_data, "Account Name")
+100 |         candidate_pairs = [(0, 1), (0, 2), (1, 2)]
+101 |         
+    | ^^^^^^^^
+102 |         # Use very high gate cutoff
+103 |         settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": 95}}})
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bulk_gate.py:105:1
+    |
+103 |         settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": 95}}})
+104 |         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+105 |         
+    | ^^^^^^^^
+106 |         # Should have no results
+107 |         assert len(results) == 0, "Should have no results with very high gate cutoff"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bulk_gate.py:119:1
+    |
+117 |         df_norm = normalize_dataframe(test_data, "Account Name")
+118 |         candidate_pairs = [(0, 1), (0, 2), (1, 2)]
+119 |         
+    | ^^^^^^^^
+120 |         # Use very low gate cutoff
+121 |         settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": 10}}})
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_bulk_gate.py:123:1
+    |
+121 |         settings = settings_from_config({"similarity": {"scoring": {"gate_cutoff": 10}}})
+122 |         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+123 |         
+    | ^^^^^^^^
+124 |         # Should have all results
+125 |         assert len(results) == 3, "Should have all results with very low gate cutoff"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_degenerate.py:42:1
+   |
+40 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+41 |         )
+42 |         
+   | ^^^^^^^^
+43 |         # Jaccard should be 0.0 for empty tokens
+44 |         assert result["jaccard"] == 0.0, f"Jaccard should be 0.0 for empty strings, got {result['jaccard']}"
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (108 > 100)
+  --> tests/test_scoring_degenerate.py:44:101
+   |
+43 |         # Jaccard should be 0.0 for empty tokens
+44 |         assert result["jaccard"] == 0.0, f"Jaccard should be 0.0 for empty strings, got {result['jaccard']}"
+   |                                                                                                     ^^^^^^^^
+45 |         
+46 |         # Test with whitespace-only strings
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_degenerate.py:45:1
+   |
+43 |         # Jaccard should be 0.0 for empty tokens
+44 |         assert result["jaccard"] == 0.0, f"Jaccard should be 0.0 for empty strings, got {result['jaccard']}"
+45 |         
+   | ^^^^^^^^
+46 |         # Test with whitespace-only strings
+47 |         result_whitespace = compute_score_components(
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_degenerate.py:54:1
+   |
+52 | …         {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+53 | …     )
+54 | …     
+   ^^^^^^^^
+55 | …     # Jaccard should be 0.0 for whitespace-only strings (after normalization)
+56 | …     assert result_whitespace["jaccard"] == 0.0, f"Jaccard should be 0.0 for whitespace-only strings, got {result_whitespace['jaccard…
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (140 > 100)
+  --> tests/test_scoring_degenerate.py:56:101
+   |
+55 | …rings (after normalization)
+56 | …Jaccard should be 0.0 for whitespace-only strings, got {result_whitespace['jaccard']}"
+   |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+57 | …
+58 | …, settings_from_config):
+   |
+
+E501 Line too long (103 > 100)
+  --> tests/test_scoring_degenerate.py:77:101
+   |
+75 |         # Test parallel scoring
+76 |         parallel_results = score_pairs_parallel(df_norm, candidate_pairs, settings)
+77 |         assert len(parallel_results) == 0, "Parallel results should be empty for empty candidate pairs"
+   |                                                                                                     ^^^
+78 |         assert isinstance(parallel_results, list), "Parallel results should be a list"
+   |
+
+E501 Line too long (116 > 100)
+   --> tests/test_scoring_degenerate.py:98:101
+    |
+ 97 |         # DataFrame should be unchanged
+ 98 |         pd.testing.assert_frame_equal(df_norm, original_df, "DataFrame should not be mutated with empty candidates")
+    |                                                                                                     ^^^^^^^^^^^^^^^^
+ 99 |
+100 |     def test_empty_candidate_list_correct_columns(self, settings_from_config):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:125:1
+    |
+123 |             "suffix_match", "num_style_match", "punctuation_mismatch", "base_score"
+124 |         ]
+125 |         
+    | ^^^^^^^^
+126 |         # This test documents the expected structure for when results are present
+127 |         print("Expected result columns:", expected_columns)
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:155:1
+    |
+153 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+154 |         )
+155 |         
+    | ^^^^^^^^
+156 |         # Should handle gracefully
+157 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:160:1
+    |
+158 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+159 |         assert result["jaccard"] == 0.0, "Jaccard should be 0.0 for empty strings"
+160 |         
+    | ^^^^^^^^
+161 |         # Test empty string vs non-empty string
+162 |         result_mixed = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:169:1
+    |
+167 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+168 |         )
+169 |         
+    | ^^^^^^^^
+170 |         # Should handle gracefully
+171 |         assert isinstance(result_mixed["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_degenerate.py:172:101
+    |
+170 |         # Should handle gracefully
+171 |         assert isinstance(result_mixed["score"], (int, float)), "Score should be numeric"
+172 |         assert 0 <= result_mixed["score"] <= 100, f"Score should be 0-100, got {result_mixed['score']}"
+    |                                                                                                     ^^^
+173 |
+174 |     def test_whitespace_only_inputs_handling(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:184:1
+    |
+182 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+183 |         )
+184 |         
+    | ^^^^^^^^
+185 |         # Should handle gracefully
+186 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:188:1
+    |
+186 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+187 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+188 |         
+    | ^^^^^^^^
+189 |         # Test mixed whitespace
+190 |         result_mixed = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:197:1
+    |
+195 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+196 |         )
+197 |         
+    | ^^^^^^^^
+198 |         # Should handle gracefully
+199 |         assert isinstance(result_mixed["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_degenerate.py:200:101
+    |
+198 |         # Should handle gracefully
+199 |         assert isinstance(result_mixed["score"], (int, float)), "Score should be numeric"
+200 |         assert 0 <= result_mixed["score"] <= 100, f"Score should be 0-100, got {result_mixed['score']}"
+    |                                                                                                     ^^^
+201 |
+202 |     def test_single_character_inputs_handling(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:212:1
+    |
+210 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+211 |         )
+212 |         
+    | ^^^^^^^^
+213 |         # Should handle gracefully
+214 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:216:1
+    |
+214 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+215 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+216 |         
+    | ^^^^^^^^
+217 |         # Test same single character
+218 |         result_same = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:225:1
+    |
+223 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+224 |         )
+225 |         
+    | ^^^^^^^^
+226 |         # Should handle gracefully
+227 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (101 > 100)
+   --> tests/test_scoring_degenerate.py:228:101
+    |
+226 |         # Should handle gracefully
+227 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+228 |         assert 0 <= result_same["score"] <= 100, f"Score should be 0-100, got {result_same['score']}"
+    |                                                                                                     ^
+229 |
+230 |     def test_very_long_inputs_handling(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:235:1
+    |
+233 |         long_string_a = "acme store " * 1000  # ~10,000 characters
+234 |         long_string_b = "acme shop " * 1000   # ~10,000 characters
+235 |         
+    | ^^^^^^^^
+236 |         result = compute_score_components(
+237 |             long_string_a,
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:243:1
+    |
+241 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+242 |         )
+243 |         
+    | ^^^^^^^^
+244 |         # Should handle gracefully
+245 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:247:1
+    |
+245 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+246 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+247 |         
+    | ^^^^^^^^
+248 |         # Test identical long strings
+249 |         result_same = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:256:1
+    |
+254 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+255 |         )
+256 |         
+    | ^^^^^^^^
+257 |         # Should handle gracefully and score high for identical strings
+258 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (101 > 100)
+   --> tests/test_scoring_degenerate.py:259:101
+    |
+257 |         # Should handle gracefully and score high for identical strings
+258 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+259 |         assert 0 <= result_same["score"] <= 100, f"Score should be 0-100, got {result_same['score']}"
+    |                                                                                                     ^
+260 |         assert result_same["score"] > 50, "Identical long strings should score reasonably high"
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:272:1
+    |
+270 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+271 |         )
+272 |         
+    | ^^^^^^^^
+273 |         # Should handle gracefully
+274 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:276:1
+    |
+274 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+275 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+276 |         
+    | ^^^^^^^^
+277 |         # Test different special characters
+278 |         result_different = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:285:1
+    |
+283 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+284 |         )
+285 |         
+    | ^^^^^^^^
+286 |         # Should handle gracefully
+287 |         assert isinstance(result_different["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (111 > 100)
+   --> tests/test_scoring_degenerate.py:288:101
+    |
+286 |         # Should handle gracefully
+287 |         assert isinstance(result_different["score"], (int, float)), "Score should be numeric"
+288 |         assert 0 <= result_different["score"] <= 100, f"Score should be 0-100, got {result_different['score']}"
+    |                                                                                                     ^^^^^^^^^^^
+289 |
+290 |     def test_numeric_only_inputs_handling(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:300:1
+    |
+298 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+299 |         )
+300 |         
+    | ^^^^^^^^
+301 |         # Should handle gracefully
+302 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:304:1
+    |
+302 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+303 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+304 |         
+    | ^^^^^^^^
+305 |         # Test identical numeric strings
+306 |         result_same = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:313:1
+    |
+311 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+312 |         )
+313 |         
+    | ^^^^^^^^
+314 |         # Should handle gracefully and score high for identical strings
+315 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (101 > 100)
+   --> tests/test_scoring_degenerate.py:316:101
+    |
+314 |         # Should handle gracefully and score high for identical strings
+315 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+316 |         assert 0 <= result_same["score"] <= 100, f"Score should be 0-100, got {result_same['score']}"
+    |                                                                                                     ^
+317 |         assert result_same["score"] > 50, "Identical numeric strings should score reasonably high"
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:329:1
+    |
+327 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+328 |         )
+329 |         
+    | ^^^^^^^^
+330 |         # Should handle gracefully
+331 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:333:1
+    |
+331 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+332 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+333 |         
+    | ^^^^^^^^
+334 |         # Test with different suffix classes
+335 |         result_suffix = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:342:1
+    |
+340 |             {"num_style_mismatch": 0, "suffix_mismatch": 25, "punctuation_mismatch": 0},
+341 |         )
+342 |         
+    | ^^^^^^^^
+343 |         # Should handle gracefully
+344 |         assert isinstance(result_suffix["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (105 > 100)
+   --> tests/test_scoring_degenerate.py:345:101
+    |
+343 |         # Should handle gracefully
+344 |         assert isinstance(result_suffix["score"], (int, float)), "Score should be numeric"
+345 |         assert 0 <= result_suffix["score"] <= 100, f"Score should be 0-100, got {result_suffix['score']}"
+    |                                                                                                     ^^^^^
+346 |
+347 |     def test_unicode_inputs_handling(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:357:1
+    |
+355 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+356 |         )
+357 |         
+    | ^^^^^^^^
+358 |         # Should handle gracefully
+359 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:361:1
+    |
+359 |         assert isinstance(result["score"], (int, float)), "Score should be numeric"
+360 |         assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+361 |         
+    | ^^^^^^^^
+362 |         # Test identical Unicode strings
+363 |         result_same = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:370:1
+    |
+368 |             {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+369 |         )
+370 |         
+    | ^^^^^^^^
+371 |         # Should handle gracefully and score high for identical strings
+372 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (101 > 100)
+   --> tests/test_scoring_degenerate.py:373:101
+    |
+371 |         # Should handle gracefully and score high for identical strings
+372 |         assert isinstance(result_same["score"], (int, float)), "Score should be numeric"
+373 |         assert 0 <= result_same["score"] <= 100, f"Score should be 0-100, got {result_same['score']}"
+    |                                                                                                     ^
+374 |         assert result_same["score"] > 50, "Identical Unicode strings should score reasonably high"
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:389:1
+    |
+387 |             ("!@#", "a"),        # Special chars vs single char
+388 |         ]
+389 |         
+    | ^^^^^^^^
+390 |         for name_a, name_b in edge_cases:
+391 |             result = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_degenerate.py:398:1
+    |
+396 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+397 |             )
+398 |             
+    | ^^^^^^^^^^^^
+399 |             # All should handle gracefully
+400 |             assert isinstance(result["score"], (int, float)), f"Score should be numeric for '{name_a}' vs '{name_b}'"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (117 > 100)
+   --> tests/test_scoring_degenerate.py:400:101
+    |
+399 |             # All should handle gracefully
+400 |             assert isinstance(result["score"], (int, float)), f"Score should be numeric for '{name_a}' vs '{name_b}'"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^
+401 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+402 |             assert isinstance(result["jaccard"], (int, float)), f"Jaccard should be numeric for '{name_a}' vs '{name_b}'"
+    |
+
+E501 Line too long (124 > 100)
+   --> tests/test_scoring_degenerate.py:401:101
+    |
+399 |             # All should handle gracefully
+400 |             assert isinstance(result["score"], (int, float)), f"Score should be numeric for '{name_a}' vs '{name_b}'"
+401 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+402 |             assert isinstance(result["jaccard"], (int, float)), f"Jaccard should be numeric for '{name_a}' vs '{name_b}'"
+403 |             assert 0 <= result["jaccard"] <= 1.0, f"Jaccard should be 0-1.0 for '{name_a}' vs '{name_b}', got {result['jaccard']}"
+    |
+
+E501 Line too long (121 > 100)
+   --> tests/test_scoring_degenerate.py:402:101
+    |
+400 |             assert isinstance(result["score"], (int, float)), f"Score should be numeric for '{name_a}' vs '{name_b}'"
+401 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+402 |             assert isinstance(result["jaccard"], (int, float)), f"Jaccard should be numeric for '{name_a}' vs '{name_b}'"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^
+403 |             assert 0 <= result["jaccard"] <= 1.0, f"Jaccard should be 0-1.0 for '{name_a}' vs '{name_b}', got {result['jaccard']}"
+    |
+
+E501 Line too long (130 > 100)
+   --> tests/test_scoring_degenerate.py:403:101
+    |
+401 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+402 |             assert isinstance(result["jaccard"], (int, float)), f"Jaccard should be numeric for '{name_a}' vs '{name_b}'"
+403 |             assert 0 <= result["jaccard"] <= 1.0, f"Jaccard should be 0-1.0 for '{name_a}' vs '{name_b}', got {result['jaccard']}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+W292 [*] No newline at end of file
+   --> tests/test_scoring_degenerate.py:403:131
+    |
+401 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for '{name_a}' vs '{name_b}', got {result['score']}"
+402 |             assert isinstance(result["jaccard"], (int, float)), f"Jaccard should be numeric for '{name_a}' vs '{name_b}'"
+403 |             assert 0 <= result["jaccard"] <= 1.0, f"Jaccard should be 0-1.0 for '{name_a}' vs '{name_b}', got {result['jaccard']}"
+    |                                                                                                                                   ^
+    |
+help: Add trailing newline
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_enhanced_fallback.py:37:1
+   |
+35 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+36 |             )
+37 |             
+   | ^^^^^^^^^^^^
+38 |             # Should produce valid results
+39 |             assert isinstance(result["score"], (int, float)), "Score should be numeric"
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (101 > 100)
+  --> tests/test_scoring_enhanced_fallback.py:42:101
+   |
+40 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100, got {result['score']}"
+41 |             assert isinstance(result["jaccard"], (int, float)), "Jaccard should be numeric"
+42 |             assert 0 <= result["jaccard"] <= 1.0, f"Jaccard should be 0-1.0, got {result['jaccard']}"
+   |                                                                                                     ^
+43 |
+44 |     def test_enhance_name_core_failure_fallback(self):
+   |
+
+E501 Line too long (103 > 100)
+  --> tests/test_scoring_enhanced_fallback.py:46:101
+   |
+44 |     def test_enhance_name_core_failure_fallback(self):
+45 |         """Test fallback when enhance_name_core fails."""
+46 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+   |                                                                                                     ^^^
+47 |             # Should still work with fallback behavior
+48 |             result = compute_score_components(
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_enhanced_fallback.py:55:1
+   |
+53 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+54 |             )
+55 |             
+   | ^^^^^^^^^^^^
+56 |             # Should produce valid results
+57 |             assert isinstance(result["score"], (int, float)), "Score should be numeric"
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (117 > 100)
+  --> tests/test_scoring_enhanced_fallback.py:62:101
+   |
+60 |     def test_get_enhanced_tokens_failure_fallback(self):
+61 |         """Test fallback when get_enhanced_tokens_for_jaccard fails."""
+62 |         with patch('src.normalize.get_enhanced_tokens_for_jaccard', side_effect=ImportError("Module not available")):
+   |                                                                                                     ^^^^^^^^^^^^^^^^^
+63 |             # Should still work with fallback behavior
+64 |             result = compute_score_components(
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_enhanced_fallback.py:71:1
+   |
+69 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+70 |             )
+71 |             
+   | ^^^^^^^^^^^^
+72 |             # Should produce valid results
+73 |             assert isinstance(result["score"], (int, float)), "Score should be numeric"
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+  --> tests/test_scoring_enhanced_fallback.py:78:101
+   |
+76 |     def test_penalties_apply_during_fallback(self):
+77 |         """Test that penalties still apply during fallback."""
+78 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+   |                                                                                                     ^^^
+79 |             # Test with suffix penalty
+80 |             result = compute_score_components(
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_enhanced_fallback.py:87:1
+   |
+85 |                 {"num_style_mismatch": 0, "suffix_mismatch": 25, "punctuation_mismatch": 0},
+86 |             )
+87 |             
+   | ^^^^^^^^^^^^
+88 |             # Should produce valid results with penalty applied
+89 |             assert isinstance(result["score"], (int, float)), "Score should be numeric"
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:107:1
+    |
+105 |                     {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+106 |                 )
+107 |         
+    | ^^^^^^^^
+108 |         # Document this as a known limitation
+109 |         print("Note: Only ImportError is caught in fallback - other exceptions propagate")
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (107 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:116:101
+    |
+114 |         results = []
+115 |         for _ in range(3):
+116 |             with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+    |                                                                                                     ^^^^^^^
+117 |                 result = compute_score_components(
+118 |                     "acme store",
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:125:1
+    |
+123 |                 )
+124 |                 results.append(result)
+125 |         
+    | ^^^^^^^^
+126 |         # All results should be identical
+127 |         for i in range(1, len(results)):
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (101 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:128:101
+    |
+126 |         # All results should be identical
+127 |         for i in range(1, len(results)):
+128 |             assert results[i]["score"] == results[0]["score"], "Fallback scores should be consistent"
+    |                                                                                                     ^
+129 |             assert results[i]["jaccard"] == results[0]["jaccard"], "Fallback jaccard should be consistent"
+    |
+
+E501 Line too long (106 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:129:101
+    |
+127 |         for i in range(1, len(results)):
+128 |             assert results[i]["score"] == results[0]["score"], "Fallback scores should be consistent"
+129 |             assert results[i]["jaccard"] == results[0]["jaccard"], "Fallback jaccard should be consistent"
+    |                                                                                                     ^^^^^^
+130 |
+131 |     def test_fallback_performance(self):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:134:1
+    |
+132 |         """Test that fallback doesn't significantly impact performance."""
+133 |         import time
+134 |         
+    | ^^^^^^^^
+135 |         # Time fallback execution
+136 |         start_time = time.time()
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:137:101
+    |
+135 |         # Time fallback execution
+136 |         start_time = time.time()
+137 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+    |                                                                                                     ^^^
+138 |             result = compute_score_components(
+139 |                 "acme store",
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:146:1
+    |
+144 |             )
+145 |         fallback_time = time.time() - start_time
+146 |         
+    | ^^^^^^^^
+147 |         # Should complete quickly (less than 1 second)
+148 |         assert fallback_time < 1.0, f"Fallback should be fast, took {fallback_time:.3f}s"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:155:101
+    |
+153 |         # This test documents that fallback behavior exists
+154 |         # In a real implementation, we might check for specific log messages
+155 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+    |                                                                                                     ^^^
+156 |             result = compute_score_components(
+157 |                 "acme store",
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:163:1
+    |
+161 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+162 |             )
+163 |             
+    | ^^^^^^^^^^^^
+164 |             # Should produce valid results
+165 |             assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:171:101
+    |
+169 |         """Test that fallback provides graceful degradation."""
+170 |         # Test that fallback still provides reasonable scores
+171 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+    |                                                                                                     ^^^
+172 |             # Identical names should still score high
+173 |             result_identical = compute_score_components(
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:180:1
+    |
+178 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+179 |             )
+180 |             
+    | ^^^^^^^^^^^^
+181 |             # Different names should score lower
+182 |             result_different = compute_score_components(
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:189:1
+    |
+187 | …         {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+188 | …     )
+189 | …     
+^^^^^^^^^^^^
+190 | …     # Identical should score higher than different
+191 | …     assert result_identical["score"] > result_different["score"], "Identical names should score higher than different names in fall…
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (144 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:191:101
+    |
+190 | …nt
+191 | …fferent["score"], "Identical names should score higher than different names in fallback"
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+192 | …
+193 | …
+    |
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:196:101
+    |
+194 |         """Test that fallback recovers from ImportError only."""
+195 |         # Test ImportError (should work with fallback)
+196 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+    |                                                                                                     ^^^
+197 |             result = compute_score_components(
+198 |                 "acme store",
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:204:1
+    |
+202 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+203 |             )
+204 |             
+    | ^^^^^^^^^^^^
+205 |             # Should produce valid results for ImportError
+206 |             assert isinstance(result["score"], (int, float)), "Score should be numeric for ImportError"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:206:101
+    |
+205 |             # Should produce valid results for ImportError
+206 |             assert isinstance(result["score"], (int, float)), "Score should be numeric for ImportError"
+    |                                                                                                     ^^^
+207 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for ImportError, got {result['score']}"
+    |
+
+E501 Line too long (111 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:207:101
+    |
+205 |             # Should produce valid results for ImportError
+206 |             assert isinstance(result["score"], (int, float)), "Score should be numeric for ImportError"
+207 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for ImportError, got {result['score']}"
+    |                                                                                                     ^^^^^^^^^^^
+208 |         
+209 |         # Test other error types (should propagate)
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:208:1
+    |
+206 |             assert isinstance(result["score"], (int, float)), "Score should be numeric for ImportError"
+207 |             assert 0 <= result["score"] <= 100, f"Score should be 0-100 for ImportError, got {result['score']}"
+208 |         
+    | ^^^^^^^^
+209 |         # Test other error types (should propagate)
+210 |         other_error_types = [AttributeError, RuntimeError, ValueError]
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:222:1
+    |
+220 |                         {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+221 |                     )
+222 |         
+    | ^^^^^^^^
+223 |         # Document this as a known limitation
+224 |         print("Note: Only ImportError is caught in fallback - other exceptions propagate")
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:228:101
+    |
+226 |     def test_fallback_configuration_handling(self):
+227 |         """Test that fallback handles configuration properly."""
+228 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+    |                                                                                                     ^^^
+229 |             # Test with different settings
+230 |             result = compute_score_components(
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:238:1
+    |
+236 |                 settings={"test": "value"},  # Pass settings
+237 |             )
+238 |             
+    | ^^^^^^^^^^^^
+239 |             # Should produce valid results
+240 |             assert isinstance(result["score"], (int, float)), "Score should be numeric"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:246:101
+    |
+244 |         """Test that fallback behavior is deterministic."""
+245 |         # Test that same inputs produce same outputs in fallback mode
+246 |         with patch('src.normalize.enhance_name_core', side_effect=ImportError("Module not available")):
+    |                                                                                                     ^^^
+247 |             result1 = compute_score_components(
+248 |                 "acme store",
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:254:1
+    |
+252 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+253 |             )
+254 |             
+    | ^^^^^^^^^^^^
+255 |             result2 = compute_score_components(
+256 |                 "acme store",
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_enhanced_fallback.py:262:1
+    |
+260 |                 {"num_style_mismatch": 0, "suffix_mismatch": 0, "punctuation_mismatch": 0},
+261 |             )
+262 |             
+    | ^^^^^^^^^^^^
+263 |             # Results should be identical
+264 |             assert result1["score"] == result2["score"], "Fallback results should be deterministic"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (103 > 100)
+   --> tests/test_scoring_enhanced_fallback.py:265:101
+    |
+263 |             # Results should be identical
+264 |             assert result1["score"] == result2["score"], "Fallback results should be deterministic"
+265 |             assert result1["jaccard"] == result2["jaccard"], "Fallback jaccard should be deterministic"
+    |                                                                                                     ^^^
+    |
+
+W292 [*] No newline at end of file
+   --> tests/test_scoring_enhanced_fallback.py:265:104
+    |
+263 |             # Results should be identical
+264 |             assert result1["score"] == result2["score"], "Fallback results should be deterministic"
+265 |             assert result1["jaccard"] == result2["jaccard"], "Fallback jaccard should be deterministic"
+    |                                                                                                        ^
+    |
+help: Add trailing newline
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_logging.py:47:1
+   |
+45 |         # Check that gate logging occurred
+46 |         gate_logs = [record for record in caplog.records if "Bulk gate:" in record.message]
+47 |         
+   | ^^^^^^^^
+48 |         # Current behavior: logging may not be captured by pytest caplog
+49 |         # This documents the current state - logging exists in code but may not be captured in tests
+   |
+help: Remove whitespace from blank line
+
+F841 Local variable `results` is assigned to but never used
+  --> tests/test_scoring_logging.py:77:9
+   |
+76 |         # Run bulk scoring
+77 |         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+   |         ^^^^^^^
+78 |
+79 |         # Should not have gate logs for empty candidates
+   |
+help: Remove assignment to unused variable `results`
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_logging.py:97:1
+   |
+95 |         # Run multiple times and check consistency
+96 |         gate_log_messages = []
+97 |         
+   | ^^^^^^^^
+98 |         for _ in range(3):
+99 |             # Clear any existing logs
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:101:1
+    |
+ 99 |             # Clear any existing logs
+100 |             caplog.clear()
+101 |             
+    | ^^^^^^^^^^^^
+102 |             # Run bulk scoring
+103 |             results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+    |
+help: Remove whitespace from blank line
+
+F841 Local variable `results` is assigned to but never used
+   --> tests/test_scoring_logging.py:103:13
+    |
+102 |             # Run bulk scoring
+103 |             results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+    |             ^^^^^^^
+104 |             
+105 |             # Collect gate log messages
+    |
+help: Remove assignment to unused variable `results`
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:104:1
+    |
+102 |             # Run bulk scoring
+103 |             results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+104 |             
+    | ^^^^^^^^^^^^
+105 |             # Collect gate log messages
+106 |             gate_logs = [record for record in caplog.records if "Bulk gate:" in record.message]
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:109:1
+    |
+107 |             if gate_logs:
+108 |                 gate_log_messages.append(gate_logs[0].message)
+109 |         
+    | ^^^^^^^^
+110 |         # All gate log messages should be identical (if any are captured)
+111 |         if gate_log_messages:
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (105 > 100)
+   --> tests/test_scoring_logging.py:112:101
+    |
+110 |         # All gate log messages should be identical (if any are captured)
+111 |         if gate_log_messages:
+112 |             assert len(set(gate_log_messages)) == 1, "Gate log messages should be consistent across runs"
+    |                                                                                                     ^^^^^
+113 |
+114 |     def test_bulk_gate_logging_performance(self, caplog, settings_from_config):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:117:1
+    |
+115 |         """Test that bulk gate logging doesn't significantly impact performance."""
+116 |         import time
+117 |         
+    | ^^^^^^^^
+118 |         # Create test data
+119 |         test_data = pd.DataFrame({
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:138:1
+    |
+136 |         # Should complete quickly (less than 1 second)
+137 |         assert execution_time < 1.0, f"Bulk scoring should be fast, took {execution_time:.3f}s"
+138 |         
+    | ^^^^^^^^
+139 |         # Should have some results
+140 |         assert len(results) >= 0, "Should have some results"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (143 > 100)
+   --> tests/test_scoring_logging.py:145:101
+    |
+143 | …code."""
+144 | …sts in the code
+145 | …(gate_survivors)}/{len(candidate_pairs)} pairs passed token_set_ratio >= {gate_cutoff}"
+    |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+146 | …
+147 | …ists
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:146:1
+    |
+144 | …     # This test documents that bulk gate logging exists in the code
+145 | …     # The actual logging format is: "Bulk gate: {len(gate_survivors)}/{len(candidate_pairs)} pairs passed token_set_ratio >= {gate_…
+146 | …     
+    ^^^^^^^^
+147 | …     # Import the scoring module to verify logging exists
+148 | …     from src.similarity import scoring
+    |
+help: Remove whitespace from blank line
+
+I001 [*] Import block is un-sorted or un-formatted
+   --> tests/test_scoring_logging.py:148:9
+    |
+147 |           # Import the scoring module to verify logging exists
+148 | /         from src.similarity import scoring
+149 | |         
+150 | |         # Check that the logging statement exists in the code
+151 | |         import inspect
+    | |______________________^
+152 |           source = inspect.getsource(scoring.score_pairs_bulk)
+    |
+help: Organize imports
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:149:1
+    |
+147 |         # Import the scoring module to verify logging exists
+148 |         from src.similarity import scoring
+149 |         
+    | ^^^^^^^^
+150 |         # Check that the logging statement exists in the code
+151 |         import inspect
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_logging.py:153:1
+    |
+151 |         import inspect
+152 |         source = inspect.getsource(scoring.score_pairs_bulk)
+153 |         
+    | ^^^^^^^^
+154 |         # Should contain the logging statement
+155 |         assert "Bulk gate:" in source, "Bulk gate logging should exist in score_pairs_bulk function"
+    |
+help: Remove whitespace from blank line
+
+W292 [*] No newline at end of file
+   --> tests/test_scoring_logging.py:158:88
+    |
+156 |         assert "logger.info" in source, "Should use logger.info for bulk gate logging"
+157 |         assert "pairs passed" in source, "Should mention pairs passed in logging"
+158 |         assert "token_set_ratio" in source, "Should mention token_set_ratio in logging"
+    |                                                                                        ^
+    |
+help: Add trailing newline
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_output_persistence.py:41:1
+   |
+39 |         # Test bulk scoring
+40 |         bulk_results = score_pairs_bulk(df_norm, candidate_pairs, settings)
+41 |         
+   | ^^^^^^^^
+42 |         # Test parallel scoring
+43 |         parallel_results = score_pairs_parallel(df_norm, candidate_pairs, settings)
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_output_persistence.py:77:1
+   |
+75 |         if results:
+76 |             result = results[0]
+77 |             
+   | ^^^^^^^^^^^^
+78 |             # Check numeric types
+79 |             assert isinstance(result["score"], (int, float)), "Score should be numeric"
+   |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_output_persistence.py:84:1
+   |
+82 |             assert isinstance(result["jaccard"], (int, float)), "jaccard should be numeric"
+83 |             assert isinstance(result["base_score"], (int, float)), "base_score should be numeric"
+84 |             
+   | ^^^^^^^^^^^^
+85 |             # Check boolean types
+86 |             assert isinstance(result["suffix_match"], bool), "suffix_match should be boolean"
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (109 > 100)
+  --> tests/test_scoring_output_persistence.py:88:101
+   |
+86 |             assert isinstance(result["suffix_match"], bool), "suffix_match should be boolean"
+87 |             assert isinstance(result["num_style_match"], bool), "num_style_match should be boolean"
+88 |             assert isinstance(result["punctuation_mismatch"], bool), "punctuation_mismatch should be boolean"
+   |                                                                                                     ^^^^^^^^^
+89 |             
+90 |             # Check ID types
+   |
+
+W293 [*] Blank line contains whitespace
+  --> tests/test_scoring_output_persistence.py:89:1
+   |
+87 |             assert isinstance(result["num_style_match"], bool), "num_style_match should be boolean"
+88 |             assert isinstance(result["punctuation_mismatch"], bool), "punctuation_mismatch should be boolean"
+89 |             
+   | ^^^^^^^^^^^^
+90 |             # Check ID types
+91 |             import numpy as np
+   |
+help: Remove whitespace from blank line
+
+E501 Line too long (117 > 100)
+  --> tests/test_scoring_output_persistence.py:92:101
+   |
+90 |             # Check ID types
+91 |             import numpy as np
+92 |             assert isinstance(result["id_a"], (int, str, np.integer)), "id_a should be int, string, or numpy integer"
+   |                                                                                                     ^^^^^^^^^^^^^^^^^
+93 |             assert isinstance(result["id_b"], (int, str, np.integer)), "id_b should be int, string, or numpy integer"
+   |
+
+E501 Line too long (117 > 100)
+  --> tests/test_scoring_output_persistence.py:93:101
+   |
+91 |             import numpy as np
+92 |             assert isinstance(result["id_a"], (int, str, np.integer)), "id_a should be int, string, or numpy integer"
+93 |             assert isinstance(result["id_b"], (int, str, np.integer)), "id_b should be int, string, or numpy integer"
+   |                                                                                                     ^^^^^^^^^^^^^^^^^
+94 |
+95 |     def test_output_structure(self, settings_from_config):
+   |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_output_persistence.py:113:1
+    |
+111 |         if results:
+112 |             result = results[0]
+113 |             
+    | ^^^^^^^^^^^^
+114 |             # Should have all required fields
+115 |             required_fields = [
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_output_persistence.py:119:1
+    |
+117 |                 "suffix_match", "num_style_match", "punctuation_mismatch", "base_score"
+118 |             ]
+119 |             
+    | ^^^^^^^^^^^^
+120 |             for field in required_fields:
+121 |                 assert field in result, f"Result should contain field '{field}'"
+    |
+help: Remove whitespace from blank line
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_output_persistence.py:144:1
+    |
+142 |             bulk_result = bulk_results[0]
+143 |             parallel_result = parallel_results[0]
+144 |             
+    | ^^^^^^^^^^^^
+145 |             # Should have same keys
+146 |             assert set(bulk_result.keys()) == set(parallel_result.keys()), "Results should have same keys"
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (106 > 100)
+   --> tests/test_scoring_output_persistence.py:146:101
+    |
+145 |             # Should have same keys
+146 |             assert set(bulk_result.keys()) == set(parallel_result.keys()), "Results should have same keys"
+    |                                                                                                     ^^^^^^
+147 |             
+148 |             # Should have same data types
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_output_persistence.py:147:1
+    |
+145 |             # Should have same keys
+146 |             assert set(bulk_result.keys()) == set(parallel_result.keys()), "Results should have same keys"
+147 |             
+    | ^^^^^^^^^^^^
+148 |             # Should have same data types
+149 |             for key in bulk_result.keys():
+    |
+help: Remove whitespace from blank line
+
+E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
+   --> tests/test_scoring_output_persistence.py:150:24
+    |
+148 |             # Should have same data types
+149 |             for key in bulk_result.keys():
+150 |                 assert type(bulk_result[key]) == type(parallel_result[key]), f"Field '{key}' should have same type"
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+151 |
+152 |     def test_output_empty_input(self, settings_from_config):
+    |
+
+E501 Line too long (115 > 100)
+   --> tests/test_scoring_output_persistence.py:150:101
+    |
+148 |             # Should have same data types
+149 |             for key in bulk_result.keys():
+150 |                 assert type(bulk_result[key]) == type(parallel_result[key]), f"Field '{key}' should have same type"
+    |                                                                                                     ^^^^^^^^^^^^^^^
+151 |
+152 |     def test_output_empty_input(self, settings_from_config):
+    |
+
+W293 [*] Blank line contains whitespace
+   --> tests/test_scoring_output_persistence.py:189:1
+    |
+187 |         # Should be identical
+188 |         assert len(results1) == len(results2), "Results should have same length"
+189 |         
+    | ^^^^^^^^
+190 |         if results1 and results2:
+191 |             for r1, r2 in zip(results1, results2):
+    |
+help: Remove whitespace from blank line
+
+E501 Line too long (102 > 100)
+   --> tests/test_scoring_penalties.py:439:101
+    |
+437 |         )
+438 |         print(
+439 |             f"Normalized names: '{df_norm.iloc[0]['name_core']}' vs '{df_norm.iloc[1]['name_core']}'",
+    |                                                                                                     ^^
+440 |         )
+    |
+
+E501 Line too long (102 > 100)
+  --> tests/test_similarity_fix.py:68:101
+   |
+67 |     def test_99_cents_grouping_with_different_suffixes(self):
+68 |         """Test that 99 Cents variants still group with different suffixes if score is high enough."""
+   |                                                                                                     ^^
+69 |         name_a = "99 Cents Only Stores LLC"
+70 |         name_b = "99 Cents Store Inc"
+   |
+
+E501 Line too long (103 > 100)
+  --> tests/test_similarity_improvements.py:21:101
+   |
+20 |     def test_lowercased_config_tokens_hit_allowlist(self):
+21 |         """Test that config tokens are normalized to lowercase and hit allowlist regardless of case."""
+   |                                                                                                     ^^^
+22 |         # Create test data with mixed case
+23 |         df_norm = pd.DataFrame(
+   |
+
+E501 Line too long (106 > 100)
+   --> tests/test_similarity_improvements.py:112:101
+    |
+110 |     def test_allowlisted_bigram_sharding_safety_rail(self):
+111 |         """Test that allowlisted bigrams are sharded when they exceed block_cap."""
+112 |         # Create a large allowlisted bigram block with names that will be sharded but still generate pairs
+    |                                                                                                     ^^^^^^
+113 |         large_block_size = 10  # Exceeds typical block_cap of 8
+114 |         df_norm = pd.DataFrame(
+    |
+
+E501 Line too long (126 > 100)
+   --> tests/test_sort_context_consistency.py:148:101
+    |
+146 |             assert (
+147 |                 order_by_direction == expected_order_by_direction
+148 |             ), f"ORDER BY direction mismatch for {sort_key}: expected {expected_order_by_direction}, got {order_by_direction}"
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+149 |
+150 |             assert (
+    |
+
+E501 Line too long (135 > 100)
+   --> tests/test_sort_context_consistency.py:152:101
+    |
+150 | …
+151 | …_expr_direction
+152 | …for {sort_key}: expected {expected_sort_expr_direction}, got {sort_expr_direction}"
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+153 | …
+154 | …_by_clause: str) -> str:
+    |
+
+E501 Line too long (132 > 100)
+   --> tools/cleanup_test_artifacts.py:565:101
+    |
+563 |             prot = " [protected]" if plan.is_protected(run_id) else ""
+564 |             print(
+565 |                 f"  {run_id} ({reason}) - {run_type} - {input_paths[0] if input_paths else 'no input'} - {age_days} days old{prot}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+566 |             )
+    |
+
+E501 Line too long (110 > 100)
+   --> tools/cleanup_test_artifacts.py:580:101
+    |
+578 |             logger.warning(f"Prod runs to delete: {prod_candidates}")
+579 |             response = input(
+580 |                 "Are you absolutely sure you want to delete PRODUCTION runs? Type 'DELETE PROD' to confirm: ",
+    |                                                                                                     ^^^^^^^^^^
+581 |             )
+582 |             if response != "DELETE PROD":
+    |
+
+Found 394 errors.
+[*] 127 fixable with the `--fix` option (12 hidden fixes can be enabled with the `--unsafe-fixes` option).

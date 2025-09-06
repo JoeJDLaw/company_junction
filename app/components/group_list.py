@@ -66,7 +66,11 @@ def render_group_list(
 
     try:
         page_groups, actual_total = get_groups_page(
-            selected_run_id, sort_by, page_state.number, page_size, filters,
+            selected_run_id,
+            sort_by,
+            page_state.number,
+            page_size,
+            filters,
         )
 
         # Update total if different (should be the same, but handle edge cases)
@@ -85,7 +89,8 @@ def render_group_list(
                 st.rerun()
         with col2:
             if st.button(
-                "📉 Reduce Page Size to 50", key=f"reduce_page_size_{selected_run_id}",
+                "📉 Reduce Page Size to 50",
+                key=f"reduce_page_size_{selected_run_id}",
             ):
                 page_state.size = 50
                 set_page_state(st.session_state, page_state)
@@ -199,7 +204,11 @@ def render_group_list_fragment(
 
     # Wrap groups list in fragment to prevent page-wide blocking
     page_groups, total_groups, max_page = render_group_list(
-        selected_run_id, sort_by, page, page_size, filters,
+        selected_run_id,
+        sort_by,
+        page,
+        page_size,
+        filters,
     )
 
     # Group by group_id and display each group

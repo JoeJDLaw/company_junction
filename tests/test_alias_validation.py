@@ -1,5 +1,4 @@
-"""Test alias validation functionality.
-"""
+"""Test alias validation functionality."""
 
 import pandas as pd
 import pytest
@@ -206,7 +205,8 @@ def test_large_bucket_warning(num_records):
 
     df_norm = pd.DataFrame(records)
     df_groups = pd.DataFrame(
-        {"group_id": [f"group_{i}" for i in range(num_records)]}, index=df_norm.index,
+        {"group_id": [f"group_{i}" for i in range(num_records)]},
+        index=df_norm.index,
     )
 
     # Ensure required columns are present

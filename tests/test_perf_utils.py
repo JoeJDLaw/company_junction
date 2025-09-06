@@ -1,5 +1,4 @@
-"""Tests for performance profiling utilities.
-"""
+"""Tests for performance profiling utilities."""
 
 import logging
 import time

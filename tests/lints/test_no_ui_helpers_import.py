@@ -27,7 +27,11 @@ def test_no_ui_helpers_import():
         ]
 
         result = subprocess.run(
-            cmd, cwd=root, capture_output=True, text=True, check=True,
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         output = result.stdout
 
@@ -69,7 +73,8 @@ def test_ui_helpers_deprecation_warning():
 
     # The module should no longer exist
     with pytest.raises(
-        ModuleNotFoundError, match="No module named 'src.utils.ui_helpers'",
+        ModuleNotFoundError,
+        match="No module named 'src.utils.ui_helpers'",
     ):
         import src.utils.ui_helpers  # type: ignore[import-not-found]
 

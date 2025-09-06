@@ -51,7 +51,9 @@ def build_raw_exact_key(account_name: str, settings: Dict[str, Any]) -> str:
 
 
 def find_exact_equals_groups(
-    df: pd.DataFrame, settings: Dict[str, Any], name_column: str = "Account Name",
+    df: pd.DataFrame,
+    settings: Dict[str, Any],
+    name_column: str = "Account Name",
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Find exact equals groups before normalization.
 
@@ -268,7 +270,9 @@ def write_exact_equals_artifacts(
 
 
 def create_unique_normalized(
-    df: pd.DataFrame, raw_exact_map: pd.DataFrame, settings: Dict[str, Any],
+    df: pd.DataFrame,
+    raw_exact_map: pd.DataFrame,
+    settings: Dict[str, Any],
 ) -> pd.DataFrame:
     """Create unique normalized dataset with representatives + singletons only.
 

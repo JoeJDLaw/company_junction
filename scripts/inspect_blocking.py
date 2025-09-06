@@ -82,7 +82,8 @@ def print_blocking_summary(df: pd.DataFrame) -> None:
 
 
 def print_allowlist_suggestions(
-    suggestions: pd.DataFrame, current_allowlist: list,
+    suggestions: pd.DataFrame,
+    current_allowlist: list,
 ) -> None:
     """Print suggested allowlist additions."""
     print("\n=== Allowlist Suggestions ===")
@@ -125,7 +126,9 @@ def print_brand_suggestions(suggestions_df: pd.DataFrame, top_n: int = 20) -> No
 
 
 def explain_token(
-    token: str, block_stats_df: pd.DataFrame, suggestions_df: pd.DataFrame,
+    token: str,
+    block_stats_df: pd.DataFrame,
+    suggestions_df: pd.DataFrame,
 ) -> None:
     """Explain a specific token's statistics."""
     print(f"\n=== Token Explanation: '{token}' ===")
@@ -154,7 +157,9 @@ def explain_token(
 
 
 def export_high_confidence_suggestions(
-    suggestions_df: pd.DataFrame, output_path: str, min_confidence: float = 0.7,
+    suggestions_df: pd.DataFrame,
+    output_path: str,
+    min_confidence: float = 0.7,
 ) -> None:
     """Export high-confidence suggestions to CSV."""
     if suggestions_df.empty:
@@ -196,17 +201,25 @@ def main() -> None:
     parser.add_argument("--run-id", help="Run ID to inspect")
     parser.add_argument("--csv", help="Path to block_stats.csv file")
     parser.add_argument(
-        "--top-n", type=int, default=20, help="Number of top suggestions to show",
+        "--top-n",
+        type=int,
+        default=20,
+        help="Number of top suggestions to show",
     )
     parser.add_argument(
-        "--config", default="config/settings.yaml", help="Path to config file",
+        "--config",
+        default="config/settings.yaml",
+        help="Path to config file",
     )
     parser.add_argument(
-        "--suggest-brands", action="store_true", help="Show brand suggestions",
+        "--suggest-brands",
+        action="store_true",
+        help="Show brand suggestions",
     )
     parser.add_argument("--explain", help="Explain a specific token's stats")
     parser.add_argument(
-        "--export-suggestions", help="Export high-confidence suggestions to CSV file",
+        "--export-suggestions",
+        help="Export high-confidence suggestions to CSV file",
     )
 
     args = parser.parse_args()

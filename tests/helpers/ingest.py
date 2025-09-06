@@ -111,7 +111,8 @@ def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.Data
                 df_ensured[col] = [f"group_{i}" for i in range(len(df_ensured))]
             elif col == "name_core":
                 df_ensured[col] = df_ensured.get(
-                    ACCOUNT_NAME, ["test_name"] * len(df_ensured),
+                    ACCOUNT_NAME,
+                    ["test_name"] * len(df_ensured),
                 )
             elif col == "suffix_class":
                 df_ensured[col] = ["corp"] * len(df_ensured)
@@ -124,7 +125,8 @@ def ensure_required_columns(df: pd.DataFrame, required_columns: list) -> pd.Data
 
 
 def create_test_fixture_data(
-    base_data: Dict[str, list], required_columns: list | None = None,
+    base_data: Dict[str, list],
+    required_columns: list | None = None,
 ) -> pd.DataFrame:
     """Create a test fixture DataFrame with canonical column names.
 

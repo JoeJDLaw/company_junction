@@ -1,5 +1,4 @@
-"""Unit tests for Salesforce ID canonicalization utilities.
-"""
+"""Unit tests for Salesforce ID canonicalization utilities."""
 
 import numpy as np
 import pandas as pd
@@ -202,7 +201,8 @@ class TestNormalizeSfidSeries:
         )
 
         with pytest.raises(
-            ValueError, match="sfid15 must contain only alphanumeric characters",
+            ValueError,
+            match="sfid15 must contain only alphanumeric characters",
         ):
             normalize_sfid_series(series)
 

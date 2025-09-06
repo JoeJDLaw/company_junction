@@ -72,7 +72,8 @@ def can_join_group(
     # Check medium threshold with shared token requirement
     edge_gating_config = config.get("grouping", {}).get("edge_gating", {})
     allow_medium_plus_shared = edge_gating_config.get(
-        "allow_medium_plus_shared_token", True,
+        "allow_medium_plus_shared_token",
+        True,
     )
 
     if (
@@ -294,12 +295,14 @@ def create_groups_with_edge_gating(
 
             logger.info("Using optimized token parsing")
             token_series = accounts_df.get(
-                "name_core_tokens", pd.Series("[]", index=accounts_df.index),
+                "name_core_tokens",
+                pd.Series("[]", index=accounts_df.index),
             )
             token_sets = {
                 account_id: set(parse_name_core_tokens(tokens_str))
                 for account_id, tokens_str in zip(
-                    accounts_df[account_id_col], token_series,
+                    accounts_df[account_id_col],
+                    token_series,
                 )
             }
         except ImportError:
@@ -435,7 +438,8 @@ def create_groups_with_edge_gating(
         config.get("grouping", {}).get("edge_gating", {}).get("performance", {})
     )
     _pair_columns = perf_settings.get(
-        "pair_columns", [id_col1, id_col2, "score"],
+        "pair_columns",
+        [id_col1, id_col2, "score"],
     )
 
     try:
@@ -446,7 +450,9 @@ def create_groups_with_edge_gating(
     except Exception:
         # Fallback to standard sorting
         sorted_pairs = candidate_pairs_df.sort_values(
-            ["score", id_col1, id_col2], ascending=[False, True, True], kind="mergesort",
+            ["score", id_col1, id_col2],
+            ascending=[False, True, True],
+            kind="mergesort",
         )
 
     # Add progress logging for pair processing
@@ -483,7 +489,12 @@ def create_groups_with_edge_gating(
 
         # Check if candidate can join primary's group
         can_join, reason, actual_score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
+            primary_id,
+            candidate_id,
+            edge_scores,
+            token_sets,
+            config,
+            stop_tokens,
         )
 
         # Track gating decisions for tuning
@@ -500,7 +511,11 @@ def create_groups_with_edge_gating(
             current_group_size = len(current_group)
 
         if not apply_canopy_bound(
-            current_group_size, primary_id, candidate_id, edge_scores, config,
+            current_group_size,
+            primary_id,
+            candidate_id,
+            edge_scores,
+            config,
         ):
             logger.debug(
                 f"Canopy bound rejected {candidate_id} joining {primary_id}'s group (size: {current_group_size})",
@@ -607,7 +622,9 @@ def create_groups_with_edge_gating(
 
 
 def create_groups_standard(
-    accounts_df: pd.DataFrame, candidate_pairs_df: pd.DataFrame, config: Dict[str, Any],
+    accounts_df: pd.DataFrame,
+    candidate_pairs_df: pd.DataFrame,
+    config: Dict[str, Any],
 ) -> pd.DataFrame:
     """Create groups using standard connected components logic (fallback).
 

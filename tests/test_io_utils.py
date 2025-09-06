@@ -327,10 +327,12 @@ class TestHelperFunctions:
 
         # Verify cache info is available
         assert hasattr(
-            load_settings, "cache_info",
+            load_settings,
+            "cache_info",
         ), "Function should have cache_info attribute"
         assert hasattr(
-            load_settings, "cache_clear",
+            load_settings,
+            "cache_clear",
         ), "Function should have cache_clear method"
 
 
@@ -399,8 +401,10 @@ class TestSettingsCaching:
 
         # Verify cache info is available
         assert hasattr(
-            load_settings, "cache_info",
+            load_settings,
+            "cache_info",
         ), "Function should have cache_info attribute"
         assert hasattr(
-            load_settings, "cache_clear",
+            load_settings,
+            "cache_clear",
         ), "Function should have cache_clear method"

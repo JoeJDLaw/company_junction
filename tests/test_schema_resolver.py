@@ -70,7 +70,9 @@ class TestSchemaResolver:
         )
 
         mapping = resolve_schema(
-            df_with_company, self.settings, cli_overrides=cli_overrides,
+            df_with_company,
+            self.settings,
+            cli_overrides=cli_overrides,
         )
 
         assert mapping["account_name"] == "Company"
@@ -80,7 +82,9 @@ class TestSchemaResolver:
     def test_resolve_schema_template_matching(self):
         """Test filename template matching."""
         mapping = resolve_schema(
-            self.sample_df, self.settings, input_filename="company_junction_test.csv",
+            self.sample_df,
+            self.settings,
+            input_filename="company_junction_test.csv",
         )
 
         assert mapping["account_name"] == "Account Name"
@@ -135,7 +139,8 @@ class TestSchemaResolver:
         )
 
         with pytest.raises(
-            ValueError, match="Required 'account_name' column not found",
+            ValueError,
+            match="Required 'account_name' column not found",
         ):
             resolve_schema(df_no_name, self.settings)
 
@@ -182,7 +187,9 @@ class TestSchemaResolver:
     def test_match_filename_template(self):
         """Test filename template matching."""
         mapping = _match_filename_template(
-            self.sample_df, "company_junction_test.csv", self.settings,
+            self.sample_df,
+            "company_junction_test.csv",
+            self.settings,
         )
 
         assert mapping is not None
@@ -192,7 +199,9 @@ class TestSchemaResolver:
     def test_match_filename_template_no_match(self):
         """Test filename template with no match."""
         mapping = _match_filename_template(
-            self.sample_df, "other_file.csv", self.settings,
+            self.sample_df,
+            "other_file.csv",
+            self.settings,
         )
 
         assert mapping is None
@@ -252,7 +261,9 @@ class TestSchemaResolver:
         target_terms = ["name", "company"]
 
         best_match = _find_best_similarity_match(
-            available_columns, target_terms, threshold=80,
+            available_columns,
+            target_terms,
+            threshold=80,
         )
 
         assert best_match in available_columns
@@ -287,7 +298,8 @@ class TestSchemaResolver:
         )
 
         date_columns = _find_date_columns(
-            df_with_dates, ["Created Date", "Start Date", "Name"],
+            df_with_dates,
+            ["Created Date", "Start Date", "Name"],
         )
 
         assert "Created Date" in date_columns

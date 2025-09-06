@@ -24,10 +24,29 @@ from src.normalize import normalize_dataframe
 from src.similarity.scoring import score_pairs_bulk, score_pairs_parallel
 
 
+def _get_settings(overrides: dict = None) -> dict:
+    """Helper to create settings dict with optional overrides."""
+    settings = {
+        "similarity": {
+            "scoring": {
+                "gate_cutoff": 72,
+                "use_bulk_cdist": True,
+                "penalties": {"punctuation": 0.1, "suffix": 0.05, "numeric": 0.15},
+            }
+        }
+    }
+    if overrides:
+        # Deep merge overrides
+        for key, value in overrides.items():
+            if key in settings["similarity"]["scoring"]:
+                settings["similarity"]["scoring"][key] = value
+    return settings
+
+
 class TestScoringContracts:
     """Test output contracts and guarantees for similarity scoring."""
 
-    def test_no_dataframe_mutation(self, settings_from_config):
+    def test_no_dataframe_mutation(self):
         """Test that input DataFrames are not mutated."""
         # Create test data
         test_data = pd.DataFrame(
@@ -44,7 +63,7 @@ class TestScoringContracts:
         original_df = copy.deepcopy(df_norm)
 
         candidate_pairs = [(0, 1), (0, 2)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run both scoring methods
         bulk_results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -57,7 +76,7 @@ class TestScoringContracts:
         assert len(bulk_results) >= 0
         assert len(parallel_results) >= 0
 
-    def test_string_dtype_enforcement(self, settings_from_config):
+    def test_string_dtype_enforcement(self):
         """Test that string columns maintain string dtypes."""
         # Create test data with mixed dtypes
         test_data = pd.DataFrame(
@@ -71,7 +90,7 @@ class TestScoringContracts:
         df_norm = normalize_dataframe(test_data, "Account Name")
 
         candidate_pairs = [(0, 1)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -84,38 +103,47 @@ class TestScoringContracts:
             import numpy as np
 
             assert isinstance(
-                result["id_a"], (str, int, np.integer),
+                result["id_a"],
+                (str, int, np.integer),
             ), "id_a should be string or integer"
             assert isinstance(
-                result["id_b"], (str, int, np.integer),
+                result["id_b"],
+                (str, int, np.integer),
             ), "id_b should be string or integer"
 
             # Verify numeric dtypes for scores
             assert isinstance(
-                result["score"], (int, float, np.number),
+                result["score"],
+                (int, float, np.number),
             ), "score should be numeric"
             assert isinstance(
-                result["ratio_name"], (int, float, np.number),
+                result["ratio_name"],
+                (int, float, np.number),
             ), "ratio_name should be numeric"
             assert isinstance(
-                result["ratio_set"], (int, float, np.number),
+                result["ratio_set"],
+                (int, float, np.number),
             ), "ratio_set should be numeric"
             assert isinstance(
-                result["jaccard"], (int, float, np.number),
+                result["jaccard"],
+                (int, float, np.number),
             ), "jaccard should be numeric"
 
             # Verify boolean dtypes for flags
             assert isinstance(
-                result["suffix_match"], bool,
+                result["suffix_match"],
+                bool,
             ), "suffix_match should be boolean"
             assert isinstance(
-                result["num_style_match"], bool,
+                result["num_style_match"],
+                bool,
             ), "num_style_match should be boolean"
             assert isinstance(
-                result["punctuation_mismatch"], bool,
+                result["punctuation_mismatch"],
+                bool,
             ), "punctuation_mismatch should be boolean"
 
-    def test_sort_order_contract_documentation(self, settings_from_config):
+    def test_sort_order_contract_documentation(self):
         """Test and document current sort order behavior."""
         # Create test data
         test_data = pd.DataFrame(
@@ -127,7 +155,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -146,7 +174,7 @@ class TestScoringContracts:
             assert "score" in result, "Should have score"
             assert 0 <= result["score"] <= 100, "Score should be in valid range"
 
-    def test_deterministic_outputs(self, settings_from_config):
+    def test_deterministic_outputs(self):
         """Test that same inputs produce identical outputs."""
         # Create test data
         test_data = pd.DataFrame(
@@ -158,7 +186,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1), (0, 2)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring twice
         results1 = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -179,7 +207,7 @@ class TestScoringContracts:
             assert r1["ratio_set"] == r2["ratio_set"], "ratio_set should be identical"
             assert r1["jaccard"] == r2["jaccard"], "jaccard should be identical"
 
-    def test_output_column_structure(self, settings_from_config):
+    def test_output_column_structure(self):
         """Test that output has correct column structure."""
         # Create test data
         test_data = pd.DataFrame(
@@ -188,7 +216,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -213,7 +241,7 @@ class TestScoringContracts:
             for col in required_columns:
                 assert col in result, f"Required column {col} should be present"
 
-    def test_output_data_types(self, settings_from_config):
+    def test_output_data_types(self):
         """Test that output data types are correct."""
         # Create test data
         test_data = pd.DataFrame(
@@ -222,7 +250,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -234,32 +262,40 @@ class TestScoringContracts:
             import numpy as np
 
             assert isinstance(
-                result["score"], (int, float, np.number),
+                result["score"],
+                (int, float, np.number),
             ), "score should be numeric"
             assert isinstance(
-                result["ratio_name"], (int, float, np.number),
+                result["ratio_name"],
+                (int, float, np.number),
             ), "ratio_name should be numeric"
             assert isinstance(
-                result["ratio_set"], (int, float, np.number),
+                result["ratio_set"],
+                (int, float, np.number),
             ), "ratio_set should be numeric"
             assert isinstance(
-                result["jaccard"], (int, float, np.number),
+                result["jaccard"],
+                (int, float, np.number),
             ), "jaccard should be numeric"
             assert isinstance(
-                result["base_score"], (int, float, np.number),
+                result["base_score"],
+                (int, float, np.number),
             ), "base_score should be numeric"
 
             assert isinstance(
-                result["suffix_match"], bool,
+                result["suffix_match"],
+                bool,
             ), "suffix_match should be boolean"
             assert isinstance(
-                result["num_style_match"], bool,
+                result["num_style_match"],
+                bool,
             ), "num_style_match should be boolean"
             assert isinstance(
-                result["punctuation_mismatch"], bool,
+                result["punctuation_mismatch"],
+                bool,
             ), "punctuation_mismatch should be boolean"
 
-    def test_empty_input_handling(self, settings_from_config):
+    def test_empty_input_handling(self):
         """Test that empty inputs produce empty outputs."""
         # Create test data
         test_data = pd.DataFrame(
@@ -268,7 +304,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs: List[Tuple[int, int]] = []  # Empty
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -277,7 +313,7 @@ class TestScoringContracts:
         assert len(results) == 0, "Empty candidate_pairs should produce empty results"
         assert isinstance(results, list), "Results should be a list"
 
-    def test_output_consistency_bulk_parallel(self, settings_from_config):
+    def test_output_consistency_bulk_parallel(self):
         """Test that bulk and parallel outputs have consistent structure."""
         # Create test data
         test_data = pd.DataFrame(
@@ -289,7 +325,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1), (0, 2)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run both methods
         bulk_results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -307,7 +343,7 @@ class TestScoringContracts:
                 bulk_keys == parallel_keys
             ), "Both methods should have same output structure"
 
-    def test_score_bounds_contract(self, settings_from_config):
+    def test_score_bounds_contract(self):
         """Test that scores are within valid bounds."""
         # Create test data with various similarity levels
         test_data = pd.DataFrame(
@@ -324,7 +360,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1), (0, 2), (0, 3)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -344,7 +380,7 @@ class TestScoringContracts:
                 0 <= result["jaccard"] <= 1.0
             ), f"jaccard {result['jaccard']} should be 0-1.0"
 
-    def test_penalty_flags_contract(self, settings_from_config):
+    def test_penalty_flags_contract(self):
         """Test that penalty flags are correctly set."""
         # Create test data with different penalty scenarios
         test_data = pd.DataFrame(
@@ -361,7 +397,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1), (2, 3)]  # Test suffix and numeric penalties
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -369,16 +405,19 @@ class TestScoringContracts:
         # Verify penalty flags are boolean
         for result in results:
             assert isinstance(
-                result["suffix_match"], bool,
+                result["suffix_match"],
+                bool,
             ), "suffix_match should be boolean"
             assert isinstance(
-                result["num_style_match"], bool,
+                result["num_style_match"],
+                bool,
             ), "num_style_match should be boolean"
             assert isinstance(
-                result["punctuation_mismatch"], bool,
+                result["punctuation_mismatch"],
+                bool,
             ), "punctuation_mismatch should be boolean"
 
-    def test_component_scores_contract(self, settings_from_config):
+    def test_component_scores_contract(self):
         """Test that component scores are present and valid."""
         # Create test data
         test_data = pd.DataFrame(
@@ -387,7 +426,7 @@ class TestScoringContracts:
 
         df_norm = normalize_dataframe(test_data, "Account Name")
         candidate_pairs = [(0, 1)]
-        settings = settings_from_config()
+        settings = _get_settings()
 
         # Run scoring
         results = score_pairs_bulk(df_norm, candidate_pairs, settings)
@@ -405,14 +444,18 @@ class TestScoringContracts:
             import numpy as np
 
             assert isinstance(
-                result["ratio_name"], (int, float, np.number),
+                result["ratio_name"],
+                (int, float, np.number),
             ), "ratio_name should be numeric"
             assert isinstance(
-                result["ratio_set"], (int, float, np.number),
+                result["ratio_set"],
+                (int, float, np.number),
             ), "ratio_set should be numeric"
             assert isinstance(
-                result["jaccard"], (int, float, np.number),
+                result["jaccard"],
+                (int, float, np.number),
             ), "jaccard should be numeric"
             assert isinstance(
-                result["base_score"], (int, float, np.number),
+                result["base_score"],
+                (int, float, np.number),
             ), "base_score should be numeric"

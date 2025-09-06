@@ -31,7 +31,9 @@ def sql_df(query: str, /, **tables: pd.DataFrame) -> pd.DataFrame:
 
 
 def sql_df_with_threads(
-    query: str, threads: int | None = None, **tables: pd.DataFrame,
+    query: str,
+    threads: int | None = None,
+    **tables: pd.DataFrame,
 ) -> pd.DataFrame:
     """SQL query with configurable thread count for heavy operations."""
     with connect(threads=threads) as con:

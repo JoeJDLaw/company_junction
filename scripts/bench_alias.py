@@ -94,7 +94,8 @@ def run_pipeline_with_settings(
     try:
         result = subprocess.run(
             cmd,
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout
             cwd=Path.cwd(),
@@ -206,13 +207,22 @@ def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Benchmark alias matching performance")
     parser.add_argument(
-        "--input", type=Path, required=True, help="Path to input CSV file",
+        "--input",
+        type=Path,
+        required=True,
+        help="Path to input CSV file",
     )
     parser.add_argument(
-        "--config", type=Path, required=True, help="Path to config YAML file",
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to config YAML file",
     )
     parser.add_argument(
-        "--workers", type=int, default=4, help="Number of parallel workers (default: 4)",
+        "--workers",
+        type=int,
+        default=4,
+        help="Number of parallel workers (default: 4)",
     )
     parser.add_argument(
         "--runs",
@@ -244,7 +254,10 @@ def main() -> None:
     for i in range(args.runs):
         logger.info(f"Run {i+1}/{args.runs}: Legacy alias matching")
         elapsed_time, stats = run_pipeline_with_settings(
-            args.input, args.config, optimize=False, workers=args.workers,
+            args.input,
+            args.config,
+            optimize=False,
+            workers=args.workers,
         )
         results.append(("Legacy (optimize=false)", elapsed_time, stats))
 
@@ -252,7 +265,10 @@ def main() -> None:
     for i in range(args.runs):
         logger.info(f"Run {i+1}/{args.runs}: Optimized alias matching")
         elapsed_time, stats = run_pipeline_with_settings(
-            args.input, args.config, optimize=True, workers=args.workers,
+            args.input,
+            args.config,
+            optimize=True,
+            workers=args.workers,
         )
         results.append(("Optimized (optimize=true)", elapsed_time, stats))
 

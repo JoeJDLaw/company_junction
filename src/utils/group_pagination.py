@@ -38,7 +38,6 @@ class PageFetchTimeout(Exception):
     """Raised when page fetch exceeds timeout."""
 
 
-
 def _build_where_clause(filters: Dict[str, Any], score_column: str) -> Tuple[str, List]:
     """Build WHERE clause and parameters for common filters.
 
@@ -77,7 +76,9 @@ def _alias_order_by(order_by_clause: str) -> str:
 
     # Use word boundaries for other fields
     result = re.sub(
-        r"\b" + re.escape(GROUP_SIZE) + r"\b", f"s.{GROUP_SIZE}", order_by_clause,
+        r"\b" + re.escape(GROUP_SIZE) + r"\b",
+        f"s.{GROUP_SIZE}",
+        order_by_clause,
     )
     result = re.sub(r"\b" + re.escape(MAX_SCORE) + r"\b", f"s.{MAX_SCORE}", result)
     return result
@@ -131,7 +132,11 @@ def _set_backend_choice(run_id: str, backend: str) -> None:
 
 
 def get_groups_page(
-    run_id: str, sort_key: str, page: int, page_size: int, filters: Dict[str, Any],
+    run_id: str,
+    sort_key: str,
+    page: int,
+    page_size: int,
+    filters: Dict[str, Any],
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get a page of groups using the configured backend (PyArrow or DuckDB).
 
@@ -235,7 +240,11 @@ def get_groups_page(
             _set_backend_choice(run_id, "duckdb")
             record_backend_choice("auto", "duckdb")
             result = get_groups_page_from_stats_duckdb(
-                run_id, sort_key, page, page_size, filters,
+                run_id,
+                sort_key,
+                page,
+                page_size,
+                filters,
             )
             duration = time.time() - start_time
             record_groups_request("duckdb", "stats", True, duration)
@@ -280,7 +289,11 @@ def get_groups_page(
 
 
 def get_groups_page_pyarrow(
-    run_id: str, sort_key: str, page: int, page_size: int, filters: Dict[str, Any],
+    run_id: str,
+    sort_key: str,
+    page: int,
+    page_size: int,
+    filters: Dict[str, Any],
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get a page of groups using PyArrow backend.
 
@@ -419,7 +432,9 @@ def get_groups_page_pyarrow(
         # Fix the sorting logic with tie-breaker and explicit NULLs last
         if GROUP_ID in df.columns and field != GROUP_ID:
             df_sorted = df.sort_values(
-                [field, GROUP_ID], ascending=[ascending, True], na_position="last",
+                [field, GROUP_ID],
+                ascending=[ascending, True],
+                na_position="last",
             )
         else:
             df_sorted = df.sort_values(field, ascending=ascending, na_position="last")
@@ -473,7 +488,11 @@ def get_groups_page_pyarrow(
 
 
 def get_groups_page_duckdb(
-    run_id: str, sort_key: str, page: int, page_size: int, filters: Dict[str, Any],
+    run_id: str,
+    sort_key: str,
+    page: int,
+    page_size: int,
+    filters: Dict[str, Any],
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Load groups page data using DuckDB for optimal performance.
 
@@ -707,7 +726,11 @@ def get_groups_page_duckdb(
 
 
 def get_groups_page_from_stats_duckdb(
-    run_id: str, sort_key: str, page: int, page_size: int, filters: Dict[str, Any],
+    run_id: str,
+    sort_key: str,
+    page: int,
+    page_size: int,
+    filters: Dict[str, Any],
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Get a page of groups using DuckDB from group_stats.parquet.
 
@@ -934,7 +957,8 @@ def get_total_groups_count(run_id: str, filters: Dict[str, Any]) -> int:
 
 
 def get_total_groups_count_from_stats_duckdb(
-    run_id: str, filters: Dict[str, Any],
+    run_id: str,
+    filters: Dict[str, Any],
 ) -> int:
     """Get total groups count from group_stats.parquet using DuckDB.
 
@@ -1008,7 +1032,8 @@ def get_total_groups_count_from_stats_duckdb(
 
 
 def get_total_groups_count_from_main_parquet(
-    run_id: str, filters: Dict[str, Any],
+    run_id: str,
+    filters: Dict[str, Any],
 ) -> int:
     """Get total groups count from main parquet file using DuckDB.
 

@@ -51,7 +51,9 @@ class DetailsCache:
         """Remove all cache entries for a specific run."""
         keys_to_remove: List[Any] = []
         for key in self.cache.keys():
-            if (isinstance(key, tuple) and len(key) > 0 and key[0] == run_id) or (isinstance(key, str) and key.startswith(f"{run_id}:")):
+            if (isinstance(key, tuple) and len(key) > 0 and key[0] == run_id) or (
+                isinstance(key, str) and key.startswith(f"{run_id}:")
+            ):
                 keys_to_remove.append(key)
 
         for key in keys_to_remove:
@@ -227,7 +229,13 @@ class TestGroupDetailsDuckDB:
 
         # Test the function
         result, total_count = get_group_details_duckdb(
-            "test_path.parquet", "group1", "account_id", 1, 10, {}, {},
+            "test_path.parquet",
+            "group1",
+            "account_id",
+            1,
+            10,
+            {},
+            {},
         )
 
         # Verify result
@@ -242,7 +250,9 @@ class TestGroupDetailsDuckDB:
     @patch("src.utils.artifact_management.get_artifact_paths")
     @patch("os.path.exists")
     def test_get_group_details_duckdb_file_not_found(
-        self, mock_exists: MagicMock, mock_get_paths: MagicMock,
+        self,
+        mock_exists: MagicMock,
+        mock_get_paths: MagicMock,
     ) -> None:
         """Test DuckDB details loading when file not found."""
         # Mock artifact paths
@@ -304,7 +314,9 @@ class TestGroupsRouting:
     @patch("os.path.exists")
     @patch("src.utils.opt_deps.DUCKDB_AVAILABLE", True)
     def test_groups_use_duckdb_when_stats_parquet_exists(
-        self, mock_exists: MagicMock, mock_get_paths: MagicMock,
+        self,
+        mock_exists: MagicMock,
+        mock_get_paths: MagicMock,
     ) -> None:
         """Test that groups page uses DuckDB when group_stats.parquet exists."""
         from src.utils.group_pagination import get_groups_page
@@ -333,7 +345,9 @@ class TestGroupsRouting:
     @patch("os.path.exists")
     @patch("src.utils.opt_deps.DUCKDB_AVAILABLE", False)
     def test_groups_fallback_to_pyarrow_when_duckdb_unavailable(
-        self, mock_exists: MagicMock, mock_get_paths: MagicMock,
+        self,
+        mock_exists: MagicMock,
+        mock_get_paths: MagicMock,
     ) -> None:
         """Test that groups page falls back to PyArrow when DuckDB unavailable."""
         from src.utils.group_pagination import get_groups_page

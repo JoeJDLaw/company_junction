@@ -151,19 +151,26 @@ class TestSurvivorshipEquivalence:
     """Test that optimized and original implementations produce identical results."""
 
     def test_singleton_groups_identical(
-        self, sample_groups_df, relationship_ranks, settings,
+        self,
+        sample_groups_df,
+        relationship_ranks,
+        settings,
     ):
         """Test that singleton groups get identical primary selection."""
         # Test with optimization enabled
         settings["survivorship"]["optimized"] = True
         df_optimized = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Test with optimization disabled
         settings["survivorship"]["optimized"] = False
         df_original = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Check singleton groups (1, 2, 3)
@@ -180,19 +187,26 @@ class TestSurvivorshipEquivalence:
             assert opt_primary, f"Singleton group {group_id} should be primary"
 
     def test_multi_record_groups_identical(
-        self, sample_groups_df, relationship_ranks, settings,
+        self,
+        sample_groups_df,
+        relationship_ranks,
+        settings,
     ):
         """Test that multi-record groups get identical primary selection."""
         # Test with optimization enabled
         settings["survivorship"]["optimized"] = True
         df_optimized = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Test with optimization disabled
         settings["survivorship"]["optimized"] = False
         df_original = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Check multi-record groups (10, 20, 30)
@@ -227,19 +241,26 @@ class TestSurvivorshipEquivalence:
             ), f"Group {group_id} should have exactly 1 primary (original)"
 
     def test_unassigned_groups_skipped(
-        self, sample_groups_df, relationship_ranks, settings,
+        self,
+        sample_groups_df,
+        relationship_ranks,
+        settings,
     ):
         """Test that unassigned groups (group_id == -1) are properly skipped."""
         # Test with optimization enabled
         settings["survivorship"]["optimized"] = True
         df_optimized = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Test with optimization disabled
         settings["survivorship"]["optimized"] = False
         df_original = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Check unassigned groups
@@ -259,19 +280,26 @@ class TestSurvivorshipEquivalence:
         ), "Unassigned groups should not have primary records (original)"
 
     def test_relationship_ranking_identical(
-        self, sample_groups_df, relationship_ranks, settings,
+        self,
+        sample_groups_df,
+        relationship_ranks,
+        settings,
     ):
         """Test that relationship ranking produces identical results."""
         # Test with optimization enabled
         settings["survivorship"]["optimized"] = True
         df_optimized = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Test with optimization disabled
         settings["survivorship"]["optimized"] = False
         df_original = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Check that relationship_rank column is identical
@@ -295,7 +323,10 @@ class TestSurvivorshipEquivalence:
         )
 
     def test_tie_breaker_logic_identical(
-        self, sample_groups_df, relationship_ranks, settings,
+        self,
+        sample_groups_df,
+        relationship_ranks,
+        settings,
     ):
         """Test that tie-breaker logic (created_date, account_id) produces identical results."""
         # Create a scenario where relationship_rank is tied
@@ -306,13 +337,17 @@ class TestSurvivorshipEquivalence:
         # Test with optimization enabled
         settings["survivorship"]["optimized"] = True
         df_optimized = select_primary_records(
-            test_df.copy(), relationship_ranks, settings,
+            test_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Test with optimization disabled
         settings["survivorship"]["optimized"] = False
         df_original = select_primary_records(
-            test_df.copy(), relationship_ranks, settings,
+            test_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Check that group 10 gets same primary record
@@ -331,13 +366,18 @@ class TestSurvivorshipEquivalence:
         ), "Tie-breaker logic should produce identical results"
 
     def test_unknown_relationship_default_rank(
-        self, sample_groups_df, relationship_ranks, settings,
+        self,
+        sample_groups_df,
+        relationship_ranks,
+        settings,
     ):
         """Test that unknown relationships get default rank 60."""
         # Test with optimization enabled
         settings["survivorship"]["optimized"] = True
         df_optimized = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Check that unknown relationships get rank 60
@@ -353,13 +393,17 @@ class TestSurvivorshipEquivalence:
         # Test with optimization enabled
         settings["survivorship"]["optimized"] = True
         df_optimized = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Test with optimization disabled
         settings["survivorship"]["optimized"] = False
         df_original = select_primary_records(
-            sample_groups_df.copy(), relationship_ranks, settings,
+            sample_groups_df.copy(),
+            relationship_ranks,
+            settings,
         )
 
         # Results should be identical regardless of optimization setting
@@ -378,14 +422,19 @@ class TestSurvivorshipEquivalence:
         pd.testing.assert_frame_equal(opt_sorted, orig_sorted, check_dtype=False)
 
     def test_deterministic_results(
-        self, sample_groups_df, relationship_ranks, settings,
+        self,
+        sample_groups_df,
+        relationship_ranks,
+        settings,
     ):
         """Test that results are deterministic (same input = same output)."""
         # Run optimization multiple times
         results = []
         for _ in range(3):
             df_result = select_primary_records(
-                sample_groups_df.copy(), relationship_ranks, settings,
+                sample_groups_df.copy(),
+                relationship_ranks,
+                settings,
             )
             results.append(df_result[["group_id", "is_primary"]])
 

@@ -174,13 +174,19 @@ def main() -> int:
     parser.add_argument("name_a", help="First company name")
     parser.add_argument("name_b", help="Second company name")
     parser.add_argument(
-        "--suffix-a", default="NONE", help="Suffix class for first name (override)",
+        "--suffix-a",
+        default="NONE",
+        help="Suffix class for first name (override)",
     )
     parser.add_argument(
-        "--suffix-b", default="NONE", help="Suffix class for second name (override)",
+        "--suffix-b",
+        default="NONE",
+        help="Suffix class for second name (override)",
     )
     parser.add_argument(
-        "--config", default="config/settings.yaml", help="Path to config file",
+        "--config",
+        default="config/settings.yaml",
+        help="Path to config file",
     )
 
     args = parser.parse_args()
@@ -190,7 +196,11 @@ def main() -> int:
 
     # Trace scoring
     score = trace_scoring(
-        args.name_a, args.name_b, args.suffix_a, args.suffix_b, settings,
+        args.name_a,
+        args.name_b,
+        args.suffix_a,
+        args.suffix_b,
+        settings,
     )
 
     print(f"\n🎯 FINAL RESULT: {score}% similarity")

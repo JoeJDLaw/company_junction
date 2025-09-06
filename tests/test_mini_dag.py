@@ -1,5 +1,4 @@
-"""Tests for MiniDAG smart auto-resume functionality.
-"""
+"""Tests for MiniDAG smart auto-resume functionality."""
 
 import tempfile
 from pathlib import Path

@@ -70,7 +70,9 @@ def apply_dtypes(df: pd.DataFrame, schema: Dict[str, str]) -> pd.DataFrame:
 
 
 def assert_no_unexpected_object_columns(
-    df: pd.DataFrame, allowed: Optional[Set[str]] = None, context: str = "dataframe",
+    df: pd.DataFrame,
+    allowed: Optional[Set[str]] = None,
+    context: str = "dataframe",
 ) -> None:
     """Assert that no unexpected object columns exist in the dataframe.
 
@@ -110,7 +112,8 @@ def assert_no_unexpected_object_columns(
 
 
 def drop_intermediate_columns(
-    df: pd.DataFrame, context: str = "dataframe",
+    df: pd.DataFrame,
+    context: str = "dataframe",
 ) -> pd.DataFrame:
     """Drop intermediate columns that are not needed downstream.
 
@@ -139,7 +142,9 @@ def drop_intermediate_columns(
 
 
 def optimize_dataframe_memory(
-    df: pd.DataFrame, context: str = "dataframe", verbose: bool = True,
+    df: pd.DataFrame,
+    context: str = "dataframe",
+    verbose: bool = True,
 ) -> pd.DataFrame:
     """Apply comprehensive memory optimization to dataframe.
 

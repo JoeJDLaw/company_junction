@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Test to validate that all Phase headers in CHANGELOG.md contain valid YYYY-MM-DD dates.
-"""
+"""Test to validate that all Phase headers in CHANGELOG.md contain valid YYYY-MM-DD dates."""
 
 import re
 from datetime import datetime

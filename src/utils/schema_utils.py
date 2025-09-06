@@ -237,7 +237,8 @@ def resolve_schema(
 
 
 def _apply_cli_overrides(
-    df: pd.DataFrame, cli_overrides: Dict[str, str],
+    df: pd.DataFrame,
+    cli_overrides: Dict[str, str],
 ) -> Dict[str, str]:
     """Apply CLI column overrides."""
     mapping = {}
@@ -255,7 +256,9 @@ def _apply_cli_overrides(
 
 
 def _match_filename_template(
-    df: pd.DataFrame, input_filename: str, settings: Dict[str, Any],
+    df: pd.DataFrame,
+    input_filename: str,
+    settings: Dict[str, Any],
 ) -> Optional[Dict[str, str]]:
     """Match filename against configured templates."""
     schema_config = settings.get("schema", {})
@@ -288,7 +291,8 @@ def _match_synonyms(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, str
 
 
 def _build_mapping_from_aliases(
-    df: pd.DataFrame, aliases: Dict[str, List[str]],
+    df: pd.DataFrame,
+    aliases: Dict[str, List[str]],
 ) -> Dict[str, str]:
     """Build column mapping from aliases configuration."""
     mapping = {}
@@ -327,7 +331,9 @@ def _apply_heuristics(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, s
     # Heuristic 1: String similarity for account_name
     if ACCOUNT_NAME not in mapping:
         best_match = _find_best_similarity_match(
-            available_columns, ["name", "company", "customer"], threshold=80,
+            available_columns,
+            ["name", "company", "customer"],
+            threshold=80,
         )
         if best_match:
             mapping[ACCOUNT_NAME] = best_match
@@ -351,7 +357,9 @@ def _apply_heuristics(df: pd.DataFrame, settings: Dict[str, Any]) -> Dict[str, s
 
 
 def _find_best_similarity_match(
-    available_columns: List[str], target_terms: List[str], threshold: int = 80,
+    available_columns: List[str],
+    target_terms: List[str],
+    threshold: int = 80,
 ) -> Optional[str]:
     """Find best column match using string similarity."""
     best_score = 0.0
@@ -559,7 +567,8 @@ def normalize_legacy_headers(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_canonical_rename(
-    df: pd.DataFrame, mapping_canonical_to_actual: Dict[str, str],
+    df: pd.DataFrame,
+    mapping_canonical_to_actual: Dict[str, str],
 ) -> pd.DataFrame:
     """Rename columns from ACTUAL -> CANONICAL using the inverted mapping.
     This must be called immediately after resolving schema and BEFORE any canonical constant is used.

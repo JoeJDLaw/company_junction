@@ -1,5 +1,4 @@
-"""Similarity scoring functionality.
-"""
+"""Similarity scoring functionality."""
 
 from __future__ import annotations
 
@@ -15,7 +14,6 @@ from src.similarity.types import ScoreComponents
 from src.utils.parallel_protocols import ExecutorLike
 
 logger = logging.getLogger(__name__)
-
 
 
 def compute_score_components(

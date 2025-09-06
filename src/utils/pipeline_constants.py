@@ -101,5 +101,9 @@ CLEANUP_EXCLUDE_DIRS = {"default", "index", "legacy", "test_save_run", ".DS_Stor
 
 # Cleanup reason codes
 CleanupReason = Literal[
-    "type_filter", "age_filter", "prod_sweep", "orphan_directory", "stale_index",
+    "type_filter",
+    "age_filter",
+    "prod_sweep",
+    "orphan_directory",
+    "stale_index",
 ]

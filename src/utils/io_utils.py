@@ -168,7 +168,8 @@ def get_file_info(file_path: str) -> dict:
 
 
 def list_data_files(
-    directory: str, extensions: Optional[List[str]] = None,
+    directory: str,
+    extensions: Optional[List[str]] = None,
 ) -> List[str]:
     """List data files in a directory.
 

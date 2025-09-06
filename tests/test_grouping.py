@@ -1,5 +1,4 @@
-"""Tests for grouping functionality with edge-gating and stable group IDs.
-"""
+"""Tests for grouping functionality with edge-gating and stable group IDs."""
 
 import sys
 from pathlib import Path
@@ -93,7 +92,12 @@ class TestCanJoinGroup:
         stop_tokens = {"inc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
+            primary_id,
+            candidate_id,
+            edge_scores,
+            token_sets,
+            config,
+            stop_tokens,
         )
 
         assert can_join is True
@@ -113,7 +117,12 @@ class TestCanJoinGroup:
         stop_tokens = {"inc", "llc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
+            primary_id,
+            candidate_id,
+            edge_scores,
+            token_sets,
+            config,
+            stop_tokens,
         )
 
         assert can_join is True
@@ -130,7 +139,12 @@ class TestCanJoinGroup:
         stop_tokens = {"inc", "llc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
+            primary_id,
+            candidate_id,
+            edge_scores,
+            token_sets,
+            config,
+            stop_tokens,
         )
 
         assert can_join is False
@@ -150,7 +164,12 @@ class TestCanJoinGroup:
         stop_tokens = {"inc", "llc"}
 
         can_join, reason, score = can_join_group(
-            primary_id, candidate_id, edge_scores, token_sets, config, stop_tokens,
+            primary_id,
+            candidate_id,
+            edge_scores,
+            token_sets,
+            config,
+            stop_tokens,
         )
 
         assert can_join is False
@@ -177,7 +196,11 @@ class TestCanopyBound:
         }
 
         can_join = apply_canopy_bound(
-            len(group_members), primary_id, candidate_id, edge_scores, config,
+            len(group_members),
+            primary_id,
+            candidate_id,
+            edge_scores,
+            config,
         )
 
         assert can_join is True
@@ -198,7 +221,11 @@ class TestCanopyBound:
         }
 
         can_join = apply_canopy_bound(
-            len(group_members), primary_id, candidate_id, edge_scores, config,
+            len(group_members),
+            primary_id,
+            candidate_id,
+            edge_scores,
+            config,
         )
 
         assert can_join is True
@@ -219,7 +246,11 @@ class TestCanopyBound:
         }
 
         can_join = apply_canopy_bound(
-            len(group_members), primary_id, candidate_id, edge_scores, config,
+            len(group_members),
+            primary_id,
+            candidate_id,
+            edge_scores,
+            config,
         )
 
         assert can_join is False
@@ -240,7 +271,11 @@ class TestCanopyBound:
         }
 
         can_join = apply_canopy_bound(
-            len(group_members), primary_id, candidate_id, edge_scores, config,
+            len(group_members),
+            primary_id,
+            candidate_id,
+            edge_scores,
+            config,
         )
 
         assert can_join is True
@@ -275,7 +310,10 @@ class TestGroupCreation:
         config = {
             "similarity": {"high": 92, "medium": 84},
             "grouping": {
-                "edge_gating": {"enabled": True, "allow_medium_plus_shared_token": True},
+                "edge_gating": {
+                    "enabled": True,
+                    "allow_medium_plus_shared_token": True,
+                },
             },
         }
 
@@ -283,7 +321,10 @@ class TestGroupCreation:
 
         # Create groups
         groups_df = create_groups_with_edge_gating(
-            accounts_df, pairs_df, config, stop_tokens,
+            accounts_df,
+            pairs_df,
+            config,
+            stop_tokens,
         )
 
         # Verify results

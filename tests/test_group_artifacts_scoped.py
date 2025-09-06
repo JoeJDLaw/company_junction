@@ -14,7 +14,8 @@ from src.utils.path_utils import get_artifact_path, get_processed_dir
 
 
 def test_group_artifacts_scoped(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that group artifacts are written under run-scoped directories."""
     run_id = "test123"
@@ -45,7 +46,8 @@ def test_group_artifacts_scoped(
 
 
 def test_artifact_paths_never_global(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that artifact paths never resolve to global processed directories."""
     run_id = "test456"

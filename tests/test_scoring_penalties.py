@@ -303,7 +303,11 @@ class TestScoringPenalties:
             "punctuation_mismatch": 50,
         }
         result_high = compute_score_components(
-            name_a, name_b, "INC", "LLC", high_penalties,
+            name_a,
+            name_b,
+            "INC",
+            "LLC",
+            high_penalties,
         )
 
         # Test with low penalties
@@ -313,7 +317,11 @@ class TestScoringPenalties:
             "punctuation_mismatch": 1,
         }
         result_low = compute_score_components(
-            name_a, name_b, "INC", "LLC", low_penalties,
+            name_a,
+            name_b,
+            "INC",
+            "LLC",
+            low_penalties,
         )
 
         # High penalties should result in lower scores
@@ -367,7 +375,11 @@ class TestScoringPenalties:
             "punctuation_mismatch": 0,
         }
         result_zero = compute_score_components(
-            name_a, name_b, "INC", "LLC", zero_penalties,
+            name_a,
+            name_b,
+            "INC",
+            "LLC",
+            zero_penalties,
         )
 
         # Test with normal penalties
@@ -377,7 +389,11 @@ class TestScoringPenalties:
             "punctuation_mismatch": 3,
         }
         result_normal = compute_score_components(
-            name_a, name_b, "INC", "LLC", normal_penalties,
+            name_a,
+            name_b,
+            "INC",
+            "LLC",
+            normal_penalties,
         )
 
         # Zero penalties should not affect score

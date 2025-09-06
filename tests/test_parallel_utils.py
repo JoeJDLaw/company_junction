@@ -21,7 +21,8 @@ class TestLokyAvailability:
 
     @patch("src.utils.parallel_utils._try_import_joblib", return_value=False)
     def test_is_loky_available_when_joblib_unavailable(
-        self, mock_try_import: MagicMock,
+        self,
+        mock_try_import: MagicMock,
     ) -> None:
         """Test loky availability when joblib is not available."""
         # Reset cache to ensure test isolation
@@ -35,7 +36,9 @@ class TestLokyAvailability:
     @patch("src.utils.parallel_utils._try_import_joblib", return_value=True)
     @patch("src.utils.parallel_utils.Parallel")
     def test_is_loky_available_when_loky_works(
-        self, mock_parallel: MagicMock, mock_try_import: MagicMock,
+        self,
+        mock_parallel: MagicMock,
+        mock_try_import: MagicMock,
     ) -> None:
         """Test loky availability when loky backend works."""
         # Reset cache to ensure test isolation
@@ -52,7 +55,9 @@ class TestLokyAvailability:
     @patch("src.utils.parallel_utils._try_import_joblib", return_value=True)
     @patch("src.utils.parallel_utils.Parallel")
     def test_is_loky_available_when_loky_fails(
-        self, mock_parallel: MagicMock, mock_try_import: MagicMock,
+        self,
+        mock_parallel: MagicMock,
+        mock_try_import: MagicMock,
     ) -> None:
         """Test loky availability when loky backend fails."""
         # Reset cache to ensure test isolation
@@ -87,7 +92,8 @@ class TestBackendSelection:
     @patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True)
     @patch("src.utils.parallel_utils.is_loky_available")
     def test_select_backend_requested_loky_but_unavailable_falls_back_to_threading(
-        self, mock_loky_available: MagicMock,
+        self,
+        mock_loky_available: MagicMock,
     ) -> None:
         """Test backend selection when loky is requested but unavailable."""
         mock_loky_available.return_value = False
@@ -99,7 +105,8 @@ class TestBackendSelection:
     @patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True)
     @patch("src.utils.parallel_utils.is_loky_available")
     def test_select_backend_requested_loky_and_available(
-        self, mock_loky_available: MagicMock,
+        self,
+        mock_loky_available: MagicMock,
     ) -> None:
         """Test backend selection when loky is requested and available."""
         mock_loky_available.return_value = True
@@ -111,7 +118,8 @@ class TestBackendSelection:
     @patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True)
     @patch("src.utils.parallel_utils.is_loky_available")
     def test_select_backend_default_when_loky_available(
-        self, mock_loky_available: MagicMock,
+        self,
+        mock_loky_available: MagicMock,
     ) -> None:
         """Test default backend selection when loky is available."""
         mock_loky_available.return_value = True
@@ -123,7 +131,8 @@ class TestBackendSelection:
     @patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True)
     @patch("src.utils.parallel_utils.is_loky_available")
     def test_select_backend_default_when_loky_unavailable(
-        self, mock_loky_available: MagicMock,
+        self,
+        mock_loky_available: MagicMock,
     ) -> None:
         """Test default backend selection when loky is unavailable."""
         mock_loky_available.return_value = False
@@ -140,7 +149,9 @@ class TestParallelExecutor:
     @patch("src.utils.parallel_utils.is_loky_available")
     @patch("src.utils.parallel_utils.calculate_optimal_workers")
     def test_parallel_executor_initialization(
-        self, mock_calculate_workers: MagicMock, mock_loky_available: MagicMock,
+        self,
+        mock_calculate_workers: MagicMock,
+        mock_loky_available: MagicMock,
     ) -> None:
         """Test ParallelExecutor initialization."""
         mock_calculate_workers.return_value = 4
@@ -221,7 +232,10 @@ class TestParallelExecutorChunking:
         # Mock joblib availability
         with patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True):
             executor = ParallelExecutor(
-                workers=12, backend="loky", chunk_size=1000, small_input_threshold=10000,
+                workers=12,
+                backend="loky",
+                chunk_size=1000,
+                small_input_threshold=10000,
             )
 
             # Test with large input (366,895 items as mentioned in requirements)
@@ -233,7 +247,9 @@ class TestParallelExecutorChunking:
 
             # Execute chunked operation
             results = executor.execute_chunked(
-                mock_func, large_items, operation_name="test_chunking",
+                mock_func,
+                large_items,
+                operation_name="test_chunking",
             )
 
             # Verify we get reasonable chunk sizes
@@ -259,7 +275,10 @@ class TestParallelExecutorChunking:
         """Test that small inputs fall back to sequential processing."""
         with patch("src.utils.parallel_utils.JOBLIB_AVAILABLE", True):
             executor = ParallelExecutor(
-                workers=12, backend="loky", chunk_size=1000, small_input_threshold=10000,
+                workers=12,
+                backend="loky",
+                chunk_size=1000,
+                small_input_threshold=10000,
             )
 
             # Test with small input (5,000 items)
@@ -269,7 +288,9 @@ class TestParallelExecutorChunking:
                 return {"size": len(chunk), "first": chunk[0] if chunk else None}
 
             results = executor.execute_chunked(
-                mock_func, small_items, operation_name="test_small_input",
+                mock_func,
+                small_items,
+                operation_name="test_small_input",
             )
 
             # Should use sequential processing for small input

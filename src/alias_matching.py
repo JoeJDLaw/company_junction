@@ -704,7 +704,8 @@ def _score_alias_against_records(
 
 
 def create_alias_cross_refs(
-    df_norm: pd.DataFrame, df_alias_matches: pd.DataFrame,
+    df_norm: pd.DataFrame,
+    df_alias_matches: pd.DataFrame,
 ) -> pd.DataFrame:
     """Create alias cross-references for each record.
 

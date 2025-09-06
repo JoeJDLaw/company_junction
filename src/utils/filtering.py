@@ -94,7 +94,8 @@ def get_order_by(sort_key: str, context: str = "default") -> str:
 
 
 def build_sort_expression(
-    sort_key: str, context: str = "default",
+    sort_key: str,
+    context: str = "default",
 ) -> List[Tuple[str, str]]:
     """Build PyArrow sort keys for stable sorting.
 
@@ -127,10 +128,11 @@ def build_sort_expression(
 
 
 def apply_filters_pyarrow(
-    table: Any, filters: Dict[str, Any], available_columns: list[str] | None = None,
+    table: Any,
+    filters: Dict[str, Any],
+    available_columns: list[str] | None = None,
 ) -> Any:
-    """Apply filters to a PyArrow table using boolean masks (works across Arrow versions).
-    """
+    """Apply filters to a PyArrow table using boolean masks (works across Arrow versions)."""
     if not filters:
         return table
 
@@ -153,7 +155,8 @@ def apply_filters_pyarrow(
     min_es = filters.get("min_edge_strength", 0.0)
     if (min_es not in (None, 0.0)) and (WEAKEST_EDGE_TO_PRIMARY in table.column_names):
         es_mask = pc.greater_equal(
-            table[WEAKEST_EDGE_TO_PRIMARY], pc.scalar(float(min_es)),
+            table[WEAKEST_EDGE_TO_PRIMARY],
+            pc.scalar(float(min_es)),
         )
         mask = es_mask if mask is None else _and_kleene_typed(mask, es_mask)
 

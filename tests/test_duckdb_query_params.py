@@ -251,7 +251,8 @@ def test_sql_injection_prevention():
 
     # Insert test user
     conn.execute(
-        "INSERT INTO users VALUES (?, ?, ?)", [1, "Alice", "alice@example.com"],
+        "INSERT INTO users VALUES (?, ?, ?)",
+        [1, "Alice", "alice@example.com"],
     )
 
     # Malicious input that would cause SQL injection with string interpolation

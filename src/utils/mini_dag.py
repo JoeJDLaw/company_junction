@@ -140,7 +140,9 @@ class MiniDAG:
         return running_stages[0] if running_stages else None
 
     def validate_intermediate_files(
-        self, stage_name: str, interim_dir: Optional[Path] = None,
+        self,
+        stage_name: str,
+        interim_dir: Optional[Path] = None,
     ) -> bool:
         """Check if intermediate files exist for a given stage."""
         if interim_dir is None:
@@ -163,7 +165,8 @@ class MiniDAG:
         return True
 
     def get_smart_resume_stage(
-        self, interim_dir: Optional[Path] = None,
+        self,
+        interim_dir: Optional[Path] = None,
     ) -> Optional[str]:
         """Intelligently determine where to resume from based on:
         1. Last completed stage in state file
@@ -246,7 +249,8 @@ class MiniDAG:
         return bool(current_hash == stored_hash)
 
     def validate_resume_capability(
-        self, interim_dir: Optional[Path] = None,
+        self,
+        interim_dir: Optional[Path] = None,
     ) -> Tuple[bool, str, ResumeDecision]:
         """Validate if the pipeline can resume from the current state.
 
@@ -337,7 +341,8 @@ class MiniDAG:
             return False
 
     def get_resume_validation_summary(
-        self, interim_dir: Optional[Path] = None,
+        self,
+        interim_dir: Optional[Path] = None,
     ) -> Dict[str, Any]:
         """Get a comprehensive summary of resume validation status.
 
@@ -367,7 +372,8 @@ class MiniDAG:
             summary["file_validation"] = {
                 "stage": last_completed,
                 "files_exist": self.validate_intermediate_files(
-                    last_completed, interim_dir,
+                    last_completed,
+                    interim_dir,
                 ),
                 "expected_files": STAGE_INTERMEDIATE_FILES.get(last_completed, []),
             }
@@ -375,7 +381,10 @@ class MiniDAG:
         return summary
 
     def _update_state_metadata(
-        self, input_path: Path, config_path: Path, cmdline: str,
+        self,
+        input_path: Path,
+        config_path: Path,
+        cmdline: str,
     ) -> None:
         """Update state metadata with current run information."""
         self._metadata.update(
@@ -466,7 +475,9 @@ class MiniDAG:
     def _atomic_write(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
-            "w", delete=False, dir=str(path.parent),
+            "w",
+            delete=False,
+            dir=str(path.parent),
         ) as tmp:
             tmp.write(content)
             tmp_path = Path(tmp.name)

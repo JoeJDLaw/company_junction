@@ -95,7 +95,9 @@ logger = logging.getLogger(__name__)
 
 
 def _assert_pairs_cover_accounts(
-    pairs: pd.DataFrame, accounts: pd.DataFrame, id_col: str = ACCOUNT_ID,
+    pairs: pd.DataFrame,
+    accounts: pd.DataFrame,
+    id_col: str = ACCOUNT_ID,
 ) -> None:
     """Assert that all pair IDs exist in the accounts DataFrame.
 
@@ -121,7 +123,9 @@ def _assert_pairs_cover_accounts(
 
 
 def _create_audit_snapshot(
-    settings: Dict[str, Any], alias_stats: Dict[str, Any], output_dir: str,
+    settings: Dict[str, Any],
+    alias_stats: Dict[str, Any],
+    output_dir: str,
 ) -> None:
     """Create an audit snapshot with run metadata.
 
@@ -137,7 +141,8 @@ def _create_audit_snapshot(
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "--short", "HEAD"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 cwd=Path(__file__).parent.parent,
             )
@@ -245,7 +250,10 @@ def _create_performance_summary_enhanced(
 
         # Generate comprehensive summary
         summary = perf_tracker.generate_summary(
-            dataset_stats, candidate_stats, group_stats, block_stats,
+            dataset_stats,
+            candidate_stats,
+            group_stats,
+            block_stats,
         )
 
         # Add run_id to summary if provided
@@ -357,7 +365,8 @@ def _compute_group_stats_pandas(df_primary: pd.DataFrame) -> pd.DataFrame:
                 MAX_SCORE: max_score,
                 PRIMARY_NAME: primary_record.get(ACCOUNT_NAME, ""),
                 DISPOSITION: primary_record.get(
-                    DISPOSITION, "Update",
+                    DISPOSITION,
+                    "Update",
                 ),  # Default to Update if not set yet
             },
         )
@@ -490,7 +499,8 @@ def run_pipeline(
         backend=parallel_backend,
         chunk_size=chunk_size,
         small_input_threshold=settings.get("parallelism", {}).get(
-            "small_input_threshold", 10000,
+            "small_input_threshold",
+            10000,
         ),
         disable_parallel=no_parallel,
     )
@@ -674,7 +684,10 @@ def run_pipeline(
         # Resolve schema mapping from DataFrame headers
         input_filename = Path(input_path).name
         schema_mapping = resolve_schema(
-            df, settings, cli_overrides=col_overrides, input_filename=input_filename,
+            df,
+            settings,
+            cli_overrides=col_overrides,
+            input_filename=input_filename,
         )
 
         # Save schema mapping for observability and reproducibility
@@ -738,7 +751,8 @@ def run_pipeline(
             df_norm["name_core_tokens"] = df_norm["name_core"].apply(create_tokens)
 
             perf_tracker.record_timing(
-                "clean_normalize", 0.0,
+                "clean_normalize",
+                0.0,
             )  # Will be updated by log_perf
 
             dag.complete("normalization")
@@ -957,7 +971,12 @@ def run_pipeline(
         # Memory tracking removed - using built-in logging instead
         logger.info("About to call create_groups_with_edge_gating")
         df_groups = create_groups_with_edge_gating(
-            df_norm, pairs_df, settings, stop_tokens, enable_progress, profile,
+            df_norm,
+            pairs_df,
+            settings,
+            stop_tokens,
+            enable_progress,
+            profile,
         )
         logger.info(f"create_groups_with_edge_gating returned: {type(df_groups)}")
         if df_groups is not None:
@@ -986,10 +1005,15 @@ def run_pipeline(
         with time_stage("survivorship", logger):
             with track_memory_peak("survivorship", logger):
                 df_primary = select_primary_records(
-                    df_groups, relationship_ranks, settings, enable_progress, profile,
+                    df_groups,
+                    relationship_ranks,
+                    settings,
+                    enable_progress,
+                    profile,
                 )
                 perf_tracker.record_timing(
-                    "survivorship", 0.0,
+                    "survivorship",
+                    0.0,
                 )  # Will be updated by log_perf
 
         # Generate merge preview
@@ -1008,7 +1032,8 @@ def run_pipeline(
 
             # Check backend configuration
             group_stats_backend = settings.get("group_stats", {}).get(
-                "backend", "duckdb",
+                "backend",
+                "duckdb",
             )
 
             if group_stats_backend == "duckdb":
@@ -1041,7 +1066,8 @@ def run_pipeline(
 
                     # Compute group stats using DuckDB
                     df_group_stats, duckdb_metadata = duckdb_engine.compute_group_stats(
-                        df_primary, config_digest,
+                        df_primary,
+                        config_digest,
                     )
 
                     # Log DuckDB performance
@@ -1076,7 +1102,8 @@ def run_pipeline(
                         get_artifact_path(run_id, "group_stats_duckdb.parquet"),
                     )
                     parquet_metadata = duckdb_engine.write_optimized_parquet(
-                        df_group_stats, group_stats_path,
+                        df_group_stats,
+                        group_stats_path,
                     )
 
                     # Log parquet write performance
@@ -1088,13 +1115,15 @@ def run_pipeline(
 
                     # Write canonical group_stats.parquet if persistence is enabled
                     persist_artifacts = settings.get("group_stats", {}).get(
-                        "persist_artifacts", True,
+                        "persist_artifacts",
+                        True,
                     )
                     # Check for environment variable override
                     if os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS"):
                         persist_artifacts = (
                             os.environ.get(
-                                "CJ_GROUP_STATS_PERSIST_ARTIFACTS", "",
+                                "CJ_GROUP_STATS_PERSIST_ARTIFACTS",
+                                "",
                             ).lower()
                             == "true"
                         )
@@ -1134,7 +1163,8 @@ def run_pipeline(
 
                     # Run parity validation if pandas backend is available for comparison
                     run_parity = settings.get("group_stats", {}).get(
-                        "run_parity_validation", False,
+                        "run_parity_validation",
+                        False,
                     )
                     # Check for environment variable override
                     if os.environ.get("CJ_GROUP_STATS_RUN_PARITY"):
@@ -1153,7 +1183,9 @@ def run_pipeline(
                         parity_validator = create_parity_validator()
                         is_parity_valid, parity_report = (
                             parity_validator.validate_group_stats_parity(
-                                df_group_stats, df_group_stats_pandas, run_id,
+                                df_group_stats,
+                                df_group_stats_pandas,
+                                run_id,
                             )
                         )
 
@@ -1193,7 +1225,9 @@ def run_pipeline(
 
                             # Generate comparison report
                             size_comparison = size_reporter.compare_parquet_files(
-                                group_stats_path, pandas_path, run_id,
+                                group_stats_path,
+                                pandas_path,
+                                run_id,
                             )
 
                             logger.info(
@@ -1236,7 +1270,8 @@ def run_pipeline(
                                     "docs/reports/phase_1_35_4_benchmark.md"
                                 )
                                 os.makedirs(
-                                    os.path.dirname(benchmark_path), exist_ok=True,
+                                    os.path.dirname(benchmark_path),
+                                    exist_ok=True,
                                 )
 
                                 with open(benchmark_path, "w") as f:
@@ -1302,7 +1337,8 @@ def run_pipeline(
 
                 # Save pandas-specific file if persistence is enabled
                 persist_artifacts = settings.get("group_stats", {}).get(
-                    "persist_artifacts", True,
+                    "persist_artifacts",
+                    True,
                 )
                 # Check for environment variable override
                 if os.environ.get("CJ_GROUP_STATS_PERSIST_ARTIFACTS"):
@@ -1353,7 +1389,8 @@ def run_pipeline(
             with track_memory_peak(DISPOSITION, logger):
                 df_dispositions = apply_dispositions(df_primary, settings)
                 perf_tracker.record_timing(
-                    DISPOSITION, 0.0,
+                    DISPOSITION,
+                    0.0,
                 )  # Will be updated by log_perf
 
         # Save dispositions
@@ -1389,7 +1426,8 @@ def run_pipeline(
                 # Re-save updated group stats
                 # Ensure deterministic ordering and stable dtypes after update
                 df_group_stats = df_group_stats.sort_values(
-                    GROUP_ID, kind="mergesort",
+                    GROUP_ID,
+                    kind="mergesort",
                 ).reset_index(drop=True)
 
                 # Re-apply dtypes to ensure consistency
@@ -1450,7 +1488,8 @@ def run_pipeline(
 
                 # Sort by group_id for optimal predicate pushdown
                 df_details = df_details.sort_values(
-                    "group_id", kind="mergesort",
+                    "group_id",
+                    kind="mergesort",
                 ).reset_index(drop=True)
 
                 # Save to processed directory for UI access
@@ -1611,10 +1650,14 @@ def main() -> None:
     parser.add_argument("--input", required=True, help="Input CSV file path")
     parser.add_argument("--outdir", required=True, help="Output directory path")
     parser.add_argument(
-        "--config", default=str(get_config_path()), help="Configuration file path",
+        "--config",
+        default=str(get_config_path()),
+        help="Configuration file path",
     )
     parser.add_argument(
-        "--progress", action="store_true", help="Enable tqdm progress bars",
+        "--progress",
+        action="store_true",
+        help="Enable tqdm progress bars",
     )
     parser.add_argument("--resume-from", help="Resume pipeline from specific stage")
     parser.add_argument(

@@ -254,7 +254,9 @@ def test_parity_validator() -> None:
 
         # Test identical data
         is_valid, report = validator.validate_group_stats_parity(
-            df_duckdb, df_pandas, run_id,
+            df_duckdb,
+            df_pandas,
+            run_id,
         )
 
         assert is_valid is True
@@ -266,7 +268,9 @@ def test_parity_validator() -> None:
         df_pandas_different.loc[0, "max_score"] = 99.0
 
         is_valid, report = validator.validate_group_stats_parity(
-            df_duckdb, df_pandas_different, run_id,
+            df_duckdb,
+            df_pandas_different,
+            run_id,
         )
 
         assert is_valid is False

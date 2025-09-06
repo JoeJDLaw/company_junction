@@ -62,7 +62,10 @@ class PerformanceTracker:
         """Get current git commit hash."""
         try:
             result = subprocess.run(
-                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=True,
             )
             return result.stdout.strip()[:8]  # Return first 8 chars
         except (subprocess.CalledProcessError, FileNotFoundError):
@@ -110,7 +113,8 @@ class PerformanceTracker:
             "groups": {
                 "count": group_stats.get("count", 0),
                 "size_histogram": group_stats.get(
-                    "size_histogram", {"1": 0, "2": 0, "3": 0, "4_plus": 0},
+                    "size_histogram",
+                    {"1": 0, "2": 0, "3": 0, "4_plus": 0},
                 ),
                 "max_group_size": group_stats.get("max_group_size", 0),
             },
@@ -132,7 +136,8 @@ class PerformanceTracker:
 
 
 def save_performance_summary(
-    summary: Dict[str, Any], output_path: str = "data/processed/perf_summary.json",
+    summary: Dict[str, Any],
+    output_path: str = "data/processed/perf_summary.json",
 ) -> None:
     """Save performance summary to JSON file.
 
@@ -187,7 +192,8 @@ def compute_group_size_histogram(groups_df: pd.DataFrame) -> Dict[str, int]:
 
 
 def compute_block_top_tokens(
-    blocks_df: pd.DataFrame, top_n: int = 10,
+    blocks_df: pd.DataFrame,
+    top_n: int = 10,
 ) -> List[Dict[str, Any]]:
     """Compute top tokens from blocking statistics.
 

@@ -80,12 +80,14 @@ def get_app_state(session_state: Any) -> AppState:
         filter_signature=session_state.get("cj.filters.signature", ""),
         # Cache state
         cache_clear_requested_for_run=session_state.get(
-            "cj.cache.clear_requested_for_run_id", None,
+            "cj.cache.clear_requested_for_run_id",
+            None,
         ),
         # UI state
         similarity_threshold=session_state.get("cj.ui.similarity_threshold", 100.0),
         previous_sort_key=session_state.get(
-            "cj.ui.previous_sort_key", "Group Size (Desc)",
+            "cj.ui.previous_sort_key",
+            "Group Size (Desc)",
         ),
     )
 
@@ -142,7 +144,9 @@ def clear_app_state(session_state: Any) -> None:
 
 # Convenience functions for common operations
 def get_backend_for_run(
-    app_state: AppState, run_id: str, default: str = "pyarrow",
+    app_state: AppState,
+    run_id: str,
+    default: str = "pyarrow",
 ) -> str:
     """Get the backend choice for a specific run."""
     return app_state.backend_choices.get(run_id, default)
@@ -159,7 +163,10 @@ def is_details_requested(app_state: AppState, run_id: str, group_id: str) -> boo
 
 
 def set_details_requested(
-    app_state: AppState, run_id: str, group_id: str, requested: bool = True,
+    app_state: AppState,
+    run_id: str,
+    group_id: str,
+    requested: bool = True,
 ) -> None:
     """Mark details as requested for a group."""
     app_state.details_requested[(run_id, group_id)] = requested
@@ -171,7 +178,10 @@ def is_details_loaded(app_state: AppState, run_id: str, group_id: str) -> bool:
 
 
 def set_details_loaded(
-    app_state: AppState, run_id: str, group_id: str, data: List[Dict[str, Any]],
+    app_state: AppState,
+    run_id: str,
+    group_id: str,
+    data: List[Dict[str, Any]],
 ) -> None:
     """Mark details as loaded and store the data."""
     key = (run_id, group_id)
@@ -180,7 +190,9 @@ def set_details_loaded(
 
 
 def get_details_data(
-    app_state: AppState, run_id: str, group_id: str,
+    app_state: AppState,
+    run_id: str,
+    group_id: str,
 ) -> Optional[List[Dict[str, Any]]]:
     """Get the loaded details data for a group."""
     return app_state.details_data.get((run_id, group_id))

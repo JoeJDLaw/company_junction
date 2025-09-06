@@ -38,7 +38,10 @@ class ParityValidator:
         self.tolerance = tolerance
 
     def validate_group_stats_parity(
-        self, duckdb_df: pd.DataFrame, pandas_df: pd.DataFrame, run_id: str,
+        self,
+        duckdb_df: pd.DataFrame,
+        pandas_df: pd.DataFrame,
+        run_id: str,
     ) -> Tuple[bool, Dict[str, Any]]:
         """Validate that DuckDB and pandas group stats are identical.
 
@@ -92,7 +95,9 @@ class ParityValidator:
         # Validate each metric column
         for col in required_columns:
             col_report = self._validate_column_parity(
-                duckdb_sorted[col], pandas_sorted[col], col,
+                duckdb_sorted[col],
+                pandas_sorted[col],
+                col,
             )
             parity_report["metrics"][col] = col_report
 
@@ -126,7 +131,10 @@ class ParityValidator:
         return is_parity_valid, parity_report
 
     def _validate_column_parity(
-        self, duckdb_series: pd.Series, pandas_series: pd.Series, column_name: str,
+        self,
+        duckdb_series: pd.Series,
+        pandas_series: pd.Series,
+        column_name: str,
     ) -> Dict[str, Any]:
         """Validate parity for a single column.
 
@@ -230,7 +238,9 @@ class ParityValidator:
         }
 
     def _validate_schema_parity(
-        self, duckdb_df: pd.DataFrame, pandas_df: pd.DataFrame,
+        self,
+        duckdb_df: pd.DataFrame,
+        pandas_df: pd.DataFrame,
     ) -> Dict[str, Any]:
         """Validate that both DataFrames have matching dtypes.
 

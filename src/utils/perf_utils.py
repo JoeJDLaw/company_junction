@@ -87,7 +87,9 @@ def parse_name_core_tokens(value: Union[str, list, None]) -> frozenset[str]:
 
 
 def build_vectorized_masks(
-    df: pd.DataFrame, blacklist_regex: str, manual_blacklist: Optional[set] = None,
+    df: pd.DataFrame,
+    blacklist_regex: str,
+    manual_blacklist: Optional[set] = None,
 ) -> dict:
     """Build vectorized boolean masks for disposition classification.
 
@@ -105,7 +107,10 @@ def build_vectorized_masks(
     # Blacklisted names
     if blacklist_regex:
         masks["blacklisted_mask"] = df["account_name"].str.contains(
-            blacklist_regex, case=False, regex=True, na=False,
+            blacklist_regex,
+            case=False,
+            regex=True,
+            na=False,
         )
 
     # Manual blacklist terms
@@ -122,7 +127,8 @@ def build_vectorized_masks(
 
     # Multiple names
     masks["multi_name_mask"] = df.get(
-        "has_multiple_names", pd.Series(False, index=df.index),
+        "has_multiple_names",
+        pd.Series(False, index=df.index),
     )
 
     # Alias cross-references
@@ -178,7 +184,8 @@ def apply_vectorized_disposition(
     }
 
     dispositions = pd.Series(
-        [disposition_map.get(r, "Keep") for r in reasons], index=df.index,
+        [disposition_map.get(r, "Keep") for r in reasons],
+        index=df.index,
     )
 
     # Apply manual overrides if provided

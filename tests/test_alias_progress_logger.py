@@ -1,5 +1,4 @@
-"""Test alias progress logging functionality.
-"""
+"""Test alias progress logging functionality."""
 
 from unittest.mock import patch
 

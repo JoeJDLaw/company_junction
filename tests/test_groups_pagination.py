@@ -276,7 +276,11 @@ class TestPaginationLimits:
 
             try:
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 1, 500, {},
+                    "test_run",
+                    "Group Size (Desc)",
+                    1,
+                    500,
+                    {},
                 )
 
                 assert page_groups == []
@@ -315,7 +319,11 @@ class TestPaginationLimits:
             try:
                 # Test first page
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 1, 5, {},
+                    "test_run",
+                    "Group Size (Desc)",
+                    1,
+                    5,
+                    {},
                 )
 
                 assert len(page_groups) == 5
@@ -323,7 +331,11 @@ class TestPaginationLimits:
 
                 # Test second page
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 2, 5, {},
+                    "test_run",
+                    "Group Size (Desc)",
+                    2,
+                    5,
+                    {},
                 )
 
                 assert len(page_groups) == 5
@@ -331,7 +343,11 @@ class TestPaginationLimits:
 
                 # Test page beyond bounds
                 page_groups, total_count = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 3, 5, {},
+                    "test_run",
+                    "Group Size (Desc)",
+                    3,
+                    5,
+                    {},
                 )
 
                 assert page_groups == []
@@ -388,7 +404,11 @@ class TestSortingStability:
             try:
                 # Test ascending sort - should be stable by group_id
                 page_groups, _ = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Asc)", 1, 10, {},
+                    "test_run",
+                    "Group Size (Asc)",
+                    1,
+                    10,
+                    {},
                 )
 
                 # Should be sorted by group_id (ascending) as tiebreaker
@@ -397,7 +417,11 @@ class TestSortingStability:
 
                 # Test descending sort - should still be stable by group_id
                 page_groups, _ = get_groups_page_pyarrow(
-                    "test_run", "Group Size (Desc)", 1, 10, {},
+                    "test_run",
+                    "Group Size (Desc)",
+                    1,
+                    10,
+                    {},
                 )
 
                 # Should still be sorted by group_id (ascending) as tiebreaker

@@ -1,5 +1,4 @@
-"""Tests for brand suggestions functionality.
-"""
+"""Tests for brand suggestions functionality."""
 
 import sys
 from pathlib import Path
@@ -200,10 +199,12 @@ class TestBrandSuggestions:
 
         # High count should have higher confidence
         high_conf_suggestion = next(
-            (s for s in suggestions if s["token"] == "high_conf"), None,
+            (s for s in suggestions if s["token"] == "high_conf"),
+            None,
         )
         low_conf_suggestion = next(
-            (s for s in suggestions if s["token"] == "low_conf"), None,
+            (s for s in suggestions if s["token"] == "low_conf"),
+            None,
         )
 
         if high_conf_suggestion and low_conf_suggestion:

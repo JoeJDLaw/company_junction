@@ -20,7 +20,9 @@ from src.utils.state_utils import (
 
 
 def render_controls(
-    selected_run_id: str, settings: Dict[str, Any], filters: Dict[str, Any],
+    selected_run_id: str,
+    settings: Dict[str, Any],
+    filters: Dict[str, Any],
 ) -> tuple[Dict[str, Any], str, int, int, int]:
     """Render pagination and filter controls.
 
@@ -88,7 +90,8 @@ def render_controls(
         # Get current similarity threshold from session state
         similarity_key = f"similarity_threshold_{selected_run_id}"
         default_threshold = settings.get("ui", {}).get(
-            "similarity_threshold_default", 100,
+            "similarity_threshold_default",
+            100,
         )  # Start with 100% (exact duplicates)
         current_threshold = st.session_state.get(similarity_key, default_threshold)
 
@@ -125,12 +128,15 @@ def render_controls(
 
     # Pagination controls
     page_size_options = settings.get("ui", {}).get(
-        "page_size_options", [50, 100, 200, 500],
+        "page_size_options",
+        [50, 100, 200, 500],
     )
     default_page_size = settings.get("ui", {}).get("page_size_default", 50)
 
     page_size = st.sidebar.selectbox(
-        "Page Size", page_size_options, index=page_size_options.index(default_page_size),
+        "Page Size",
+        page_size_options,
+        index=page_size_options.index(default_page_size),
     )
 
     # Update page state
@@ -140,7 +146,12 @@ def render_controls(
     # Check if filters changed to reset page
     backend = backend_state.groups.get(selected_run_id, "pyarrow")
     current_filters_key = build_cache_key(
-        selected_run_id, sort_by, 1, page_size, filters, backend,
+        selected_run_id,
+        sort_by,
+        1,
+        page_size,
+        filters,
+        backend,
     )
 
     if filters_state.signature != current_filters_key:

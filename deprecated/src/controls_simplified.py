@@ -20,7 +20,9 @@ from src.utils.simple_state import (
 
 
 def render_controls_simplified(
-    selected_run_id: str, settings: Dict[str, Any], filters: Dict[str, Any],
+    selected_run_id: str,
+    settings: Dict[str, Any],
+    filters: Dict[str, Any],
 ) -> tuple[Dict[str, Any], str, int, int, int]:
     """Render pagination and filter controls using simplified state management.
 
@@ -109,12 +111,15 @@ def render_controls_simplified(
 
     # Pagination controls
     page_size_options = settings.get("ui", {}).get(
-        "page_size_options", [50, 100, 200, 500],
+        "page_size_options",
+        [50, 100, 200, 500],
     )
     default_page_size = settings.get("ui", {}).get("page_size_default", 50)
 
     page_size = st.sidebar.selectbox(
-        "Page Size", page_size_options, index=page_size_options.index(default_page_size),
+        "Page Size",
+        page_size_options,
+        index=page_size_options.index(default_page_size),
     )
 
     # Update page size if changed
@@ -124,7 +129,12 @@ def render_controls_simplified(
     # Check if filters changed to reset page
     backend = get_backend_for_run(app_state, selected_run_id)
     current_filters_key = build_cache_key(
-        selected_run_id, sort_by, 1, page_size, filters, backend,
+        selected_run_id,
+        sort_by,
+        1,
+        page_size,
+        filters,
+        backend,
     )
 
     if app_state.filter_signature != current_filters_key:

@@ -10,7 +10,8 @@ from src import cleaning
 
 
 def test_main_forwards_resume_noresume_force_correct_order(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Test that main() forwards resume/no_resume/force args in correct order.
 
@@ -45,7 +46,8 @@ def test_main_forwards_resume_noresume_force_correct_order(
     with patch("os.path.exists", return_value=True):
         # Mock sys.argv to avoid argparse issues
         with patch(
-            "sys.argv", ["cleaning.py", "--input", "test.csv", "--outdir", "output"],
+            "sys.argv",
+            ["cleaning.py", "--input", "test.csv", "--outdir", "output"],
         ):
             # Directly call the fixed run_pipeline call with keyword args
             cleaning.run_pipeline(
@@ -75,7 +77,8 @@ def test_main_forwards_resume_noresume_force_correct_order(
 
 
 def test_main_forwards_resume_args_when_set(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Test correct forwarding when resume_from is set and no_resume is True."""
     called = {}
@@ -105,7 +108,8 @@ def test_main_forwards_resume_args_when_set(
 
     with patch("os.path.exists", return_value=True):
         with patch(
-            "sys.argv", ["cleaning.py", "--input", "test.csv", "--outdir", "output"],
+            "sys.argv",
+            ["cleaning.py", "--input", "test.csv", "--outdir", "output"],
         ):
             cleaning.run_pipeline(
                 input_path=ns.input,

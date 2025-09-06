@@ -603,7 +603,8 @@ def create_parallel_executor(
 
 
 def ensure_deterministic_order(
-    results: List[Any], sort_key: Optional[Callable] = None,
+    results: List[Any],
+    sort_key: Optional[Callable] = None,
 ) -> List[Any]:
     """Ensure deterministic ordering of parallel results.
 
@@ -622,7 +623,10 @@ def ensure_deterministic_order(
 
 
 def log_parallel_config(
-    workers: int, backend: str, chunk_size: int, input_size: int,
+    workers: int,
+    backend: str,
+    chunk_size: int,
+    input_size: int,
 ) -> None:
     """Log parallel execution configuration."""
     logger.info("=== Parallel Configuration ===")

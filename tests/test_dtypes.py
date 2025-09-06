@@ -1,5 +1,4 @@
-"""Tests for dtype validation and memory optimization functionality.
-"""
+"""Tests for dtype validation and memory optimization functionality."""
 
 import sys
 from pathlib import Path
@@ -121,7 +120,9 @@ class TestObjectColumnValidation:
 
         # Should not raise exception with custom allowed set
         assert_no_unexpected_object_columns(
-            df, allowed={"custom_col", "account_id"}, context="test",
+            df,
+            allowed={"custom_col", "account_id"},
+            context="test",
         )
 
 

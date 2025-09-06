@@ -1,5 +1,4 @@
-"""Test cache utilities functionality.
-"""
+"""Test cache utilities functionality."""
 
 import json
 import os

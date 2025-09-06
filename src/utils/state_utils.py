@@ -79,7 +79,8 @@ class CacheState:
 def get_page_state(state: Any) -> PageState:
     """Get page state from session state."""
     return PageState(
-        number=state.get("cj.page.number", 1), size=state.get("cj.page.size", 50),
+        number=state.get("cj.page.number", 1),
+        size=state.get("cj.page.size", 50),
     )
 
 

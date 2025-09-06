@@ -1,5 +1,4 @@
-"""Path utilities for the company junction pipeline.
-"""
+"""Path utilities for the company junction pipeline."""
 
 import json
 from datetime import datetime

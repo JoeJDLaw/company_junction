@@ -1,5 +1,4 @@
-"""Utility modules for the company junction pipeline.
-"""
+"""Utility modules for the company junction pipeline."""
 
 # Import from all utility modules
 from .dtypes import (

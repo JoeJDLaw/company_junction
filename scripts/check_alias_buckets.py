@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Analyze block sizes and validate that block cap doesn't cause recall loss.
-"""
+"""Analyze block sizes and validate that block cap doesn't cause recall loss."""
 
 import argparse
 import logging
@@ -120,10 +119,14 @@ def main() -> None:
     )
     parser.add_argument("--legacy", required=True, help="Path to legacy alias matches")
     parser.add_argument(
-        "--optimized", required=True, help="Path to optimized alias matches",
+        "--optimized",
+        required=True,
+        help="Path to optimized alias matches",
     )
     parser.add_argument(
-        "--block-stats", required=True, help="Path to block statistics CSV",
+        "--block-stats",
+        required=True,
+        help="Path to block statistics CSV",
     )
     parser.add_argument("--output", help="Path to write detailed diff report")
     args = parser.parse_args()

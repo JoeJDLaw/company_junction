@@ -111,7 +111,8 @@ def _set_backend_choice(run_id: str, backend: str) -> None:
 
 
 def _build_where_clause(
-    filters: Dict[str, Any], available_columns: List[str],
+    filters: Dict[str, Any],
+    available_columns: List[str],
 ) -> Tuple[str, List]:
     """Build WHERE for per-row details (dispositions/min_edge_strength)."""
     where_sql, params = [], []
@@ -161,8 +162,7 @@ def get_group_details(
     page_size: int,
     filters: Dict[str, Any],
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Entry point selecting backend & returning (rows, total_rows) for a single group.
-    """
+    """Entry point selecting backend & returning (rows, total_rows) for a single group."""
     start_time = time.time()
     filters_signature = f"{len(filters)}_filters" if filters else "no_filters"
 
@@ -203,7 +203,8 @@ def get_group_details(
 
     # Get order_by early (comes from whitelist; safe to use in ORDER BY)
     order_by = get_order_by(
-        sort_key, context="group_details",
+        sort_key,
+        context="group_details",
     )  # Use group_details context for correct column mapping
     if page == 1:  # Only log for first page to reduce noise
         logger.info(f"get_group_details will use ORDER BY '{order_by}'")
@@ -228,7 +229,13 @@ def get_group_details(
         record_backend_choice("forced", "pyarrow")
         try:
             result, total = _get_group_details_pyarrow(
-                source_path, group_id, order_by, page, page_size, filters, settings,
+                source_path,
+                group_id,
+                order_by,
+                page,
+                page_size,
+                filters,
+                settings,
             )
             duration = time.time() - start_time
             record_details_request("pyarrow", True, duration)
@@ -246,7 +253,13 @@ def get_group_details(
         record_backend_choice("forced", "duckdb")
         try:
             result, total = _get_group_details_duckdb(
-                source_path, group_id, order_by, page, page_size, filters, settings,
+                source_path,
+                group_id,
+                order_by,
+                page,
+                page_size,
+                filters,
+                settings,
             )
             duration = time.time() - start_time
             record_details_request("duckdb", True, duration)
@@ -272,7 +285,13 @@ def get_group_details(
         try:
             _set_backend_choice(run_id, "duckdb")
             result, total = _get_group_details_duckdb(
-                source_path, group_id, order_by, page, page_size, filters, settings,
+                source_path,
+                group_id,
+                order_by,
+                page,
+                page_size,
+                filters,
+                settings,
             )
             # Structured logging with metrics - only for first page to reduce noise
             duration_ms = int((time.time() - start_time) * 1000)
@@ -291,7 +310,13 @@ def get_group_details(
 
     _set_backend_choice(run_id, "pyarrow")
     result, total = _get_group_details_pyarrow(
-        source_path, group_id, order_by, page, page_size, filters, settings,
+        source_path,
+        group_id,
+        order_by,
+        page,
+        page_size,
+        filters,
+        settings,
     )
     # Structured logging with metrics - only for first page to reduce noise
     duration_ms = int((time.time() - start_time) * 1000)
@@ -459,7 +484,9 @@ def _get_group_details_pyarrow(
         df = filtered.to_pandas()
         if ACCOUNT_NAME in df.columns:
             df = df.sort_values(
-                [col, ACCOUNT_NAME], ascending=[ascending, True], na_position="last",
+                [col, ACCOUNT_NAME],
+                ascending=[ascending, True],
+                na_position="last",
             )
         else:
             df = df.sort_values(col, ascending=ascending, na_position="last")

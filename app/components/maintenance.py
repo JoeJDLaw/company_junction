@@ -169,7 +169,8 @@ def render_maintenance(selected_run_id: str) -> None:
         # Run Deletion (feature-gated) in nested expander
         if enable_run_deletion and admin_mode:
             with panel.expander(
-                f"🗑️ {MaintenanceConstants.RUN_DELETION_HEADER}", expanded=False,
+                f"🗑️ {MaintenanceConstants.RUN_DELETION_HEADER}",
+                expanded=False,
             ):
                 from src.utils.run_management import format_run_display_name, list_runs
 
@@ -237,10 +238,12 @@ def render_maintenance(selected_run_id: str) -> None:
                                         if results.get("errors"):
                                             panel.error("Errors occurred; see logs.")
                                         st.session_state.pop(
-                                            f"deletion_preview_{selected_run_id}", None,
+                                            f"deletion_preview_{selected_run_id}",
+                                            None,
                                         )
                                         st.session_state.pop(
-                                            f"selected_run_ids_{selected_run_id}", None,
+                                            f"selected_run_ids_{selected_run_id}",
+                                            None,
                                         )
                                         st.rerun()
                                     except Exception as e:
@@ -253,10 +256,12 @@ def render_maintenance(selected_run_id: str) -> None:
                                     use_container_width=True,
                                 ):
                                     st.session_state.pop(
-                                        f"deletion_preview_{selected_run_id}", None,
+                                        f"deletion_preview_{selected_run_id}",
+                                        None,
                                     )
                                     st.session_state.pop(
-                                        f"selected_run_ids_{selected_run_id}", None,
+                                        f"selected_run_ids_{selected_run_id}",
+                                        None,
                                     )
                                     panel.info("Cancelled.")
 

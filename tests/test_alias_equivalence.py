@@ -1,5 +1,4 @@
-"""Test alias matching equivalence between legacy and optimized paths.
-"""
+"""Test alias matching equivalence between legacy and optimized paths."""
 
 from typing import Any, Dict
 
@@ -244,7 +243,8 @@ def test_alias_equivalence_sequential_fallback():
     )
 
     df_groups = pd.DataFrame(
-        {"group_id": ["group_1", "group_1", "group_2"]}, index=df_norm.index,
+        {"group_id": ["group_1", "group_1", "group_2"]},
+        index=df_norm.index,
     )
 
     # Ensure required columns are present

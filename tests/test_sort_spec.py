@@ -1,5 +1,4 @@
-"""Tests for sort specification functionality in filtering.py.
-"""
+"""Tests for sort specification functionality in filtering.py."""
 
 import pytest
 
@@ -18,7 +17,9 @@ class TestSortSpec:
     def test_sort_spec_creation(self):
         """Test SortSpec creation with valid parameters."""
         spec = SortSpec(
-            field=GROUP_SIZE, direction="desc", tie_breaker=(GROUP_ID, "asc"),
+            field=GROUP_SIZE,
+            direction="desc",
+            tie_breaker=(GROUP_ID, "asc"),
         )
         assert spec.field == GROUP_SIZE
         assert spec.direction == "desc"
@@ -85,7 +86,9 @@ class TestToDuckDBOrderBy:
     def test_group_size_desc_to_duckdb(self):
         """Test converting Group Size Desc to DuckDB ORDER BY."""
         spec = SortSpec(
-            field=GROUP_SIZE, direction="desc", tie_breaker=(GROUP_ID, "asc"),
+            field=GROUP_SIZE,
+            direction="desc",
+            tie_breaker=(GROUP_ID, "asc"),
         )
         result = to_duckdb_order_by(spec)
         expected = f"{GROUP_SIZE} DESC, {GROUP_ID} ASC"
@@ -105,7 +108,9 @@ class TestToPyArrowSortBy:
     def test_group_size_desc_to_pyarrow(self):
         """Test converting Group Size Desc to PyArrow sort spec."""
         spec = SortSpec(
-            field=GROUP_SIZE, direction="desc", tie_breaker=(GROUP_ID, "asc"),
+            field=GROUP_SIZE,
+            direction="desc",
+            tie_breaker=(GROUP_ID, "asc"),
         )
         result = to_pyarrow_sort_by(spec)
         expected = [(GROUP_SIZE, "descending"), (GROUP_ID, "ascending")]

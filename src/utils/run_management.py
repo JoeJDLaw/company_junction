@@ -185,7 +185,8 @@ def get_default_run_id() -> str:
 
 
 def format_run_display_name(
-    run_id: str, metadata: Optional[Dict[str, Any]] = None,
+    run_id: str,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Format a run ID for display in the UI.
 

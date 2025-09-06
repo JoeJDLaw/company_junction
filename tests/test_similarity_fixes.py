@@ -1,5 +1,4 @@
-"""Tests for the specific fixes applied to similarity module.
-"""
+"""Tests for the specific fixes applied to similarity module."""
 
 import sys
 from pathlib import Path
@@ -180,7 +179,9 @@ class TestSimilarityFixes:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Generate candidate pairs with interim directory
             _pairs = generate_candidate_pairs_soft_ban(
-                df_norm, interim_dir=temp_dir, settings=settings,
+                df_norm,
+                interim_dir=temp_dir,
+                settings=settings,
             )
 
             # Check that block_stats.csv was created

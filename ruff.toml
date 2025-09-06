@@ -7,3 +7,4 @@ ignore = ["E203"]
 
 [lint.per-file-ignores]
 "tests/*" = ["F401", "E402"]
+"tests/**" = ["E402", "E501"]  # allow import-at-top exceptions and long lines in tests

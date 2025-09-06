@@ -463,7 +463,8 @@ def excel_serial_to_datetime(val: Any) -> Optional[pd.Timestamp]:
 
 
 def normalize_dataframe(
-    df: pd.DataFrame, name_column: str = "Account Name",
+    df: pd.DataFrame,
+    name_column: str = "Account Name",
 ) -> pd.DataFrame:
     """Normalize name column in a DataFrame.
 
@@ -510,7 +511,8 @@ def load_normalization_settings(
             with open(config_path) as f:
                 config = yaml.safe_load(f)
             _normalization_settings = config.get("similarity", {}).get(
-                "normalization", {},
+                "normalization",
+                {},
             )
         except Exception as e:
             logger.warning(f"Could not load normalization settings: {e}")
@@ -519,7 +521,8 @@ def load_normalization_settings(
 
 
 def enhance_name_core(
-    name_core: str, settings: Optional[Dict[str, Any]] = None,
+    name_core: str,
+    settings: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, Set[str]]:
     """Apply enhanced normalization to name_core for better retail brand matching.
 
@@ -574,7 +577,8 @@ def enhance_name_core(
 
 
 def get_enhanced_tokens_for_jaccard(
-    name_core: str, settings: Optional[Dict[str, Any]] = None,
+    name_core: str,
+    settings: Optional[Dict[str, Any]] = None,
 ) -> Set[str]:
     """Get token set for Jaccard calculation, excluding weak tokens.
 

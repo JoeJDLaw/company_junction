@@ -1,5 +1,4 @@
-"""Tests for name normalization functionality.
-"""
+"""Tests for name normalization functionality."""
 
 import sys
 import unittest
@@ -54,7 +53,8 @@ class TestNormalize(unittest.TestCase):
         # Test no suffix
         result = normalize_name("Acme Company")
         self.assertEqual(
-            result.suffix_class, "CO",
+            result.suffix_class,
+            "CO",
         )  # "Company" is recognized as CO suffix
         self.assertEqual(result.name_core, "acme")
 

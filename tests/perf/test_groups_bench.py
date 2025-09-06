@@ -33,7 +33,8 @@ def synthetic_10k_data() -> pd.DataFrame:
                 "is_primary": i % 10 == 0,  # Every 10th is primary
                 "weakest_edge_to_primary": np.random.uniform(0.1, 1.0),
                 "disposition": np.random.choice(
-                    ["keep", "merge", "delete"], p=[0.6, 0.3, 0.1],
+                    ["keep", "merge", "delete"],
+                    p=[0.6, 0.3, 0.1],
                 ),
                 "group_size": 10,  # All groups have size 10
                 "max_score": np.random.uniform(0.5, 1.0),
@@ -61,7 +62,8 @@ def synthetic_100k_data() -> pd.DataFrame:
                 "is_primary": i % 100 == 0,  # Every 100th is primary
                 "weakest_edge_to_primary": np.random.uniform(0.1, 1.0),
                 "disposition": np.random.choice(
-                    ["keep", "merge", "delete"], p=[0.6, 0.3, 0.1],
+                    ["keep", "merge", "delete"],
+                    p=[0.6, 0.3, 0.1],
                 ),
                 "group_size": 100,  # All groups have size 100
                 "max_score": np.random.uniform(0.5, 1.0),
@@ -89,7 +91,8 @@ def synthetic_1m_data() -> pd.DataFrame:
                 "is_primary": i % 1000 == 0,  # Every 1000th is primary
                 "weakest_edge_to_primary": np.random.uniform(0.1, 1.0),
                 "disposition": np.random.choice(
-                    ["keep", "merge", "delete"], p=[0.6, 0.3, 0.1],
+                    ["keep", "merge", "delete"],
+                    p=[0.6, 0.3, 0.1],
                 ),
                 "group_size": 1000,  # All groups have size 1000
                 "max_score": np.random.uniform(0.5, 1.0),
@@ -102,7 +105,8 @@ def synthetic_1m_data() -> pd.DataFrame:
 
 @pytest.fixture
 def synthetic_10k_paths(
-    synthetic_10k_data: pd.DataFrame, tmp_path: Path,
+    synthetic_10k_data: pd.DataFrame,
+    tmp_path: Path,
 ) -> Dict[str, str]:
     """Create temporary parquet files for 10k dataset."""
     review_ready_path = tmp_path / "review_ready_10k.parquet"
@@ -136,7 +140,8 @@ def synthetic_10k_paths(
 
 @pytest.fixture
 def synthetic_100k_paths(
-    synthetic_100k_data: pd.DataFrame, tmp_path: Path,
+    synthetic_100k_data: pd.DataFrame,
+    tmp_path: Path,
 ) -> Dict[str, str]:
     """Create temporary parquet files for 100k dataset."""
     review_ready_path = tmp_path / "review_ready_100k.parquet"
@@ -170,7 +175,8 @@ def synthetic_100k_paths(
 
 @pytest.fixture
 def synthetic_1m_paths(
-    synthetic_1m_data: pd.DataFrame, tmp_path: Path,
+    synthetic_1m_data: pd.DataFrame,
+    tmp_path: Path,
 ) -> Dict[str, str]:
     """Create temporary parquet files for 1M dataset."""
     review_ready_path = tmp_path / "review_ready_1m.parquet"
@@ -215,7 +221,8 @@ class TestGroupsPageBenchmarks:
             return synthetic_10k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         def run():
@@ -241,7 +248,8 @@ class TestGroupsPageBenchmarks:
             return synthetic_10k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         # Force DuckDB
@@ -260,7 +268,10 @@ class TestGroupsPageBenchmarks:
 
     @pytest.mark.performance
     def test_groups_page_100k_pyarrow(
-        self, benchmark, synthetic_100k_paths, monkeypatch,
+        self,
+        benchmark,
+        synthetic_100k_paths,
+        monkeypatch,
     ):
         """Benchmark PyArrow pagination on 100k dataset."""
         run_id = "bench_100k"
@@ -270,7 +281,8 @@ class TestGroupsPageBenchmarks:
             return synthetic_100k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         def run():
@@ -288,7 +300,10 @@ class TestGroupsPageBenchmarks:
 
     @pytest.mark.performance
     def test_groups_page_100k_duckdb(
-        self, benchmark, synthetic_100k_paths, monkeypatch,
+        self,
+        benchmark,
+        synthetic_100k_paths,
+        monkeypatch,
     ):
         """Benchmark DuckDB pagination on 100k dataset."""
         run_id = "bench_100k"
@@ -298,7 +313,8 @@ class TestGroupsPageBenchmarks:
             return synthetic_100k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         def run():
@@ -325,7 +341,8 @@ class TestGroupsPageBenchmarks:
             return synthetic_1m_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         def run():
@@ -352,7 +369,8 @@ class TestGroupsPageBenchmarks:
             return synthetic_1m_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         def run():
@@ -374,7 +392,10 @@ class TestGroupDetailsBenchmarks:
 
     @pytest.mark.performance
     def test_group_details_10k_pyarrow(
-        self, benchmark, synthetic_10k_paths, monkeypatch,
+        self,
+        benchmark,
+        synthetic_10k_paths,
+        monkeypatch,
     ):
         """Benchmark PyArrow details on 10k dataset."""
         run_id = "bench_10k"
@@ -384,7 +405,8 @@ class TestGroupDetailsBenchmarks:
             return synthetic_10k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_details.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_details.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         def run():
@@ -403,7 +425,10 @@ class TestGroupDetailsBenchmarks:
 
     @pytest.mark.performance
     def test_group_details_10k_duckdb(
-        self, benchmark, synthetic_10k_paths, monkeypatch,
+        self,
+        benchmark,
+        synthetic_10k_paths,
+        monkeypatch,
     ):
         """Benchmark DuckDB details on 10k dataset."""
         run_id = "bench_10k"
@@ -413,7 +438,8 @@ class TestGroupDetailsBenchmarks:
             return synthetic_10k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_details.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_details.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         def run():
@@ -444,7 +470,8 @@ class TestSortVariants:
             return synthetic_10k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         sort_keys = [
@@ -479,7 +506,8 @@ class TestFilterVariants:
             return synthetic_10k_paths
 
         monkeypatch.setattr(
-            "src.utils.group_pagination.get_artifact_paths", mock_get_artifact_paths,
+            "src.utils.group_pagination.get_artifact_paths",
+            mock_get_artifact_paths,
         )
 
         filter_combinations: List[Dict[str, Any]] = [

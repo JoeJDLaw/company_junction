@@ -74,7 +74,8 @@ class ParquetSizeReporter:
                 "size_bytes": file_size_bytes,
                 "compression": compression_info.get("compression", "unknown"),
                 "dictionary_encoding": compression_info.get(
-                    "dictionary_encoding", False,
+                    "dictionary_encoding",
+                    False,
                 ),
                 "columns_pruned": 0,  # Will be updated if comparison data available
                 "compression_ratio": compression_ratio,
@@ -220,7 +221,10 @@ class ParquetSizeReporter:
             return None
 
     def compare_parquet_files(
-        self, original_path: str, optimized_path: str, run_id: str,
+        self,
+        original_path: str,
+        optimized_path: str,
+        run_id: str,
     ) -> Dict[str, Any]:
         """Compare two Parquet files and report differences.
 

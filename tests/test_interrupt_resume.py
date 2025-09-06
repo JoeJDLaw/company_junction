@@ -157,7 +157,9 @@ parallelism:
             ]
 
             # Run the pipeline (should complete quickly with small data)
-            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                cmd, check=False, capture_output=True, text=True, timeout=30
+            )
 
             # Should complete successfully
             assert result.returncode == 0, f"Pipeline failed: {result.stderr}"

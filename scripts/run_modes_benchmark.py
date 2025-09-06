@@ -184,7 +184,9 @@ class RunModesBenchmark:
             "group_stats",
         ]
 
-        result = subprocess.run(cmd, check=False, capture_output=True, text=True, env=env)
+        result = subprocess.run(
+            cmd, check=False, capture_output=True, text=True, env=env
+        )
         elapsed = time.time() - start_time
 
         success = result.returncode == 0
@@ -383,7 +385,8 @@ class RunModesBenchmark:
             .get("meets_requirement", False)
         )
         benchmark_success = self.results.get("benchmark_sanity", {}).get(
-            "success", False,
+            "success",
+            False,
         )
 
         # Calculate overall success (all tests passed + specific requirements met)

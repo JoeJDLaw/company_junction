@@ -51,7 +51,9 @@ def run_pipeline(input_file: str, run_id: str, use_legacy: bool = False) -> dict
 
 
 def run_group_stats_benchmark(
-    dataset_size: str, run_id: str, backend: str = "duckdb",
+    dataset_size: str,
+    run_id: str,
+    backend: str = "duckdb",
 ) -> dict:
     """Run group stats benchmark with specified backend."""
     input_file = f"data/raw/company_junction_range_{dataset_size}.csv"
@@ -66,7 +68,9 @@ def run_group_stats_benchmark(
 
     # Run the full pipeline to generate group_stats artifacts
     cmd = f"python -m src.cleaning --input {input_file} --outdir data/interim/{run_id} --config config/settings.yaml --run-id {run_id}"
-    result = subprocess.run(cmd, check=False, shell=True, env=env, capture_output=True, text=True)
+    result = subprocess.run(
+        cmd, check=False, shell=True, env=env, capture_output=True, text=True
+    )
 
     end_time = time.perf_counter()
     end_mem = get_memory_usage()
@@ -150,7 +154,8 @@ def generate_parquet_size_report(run_id: str) -> Dict[str, Any]:
 
 
 def create_settings_override(
-    persist_artifacts: bool = True, run_parity: bool = False,
+    persist_artifacts: bool = True,
+    run_parity: bool = False,
 ) -> Dict[str, Any]:
     """Create a transient settings override for benchmark runs."""
     import yaml
@@ -240,13 +245,17 @@ def run_group_stats_parity(dataset_size: str, run_id: str) -> dict:
     # Run DuckDB version
     logger.info("Running DuckDB backend...")
     duckdb_metrics = run_group_stats_benchmark(
-        dataset_size, f"{run_id}_duckdb", "duckdb",
+        dataset_size,
+        f"{run_id}_duckdb",
+        "duckdb",
     )
 
     # Run pandas version
     logger.info("Running pandas backend...")
     pandas_metrics = run_group_stats_benchmark(
-        dataset_size, f"{run_id}_pandas", "pandas",
+        dataset_size,
+        f"{run_id}_pandas",
+        "pandas",
     )
 
     # Generate parity report
@@ -298,7 +307,9 @@ def generate_parity_report(run_id: str, dataset_size: str) -> str:
 
         # Validate parity
         is_parity_valid, parity_report = parity_validator.validate_group_stats_parity(
-            df_duckdb, df_pandas, run_id,
+            df_duckdb,
+            df_pandas,
+            run_id,
         )
 
         # Save parity report
@@ -459,7 +470,10 @@ def main() -> int:
 
             duckdb_settings = settings.get("engine", {}).get("duckdb", {})
             benchmark_path = generate_benchmark_report(
-                args.dataset, run_times, run_id_base, duckdb_settings,
+                args.dataset,
+                run_times,
+                run_id_base,
+                duckdb_settings,
             )
             logger.info(f"Benchmark report generated: {benchmark_path}")
         except Exception as e:
@@ -496,7 +510,8 @@ def main() -> int:
         # Create settings override for parity mode
         persist_artifacts = args.persist_group_stats_artifacts.lower() == "true"
         _settings_override = create_settings_override(
-            persist_artifacts=persist_artifacts, run_parity=True,
+            persist_artifacts=persist_artifacts,
+            run_parity=True,
         )
 
         # Set environment variables for the pipeline

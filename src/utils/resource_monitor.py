@@ -73,7 +73,8 @@ def estimate_memory_per_worker() -> float:
 
 
 def calculate_optimal_workers(
-    requested_workers: Optional[int] = None, memory_cap_percent: float = 75.0,
+    requested_workers: Optional[int] = None,
+    memory_cap_percent: float = 75.0,
 ) -> int:
     """Calculate optimal number of workers based on available resources.
 

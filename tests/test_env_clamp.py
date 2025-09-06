@@ -1,5 +1,4 @@
-"""Test BLAS environment variable clamping functionality.
-"""
+"""Test BLAS environment variable clamping functionality."""
 
 import os
 from unittest.mock import patch

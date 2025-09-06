@@ -13,7 +13,9 @@ class TestMiniDAGResumeContract:
     @patch("src.cleaning.run_pipeline")
     @patch("src.utils.mini_dag.MiniDAG")
     def test_resume_from_respects_contract(
-        self, mock_mini_dag_class, mock_run_pipeline,
+        self,
+        mock_mini_dag_class,
+        mock_run_pipeline,
     ):
         """Test that --resume-from only executes expected stages and marks prior ones complete."""
         # Create a mock MiniDAG instance
@@ -94,7 +96,8 @@ class TestMiniDAGResumeContract:
             temp_path = Path(temp_dir)
 
             mini_dag = MiniDAG(
-                state_file=temp_path / "mini_dag_state.json", run_id="test_persistence",
+                state_file=temp_path / "mini_dag_state.json",
+                run_id="test_persistence",
             )
 
             # Register and complete stages
@@ -127,7 +130,8 @@ class TestMiniDAGResumeContract:
 
             # Create MiniDAG with no existing state
             mini_dag = MiniDAG(
-                state_file=temp_path / "mini_dag_state.json", run_id="test_no_previous",
+                state_file=temp_path / "mini_dag_state.json",
+                run_id="test_no_previous",
             )
 
             # Verify no stages are registered
@@ -144,7 +148,8 @@ class TestMiniDAGResumeContract:
             temp_path = Path(temp_dir)
 
             mini_dag = MiniDAG(
-                state_file=temp_path / "mini_dag_state.json", run_id="test_ordering",
+                state_file=temp_path / "mini_dag_state.json",
+                run_id="test_ordering",
             )
 
             # Register stages in order

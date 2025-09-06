@@ -60,7 +60,9 @@ BLACKLIST = BLACKLIST_TOKENS + BLACKLIST_PHRASES
 
 
 def classify_disposition(
-    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any],
+    row: pd.Series,
+    group_meta: Dict[str, Any],
+    settings: Dict[str, Any],
 ) -> str:
     """Classify disposition for a single record.
 
@@ -195,7 +197,8 @@ def _compile_blacklist_regex() -> re.Pattern[str]:
 
 
 def _is_blacklisted_improved(
-    name: str, manual_terms: Optional[set[str]] = None,
+    name: str,
+    manual_terms: Optional[set[str]] = None,
 ) -> bool:
     """Improved blacklist checking with word-boundary matching for tokens.
 
@@ -414,7 +417,8 @@ def compute_group_metadata(df_groups: pd.DataFrame) -> Dict[int, Dict[str, Any]]
 
 
 def apply_dispositions(
-    df_groups: pd.DataFrame, settings: Dict[str, Any],
+    df_groups: pd.DataFrame,
+    settings: Dict[str, Any],
 ) -> pd.DataFrame:
     """Apply disposition classification to all records.
 
@@ -447,7 +451,8 @@ def apply_dispositions(
 
 
 def _apply_dispositions_vectorized(
-    df_groups: pd.DataFrame, settings: Dict[str, Any],
+    df_groups: pd.DataFrame,
+    settings: Dict[str, Any],
 ) -> pd.DataFrame:
     """Apply disposition classification using vectorized operations (np.select).
 
@@ -490,7 +495,10 @@ def _apply_dispositions_vectorized(
     # Get the pattern string from compiled regex
     token_pattern = _compile_blacklist_regex().pattern
     token_mask = name_series.str.contains(
-        token_pattern, case=False, na=False, regex=True,
+        token_pattern,
+        case=False,
+        na=False,
+        regex=True,
     )
 
     # Multi-word phrase detection (substring)
@@ -519,14 +527,16 @@ def _apply_dispositions_vectorized(
 
     # Multiple names condition
     multiple_names_mask = result_df.get(
-        "has_multiple_names", pd.Series([False] * len(result_df)),
+        "has_multiple_names",
+        pd.Series([False] * len(result_df)),
     )
     conditions.append(multiple_names_mask.to_numpy())
     choices.append("Verify")
 
     # Alias matches condition
     alias_mask = result_df.get(
-        "alias_cross_refs", pd.Series([[]] * len(result_df)),
+        "alias_cross_refs",
+        pd.Series([[]] * len(result_df)),
     ).apply(lambda x: len(x) > 0 if isinstance(x, list) else False)
     conditions.append(alias_mask.to_numpy())
     choices.append("Verify")
@@ -549,7 +559,8 @@ def _apply_dispositions_vectorized(
     # Singleton suspicious condition
     singleton_mask = (group_size_series == 1) & (~blacklist_mask)
     suspicious_singleton_mask = pd.Series(
-        [False] * len(result_df), index=result_df.index,
+        [False] * len(result_df),
+        index=result_df.index,
     )
     if "disposition" in settings and "performance" in settings["disposition"]:
         suspicious_regex = settings["disposition"]["performance"].get(
@@ -557,7 +568,9 @@ def _apply_dispositions_vectorized(
         )
         if suspicious_regex:
             suspicious_singleton_mask = name_series.str.contains(
-                suspicious_regex, case=False, na=False,
+                suspicious_regex,
+                case=False,
+                na=False,
             )
     singleton_suspicious = singleton_mask & suspicious_singleton_mask
     conditions.append(singleton_suspicious.to_numpy())
@@ -596,7 +609,11 @@ def _apply_dispositions_vectorized(
 
     # Phase 1.35.3: Vectorized reason generation
     reasons = _generate_disposition_reasons_vectorized(
-        result_df, group_metadata, blacklist_mask, manual_overrides, settings,
+        result_df,
+        group_metadata,
+        blacklist_mask,
+        manual_overrides,
+        settings,
     )
     result_df["disposition_reason"] = reasons
 
@@ -619,7 +636,8 @@ def _apply_dispositions_vectorized(
 
 
 def _apply_dispositions_legacy(
-    df_groups: pd.DataFrame, settings: Dict[str, Any],
+    df_groups: pd.DataFrame,
+    settings: Dict[str, Any],
 ) -> pd.DataFrame:
     """Legacy disposition classification using iterrows (fallback).
 
@@ -717,7 +735,9 @@ def load_dispositions(input_path: str) -> pd.DataFrame:
 
 
 def get_disposition_reason(
-    row: pd.Series, group_meta: Dict[str, Any], settings: Dict[str, Any],
+    row: pd.Series,
+    group_meta: Dict[str, Any],
+    settings: Dict[str, Any],
 ) -> str:
     """Get the reason for a disposition classification.
 
@@ -839,7 +859,9 @@ def _generate_disposition_reasons_vectorized(
         )
         if suspicious_regex:
             suspicious_singleton_mask = name_series.str.contains(
-                suspicious_regex, case=False, na=False,
+                suspicious_regex,
+                case=False,
+                na=False,
             )
 
     singleton_suspicious = singleton_mask & suspicious_singleton_mask

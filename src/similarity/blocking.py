@@ -1,5 +1,4 @@
-"""Blocking and candidate pair generation for similarity matching.
-"""
+"""Blocking and candidate pair generation for similarity matching."""
 
 import logging
 from itertools import combinations
@@ -108,7 +107,11 @@ def generate_candidate_pairs_soft_ban(
                     if len(bg_df) > block_cap:
                         # Safety rail: shard huge bigram groups
                         bg_pairs = _apply_standard_sharding(
-                            bg_df, bg, shard_strategy, block_cap, fallback_shard,
+                            bg_df,
+                            bg,
+                            shard_strategy,
+                            block_cap,
+                            fallback_shard,
                         )
                         strategy = "allowlisted_bigram_sharded"
                     else:
@@ -153,7 +156,11 @@ def generate_candidate_pairs_soft_ban(
             if block_size > block_cap:
                 # Keep recall, just shard deterministically (no prefilter)
                 block_pairs = _apply_standard_sharding(
-                    block_df, block_key, shard_strategy, block_cap, fallback_shard,
+                    block_df,
+                    block_key,
+                    shard_strategy,
+                    block_cap,
+                    fallback_shard,
                 )
                 pairs_generated = len(block_pairs)
                 pairs_capped = 0
@@ -180,14 +187,19 @@ def generate_candidate_pairs_soft_ban(
             )
             pairs_generated = len(block_pairs)
             pairs_capped = max(
-                0, (block_size * (block_size - 1) // 2) - pairs_generated,
+                0,
+                (block_size * (block_size - 1) // 2) - pairs_generated,
             )
 
         elif block_size > block_cap:
             # Large but not denylisted: standard sharding
             strategy = "standard_sharded"
             block_pairs = _apply_standard_sharding(
-                block_df, block_key, shard_strategy, block_cap, fallback_shard,
+                block_df,
+                block_key,
+                shard_strategy,
+                block_cap,
+                fallback_shard,
             )
             pairs_generated = len(block_pairs)
             pairs_capped = 0
@@ -232,7 +244,10 @@ def generate_candidate_pairs_soft_ban(
 
 
 def _create_shards_with_fallback(
-    df: pd.DataFrame, primary: str, fallback: str, max_size: int,
+    df: pd.DataFrame,
+    primary: str,
+    fallback: str,
+    max_size: int,
 ) -> List[pd.DataFrame]:
     """Create shards with fallback strategy for oversized shards."""
     shards = _create_shards(df, primary, max_size)
@@ -258,7 +273,10 @@ def _apply_soft_ban_sharding(
 ) -> List[Tuple[int, int]]:
     """Apply soft-ban sharding with prefiltering."""
     shards = _create_shards_with_fallback(
-        block_df, shard_strategy, fallback_shard, max_shard_size,
+        block_df,
+        shard_strategy,
+        fallback_shard,
+        max_shard_size,
     )
 
     pairs = []
@@ -288,7 +306,10 @@ def _apply_standard_sharding(
 ) -> List[Tuple[int, int]]:
     """Apply standard sharding for large blocks."""
     shards = _create_shards_with_fallback(
-        block_df, shard_strategy, fallback_shard or shard_strategy, block_cap,
+        block_df,
+        shard_strategy,
+        fallback_shard or shard_strategy,
+        block_cap,
     )
 
     pairs = []
@@ -301,7 +322,9 @@ def _apply_standard_sharding(
 
 
 def _create_shards(
-    block_df: pd.DataFrame, shard_strategy: str, max_shard_size: int,
+    block_df: pd.DataFrame,
+    shard_strategy: str,
+    max_shard_size: int,
 ) -> List[pd.DataFrame]:
     """Create shards based on strategy."""
     shards = []

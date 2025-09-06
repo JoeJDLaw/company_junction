@@ -12,7 +12,11 @@ def test_similarity_outputs_expected_columns() -> None:
     )
     settings = {"similarity": {"medium": 0, "penalty": {}}}
     out = pair_scores(
-        df, settings, enable_progress=False, parallel_executor=None, interim_dir=None,
+        df,
+        settings,
+        enable_progress=False,
+        parallel_executor=None,
+        interim_dir=None,
     )
     # OK if empty (thresholds/logic may filter), but if not empty, columns must exist
     if not out.empty:

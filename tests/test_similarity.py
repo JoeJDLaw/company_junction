@@ -1,5 +1,4 @@
-"""Test similarity computation functionality.
-"""
+"""Test similarity computation functionality."""
 
 from typing import Any, Dict
 
@@ -59,7 +58,9 @@ class TestSimilarity:
     """Test similarity computation functionality."""
 
     def test_candidate_pair_generation(
-        self, sample_data: Any, settings: Dict[str, Any],
+        self,
+        sample_data: Any,
+        settings: Dict[str, Any],
     ) -> None:
         """Test that candidate pairs are generated correctly."""
         pairs_df = pair_scores(sample_data, settings)

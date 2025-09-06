@@ -1,5 +1,4 @@
-"""Logging utilities for the company junction pipeline.
-"""
+"""Logging utilities for the company junction pipeline."""
 
 import logging
 

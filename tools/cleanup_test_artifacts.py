@@ -279,7 +279,9 @@ def discover_candidates(
         for rid in orphan_runs:
             # dummy run_data for display; delete_run_directories handles dirs
             plan.add_candidate(
-                rid, {"input_paths": [], "timestamp": ""}, "orphan_directory",
+                rid,
+                {"input_paths": [], "timestamp": ""},
+                "orphan_directory",
             )
         for rid in stale_index:
             plan.add_candidate(rid, run_index.get(rid, {}), "stale_index")
@@ -338,7 +340,8 @@ def update_latest_symlink() -> None:
 
 
 def execute_cleanup(
-    plan: CleanupPlan, run_index: Dict[str, Any],
+    plan: CleanupPlan,
+    run_index: Dict[str, Any],
 ) -> Tuple[List[str], int]:
     """Execute the cleanup plan.
 
@@ -397,10 +400,13 @@ Examples:
     )
 
     parser.add_argument(
-        "--types", help="Comma-separated run types to include (test,dev,prod,benchmark)",
+        "--types",
+        help="Comma-separated run types to include (test,dev,prod,benchmark)",
     )
     parser.add_argument(
-        "--older-than", type=int, help="Only consider runs older than N days",
+        "--older-than",
+        type=int,
+        help="Only consider runs older than N days",
     )
     parser.add_argument(
         "--prod-sweep",
@@ -423,7 +429,9 @@ Examples:
     )
     parser.add_argument("--yes", action="store_true", help="Skip confirmation prompts")
     parser.add_argument(
-        "--json", action="store_true", help="Print machine-readable JSON output",
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON output",
     )
     parser.add_argument(
         "--dry-run",

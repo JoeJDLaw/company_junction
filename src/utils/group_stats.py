@@ -23,7 +23,8 @@ logger = get_logger(__name__)
 
 
 def compute_group_stats(
-    table: pd.DataFrame | Any, backend: str = "auto",
+    table: pd.DataFrame | Any,
+    backend: str = "auto",
 ) -> pd.DataFrame:
     """Compute group statistics for sorting with backend selection.
 

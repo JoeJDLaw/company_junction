@@ -80,7 +80,8 @@ def load_manual_blacklist(path: str = "data/manual/manual_blacklist.json") -> Se
 
 
 def save_manual_blacklist(
-    terms: Set[str], path: str = "data/manual/manual_blacklist.json",
+    terms: Set[str],
+    path: str = "data/manual/manual_blacklist.json",
 ) -> bool:
     """Save manual blacklist terms to JSON file.
 
@@ -202,7 +203,8 @@ def upsert_manual_override(
 
 
 def remove_manual_override(
-    record_id: str, path: str = "data/manual/manual_dispositions.json",
+    record_id: str,
+    path: str = "data/manual/manual_dispositions.json",
 ) -> bool:
     """Remove a manual disposition override.
 
@@ -224,7 +226,8 @@ def remove_manual_override(
 
 
 def get_manual_override(
-    record_id: str, path: str = "data/manual/manual_dispositions.json",
+    record_id: str,
+    path: str = "data/manual/manual_dispositions.json",
 ) -> Optional[str]:
     """Get manual override for a specific record.
 

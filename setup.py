@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Setup script for company_junction package.
-"""
+"""Setup script for company_junction package."""
 
 from setuptools import find_packages, setup
 

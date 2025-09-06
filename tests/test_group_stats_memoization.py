@@ -67,7 +67,8 @@ class TestGroupStatsMemoization:
                 # First run - should be a cache miss
                 config_digest = "test_config_123"
                 t1_df, t1_meta = engine.compute_group_stats(
-                    df_primary, config_digest=config_digest,
+                    df_primary,
+                    config_digest=config_digest,
                 )
 
                 # Verify first run completed
@@ -81,7 +82,8 @@ class TestGroupStatsMemoization:
 
                 # Second run with same config - should be cache hit
                 t2_df, t2_meta = engine.compute_group_stats(
-                    df_primary, config_digest=config_digest,
+                    df_primary,
+                    config_digest=config_digest,
                 )
 
                 # Verify second run used cache
@@ -96,7 +98,8 @@ class TestGroupStatsMemoization:
                 # Third run - should also be cache hit
                 time.sleep(0.1)
                 t3_df, t3_meta = engine.compute_group_stats(
-                    df_primary, config_digest=config_digest,
+                    df_primary,
+                    config_digest=config_digest,
                 )
 
                 assert len(t3_df) > 0, "Third run should produce results"
@@ -140,13 +143,15 @@ class TestGroupStatsMemoization:
                 # Run with first config
                 config1 = "config_alpha"
                 df1, meta1 = engine.compute_group_stats(
-                    df_primary, config_digest=config1,
+                    df_primary,
+                    config_digest=config1,
                 )
 
                 # Run with second config
                 config2 = "config_beta"
                 df2, meta2 = engine.compute_group_stats(
-                    df_primary, config_digest=config2,
+                    df_primary,
+                    config_digest=config2,
                 )
 
                 # Both should be cache misses
@@ -159,7 +164,8 @@ class TestGroupStatsMemoization:
 
                 # Run first config again - should be cache hit
                 df1_again, meta1_again = engine.compute_group_stats(
-                    df_primary, config_digest=config1,
+                    df_primary,
+                    config_digest=config1,
                 )
                 assert (
                     meta1_again.get("cache_hit", False) is True
@@ -167,7 +173,8 @@ class TestGroupStatsMemoization:
 
                 # Run second config again - should be cache hit
                 df2_again, meta2_again = engine.compute_group_stats(
-                    df_primary, config_digest=config2,
+                    df_primary,
+                    config_digest=config2,
                 )
                 assert (
                     meta2_again.get("cache_hit", False) is True
@@ -202,7 +209,8 @@ class TestGroupStatsMemoization:
             }
 
             engine = create_duckdb_group_stats_engine(
-                settings, run_id="test_memo_disabled",
+                settings,
+                run_id="test_memo_disabled",
             )
 
             try:
@@ -210,13 +218,15 @@ class TestGroupStatsMemoization:
 
                 # First run
                 df1, meta1 = engine.compute_group_stats(
-                    df_primary, config_digest=config_digest,
+                    df_primary,
+                    config_digest=config_digest,
                 )
                 assert len(df1) > 0, "First run should produce results"
 
                 # Second run with same config - should still be cache miss if memoization disabled
                 df2, meta2 = engine.compute_group_stats(
-                    df_primary, config_digest=config_digest,
+                    df_primary,
+                    config_digest=config_digest,
                 )
                 assert len(df2) > 0, "Second run should produce results"
 
@@ -263,7 +273,8 @@ class TestGroupStatsMemoization:
                 # First run - measure time
                 start_time = time.time()
                 df1, meta1 = engine.compute_group_stats(
-                    df_primary, config_digest=config_digest,
+                    df_primary,
+                    config_digest=config_digest,
                 )
                 first_run_time = time.time() - start_time
 
@@ -275,7 +286,8 @@ class TestGroupStatsMemoization:
                 # Second run - should be faster due to cache
                 start_time = time.time()
                 df2, meta2 = engine.compute_group_stats(
-                    df_primary, config_digest=config_digest,
+                    df_primary,
+                    config_digest=config_digest,
                 )
                 second_run_time = time.time() - start_time
 

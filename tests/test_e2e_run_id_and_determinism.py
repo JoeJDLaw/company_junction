@@ -38,7 +38,9 @@ def get_directory_hashes(directory: str) -> Dict[str, str]:
 
 
 def run_pipeline_test(
-    input_file: str, workers: int, no_resume: bool = True,
+    input_file: str,
+    workers: int,
+    no_resume: bool = True,
 ) -> Dict[str, Any]:
     """Run pipeline and return run ID and output hashes."""
     cmd = [
@@ -62,7 +64,12 @@ def run_pipeline_test(
 
     # Run the pipeline
     result = subprocess.run(
-        cmd, check=False, capture_output=True, text=True, cwd=Path.cwd(), env=os.environ.copy(),
+        cmd,
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=Path.cwd(),
+        env=os.environ.copy(),
     )
 
     if result.returncode != 0:

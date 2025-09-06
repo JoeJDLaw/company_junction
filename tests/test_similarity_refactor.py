@@ -1,5 +1,4 @@
-"""Tests for refactored similarity module.
-"""
+"""Tests for refactored similarity module."""
 
 import sys
 from pathlib import Path

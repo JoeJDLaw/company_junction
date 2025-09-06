@@ -95,7 +95,9 @@ def find_pyarrow_imports(file_path: str) -> List[Dict[str, Any]]:
             # Check for any PyArrow import in hard ban paths
             if is_hard_banned:
                 if re.search(
-                    r"\bimport\s+pyarrow\b|\bfrom\s+pyarrow\b", line, re.IGNORECASE,
+                    r"\bimport\s+pyarrow\b|\bfrom\s+pyarrow\b",
+                    line,
+                    re.IGNORECASE,
                 ):
                     violations.append(
                         {
@@ -112,7 +114,9 @@ def find_pyarrow_imports(file_path: str) -> List[Dict[str, Any]]:
             elif is_allowed:
                 # Check for any PyArrow import not matching allowed patterns
                 if re.search(
-                    r"\bimport\s+pyarrow\b|\bfrom\s+pyarrow\b", line, re.IGNORECASE,
+                    r"\bimport\s+pyarrow\b|\bfrom\s+pyarrow\b",
+                    line,
+                    re.IGNORECASE,
                 ):
                     # Skip comment lines
                     if line.strip().startswith("#"):
@@ -135,7 +139,9 @@ def find_pyarrow_imports(file_path: str) -> List[Dict[str, Any]]:
 
             # Check for any PyArrow import in other files
             elif re.search(
-                r"\bimport\s+pyarrow\b|\bfrom\s+pyarrow\b", line, re.IGNORECASE,
+                r"\bimport\s+pyarrow\b|\bfrom\s+pyarrow\b",
+                line,
+                re.IGNORECASE,
             ):
                 violations.append(
                     {
