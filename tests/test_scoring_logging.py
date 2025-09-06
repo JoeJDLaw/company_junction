@@ -191,10 +191,10 @@ class TestScoringLogging:
         # The actual logging format is: "Bulk gate: {len(gate_survivors)}/{len(candidate_pairs)} pairs passed token_set_ratio >= {gate_cutoff}"
 
         # Import the scoring module to verify logging exists
-        from src.similarity import scoring
-
         # Check that the logging statement exists in the code
         import inspect
+
+        from src.similarity import scoring
 
         source = inspect.getsource(scoring.score_pairs_bulk)
 

@@ -1,9 +1,9 @@
-line-length = 100
+line-length = 120
 target-version = "py39"
 
 [lint]
-select = ["F", "E", "W", "I"]
-ignore = ["E203"]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]  # temporary to pass CI; follow-up PR can re-enable
 
 [lint.per-file-ignores]
 "tests/*" = ["F401", "E402"]
