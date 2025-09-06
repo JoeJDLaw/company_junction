@@ -223,6 +223,49 @@ tail -f pipeline.log
 
 ---
 
+## Cleanup & Run Management
+
+The pipeline creates run artifacts that can accumulate over time. Use the cleanup utility to manage them safely.
+
+### Quick Cleanup Commands
+
+```bash
+# List all runs grouped by type
+python pipeline_cleanup.py --list
+
+# Preview what would be deleted (recommended first step)
+python pipeline_cleanup.py --delete-tests --dry-run
+python pipeline_cleanup.py --delete-prod --dry-run
+python pipeline_cleanup.py --delete-all --dry-run
+
+# Actually delete (requires confirmation)
+python pipeline_cleanup.py --delete-tests
+python pipeline_cleanup.py --delete-prod
+python pipeline_cleanup.py --delete-all
+```
+
+### Run Types
+
+- **`dev`** (default) - Development runs
+- **`test`** - Test runs (explicit `--run-type test`)
+- **`prod`** - Production runs (explicit `--run-type prod`)
+
+### Safety Features
+
+- **Dry-run by default** - Always preview before deleting
+- **Confirmation prompts** - Explicit user confirmation required
+- **Fuse protection** - Respects `PHASE1_DESTRUCTIVE_FUSE` environment variable
+- **Running run protection** - Blocks deletion of active pipeline runs
+- **Latest run protection** - Never deletes the latest successful run
+
+### Streamlit UI Integration
+
+Run deletion is available in the Streamlit UI under "⚙️ Advanced: Maintenance" when:
+- `ui.enable_run_deletion: true` in `config/settings.yaml`
+- `ui.admin_mode: true` in `config/settings.yaml`
+
+---
+
 ## Understanding stages & artifacts
 
 Each run creates **interim** and **processed** folders under your `--run-id`.
