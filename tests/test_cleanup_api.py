@@ -33,14 +33,19 @@ class TestCleanupAPI:
         self.patcher.start()
 
         # Mock the path utilities to use temp directory
-        self.path_patcher = patch("src.utils.cache_utils.get_processed_dir")
-        self.mock_get_processed_dir = self.path_patcher.start()
+        self.path_patcher_processed = patch("src.utils.cache_utils.get_processed_dir")
+        self.mock_get_processed_dir = self.path_patcher_processed.start()
         self.mock_get_processed_dir.return_value = Path(self.temp_dir)
+        
+        self.path_patcher_interim = patch("src.utils.cache_utils.get_interim_dir")
+        self.mock_get_interim_dir = self.path_patcher_interim.start()
+        self.mock_get_interim_dir.return_value = Path(self.temp_dir)
 
     def teardown_method(self):
         """Clean up test environment."""
         self.patcher.stop()
-        self.path_patcher.stop()
+        self.path_patcher_processed.stop()
+        self.path_patcher_interim.stop()
         # Clean up temp directory
         import shutil
 

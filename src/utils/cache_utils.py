@@ -626,9 +626,10 @@ def is_run_truly_inflight(run_id: str) -> bool:
         # Look for python processes running cleaning.py with this run_id
         for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
-                if proc.info["name"] == "python" and proc.info["cmdline"]:
-                    cmdline = " ".join(proc.info["cmdline"])
-                    if "cleaning.py" in cmdline and run_id in cmdline:
+                name = (proc.info.get("name") or "").lower()
+                cmdline = proc.info.get("cmdline", [])
+                cmd = " ".join(cmdline)
+                if "python" in name and "cleaning.py" in cmd and run_id in cmd:
                         logger.info(
                             f"Found active process {proc.info['pid']} for run {run_id}",
                         )
