@@ -95,7 +95,7 @@ def normalize_sfid_series(series: pd.Series) -> pd.Series:
     if s_filtered.empty:
         return s  # Return original series if all values were empty
 
-    # Identify 15-char and 18-char IDs
+    # Identify 15-char and 18-char IDs on the filtered series
     is18 = s_filtered.str.len() == 18
     is15 = s_filtered.str.len() == 15
 
@@ -107,7 +107,8 @@ def normalize_sfid_series(series: pd.Series) -> pd.Series:
         logger.info(
             f"Converting {is15.sum()} 15-character IDs to 18-character canonical form",
         )
-        out.loc[non_empty & is15] = s_filtered[is15].map(sfid15_to_18)
+        # Use the filtered series indices directly to avoid index mismatch
+        out.loc[s_filtered[is15].index] = s_filtered[is15].map(sfid15_to_18)
 
     # Pass through 18-char IDs unchanged
     if is18.any():
