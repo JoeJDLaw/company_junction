@@ -3,6 +3,7 @@
 This module handles run deletion and cache clearing functionality.
 """
 
+import os
 from typing import Any
 
 import streamlit as st
@@ -172,22 +173,35 @@ def render_maintenance(selected_run_id: str) -> None:
                 f"🗑️ {MaintenanceConstants.RUN_DELETION_HEADER}",
                 expanded=False,
             ):
-                from src.utils.run_management import format_run_display_name, list_runs
+                # ✅ Switch to cleanup_api.list_runs() for single source of truth
+                from src.utils.cleanup_api import list_runs as list_runs_for_ui
+                from src.utils.cleanup_api import preview_delete, delete_runs
 
-                runs = list_runs()
-                if not runs:
+                # Show FUSE status badge
+                fuse_on = os.environ.get("PHASE1_DESTRUCTIVE_FUSE", "false").lower() == "true"
+                fuse_status = "ON" if fuse_on else "OFF"
+                panel.caption(
+                    f"Destructive Fuse: **{fuse_status}**  "
+                    + ("(required for deletion)" if not fuse_on else "")
+                )
+
+                # Build options
+                runs_dto = list_runs_for_ui()
+                if not runs_dto:
                     panel.info("No runs available for deletion.")
                 else:
-                    deletable_runs = [r for r in runs if r["status"] != "running"]
-                    if not deletable_runs:
+                    deletable = [r for r in runs_dto if r.status != "running"]
+                    if not deletable:
                         panel.info("No deletable runs (all running).")
                     else:
+                        # Format options using same display helper if you want,
+                        # or inline since we already have run metadata here.
                         run_options, display_to_id = [], {}
-                        for r in deletable_runs:
-                            icon = "✅" if r["status"] == "complete" else "❌"
-                            disp = f"{icon} {format_run_display_name(r['run_id'], r)}"
+                        for r in deletable:
+                            icon = "✅" if r.status == "complete" else "❌"
+                            disp = f"{icon} {r.run_id} · {r.run_type.upper()} · {r.timestamp}"
                             run_options.append(disp)
-                            display_to_id[disp] = r["run_id"]
+                            display_to_id[disp] = r.run_id
 
                         selected_runs = panel.multiselect(
                             "Choose runs",
@@ -195,7 +209,11 @@ def render_maintenance(selected_run_id: str) -> None:
                             help=MaintenanceConstants.SELECT_RUNS_HELP,
                         )
 
-                        # Tiny action row
+                        # Clear stale preview if selection becomes empty
+                        if not selected_runs:
+                            st.session_state.pop(f"deletion_preview_{selected_run_id}", None)
+                            st.session_state.pop(f"selected_run_ids_{selected_run_id}", None)
+
                         ac1, ac2, ac3 = panel.columns(3)
                         if selected_runs:
                             ids = [display_to_id[s] for s in selected_runs]
@@ -205,48 +223,36 @@ def render_maintenance(selected_run_id: str) -> None:
                                     key=f"preview_{selected_run_id}",
                                     use_container_width=True,
                                 ):
-                                    from src.utils.cleanup_api import preview_delete
-
                                     try:
                                         preview = preview_delete(ids)
-                                        st.session_state[
-                                            f"deletion_preview_{selected_run_id}"
-                                        ] = preview.to_dict()
-                                        st.session_state[
-                                            f"selected_run_ids_{selected_run_id}"
-                                        ] = ids
+                                        st.session_state[f"deletion_preview_{selected_run_id}"] = preview.to_dict()
+                                        st.session_state[f"selected_run_ids_{selected_run_id}"] = ids
                                         panel.success("Preview ready below")
                                     except Exception as e:
                                         panel.error(f"Preview failed: {e}")
 
                             with ac2:
+                                # If fuse is OFF, pre-warn and still allow a click (the backend blocks anyway)
                                 if panel.button(
                                     MaintenanceConstants.DELETE_SELECTED_BUTTON,
                                     key=f"delete_{selected_run_id}",
                                     use_container_width=True,
                                 ):
-                                    from src.utils.cleanup_api import delete_runs
-
                                     try:
                                         results = delete_runs(ids)
-                                        if results.deleted:
-                                            panel.success(
-                                                f"Deleted {len(results.deleted)} runs",
-                                            )
+                                        # Prefer specific error messaging
+                                        if results.errors:
+                                            # Show the first error clearly (fuse error is a common one)
+                                            panel.error(results.errors[0])
                                         if results.inflight_blocked:
                                             panel.warning(
-                                                f"Skipped {len(results.inflight_blocked)} running runs"
+                                                f"Skipped {len(results.inflight_blocked)} running runs."
                                             )
-                                        if results.errors:
-                                            panel.error("Errors occurred; see logs.")
-                                        st.session_state.pop(
-                                            f"deletion_preview_{selected_run_id}",
-                                            None,
-                                        )
-                                        st.session_state.pop(
-                                            f"selected_run_ids_{selected_run_id}",
-                                            None,
-                                        )
+                                        if results.deleted:
+                                            panel.success(f"Deleted {len(results.deleted)} runs")
+                                        # Reset preview & selection
+                                        st.session_state.pop(f"deletion_preview_{selected_run_id}", None)
+                                        st.session_state.pop(f"selected_run_ids_{selected_run_id}", None)
                                         st.rerun()
                                     except Exception as e:
                                         panel.error(f"Delete failed: {e}")
@@ -257,27 +263,31 @@ def render_maintenance(selected_run_id: str) -> None:
                                     key=f"cancel_{selected_run_id}",
                                     use_container_width=True,
                                 ):
-                                    st.session_state.pop(
-                                        f"deletion_preview_{selected_run_id}",
-                                        None,
-                                    )
-                                    st.session_state.pop(
-                                        f"selected_run_ids_{selected_run_id}",
-                                        None,
-                                    )
+                                    st.session_state.pop(f"deletion_preview_{selected_run_id}", None)
+                                    st.session_state.pop(f"selected_run_ids_{selected_run_id}", None)
                                     panel.info("Cancelled.")
 
+                        # Enhanced preview block
                         preview_data: dict[str, Any] | None = st.session_state.get(
-                            f"deletion_preview_{selected_run_id}",
+                            f"deletion_preview_{selected_run_id}"
                         )
                         if preview_data:
                             panel.caption("Preview")
-                            if preview_data.get("runs_to_delete"):
-                                panel.write(
-                                    f"- Runs: {len(preview_data['runs_to_delete'])}",
-                                )
-                            if preview_data.get("total_bytes", 0) > 0:
-                                mb = preview_data["total_bytes"] / (1024 * 1024)
+                            runs_to_delete = preview_data.get("runs_to_delete", [])
+                            inflight = preview_data.get("runs_inflight", [])
+                            not_found = preview_data.get("runs_not_found", [])
+                            latest_affected = preview_data.get("latest_affected", False)
+                            total_bytes = preview_data.get("total_bytes", 0)
+
+                            panel.write(f"- Runs: {len(runs_to_delete)}")
+                            if inflight:
+                                panel.warning(f"- Running (skipped): {len(inflight)}")
+                            if not_found:
+                                panel.warning(f"- Not found: {len(not_found)}")
+                            if latest_affected:
+                                panel.warning("⚠️ This selection would delete the **latest** run.")
+                            if total_bytes > 0:
+                                mb = total_bytes / (1024 * 1024)
                                 panel.write(f"- Size: {mb:.1f} MB")
 
         elif not enable_run_deletion:
