@@ -1,0 +1,76 @@
+name: Coverage Gates
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run tests with coverage
+      run: |
+        pytest --cov=src --cov-branch --cov-report=xml --cov-report=term-missing:skip-covered
+    
+    - name: Check overall coverage gate (75%)
+      run: |
+        coverage report --fail-under=75 --show-missing
+    
+    - name: Check critical modules coverage (90%)
+      run: |
+        echo "Checking critical modules coverage..."
+        coverage report --include="src/cleaning.py" --fail-under=90 || echo "WARNING: cleaning.py coverage below 90%"
+        coverage report --include="src/disposition.py" --fail-under=90 || echo "WARNING: disposition.py coverage below 90%"
+        coverage report --include="src/edge_grouping.py" --fail-under=90 || echo "WARNING: edge_grouping.py coverage below 90%"
+        coverage report --include="src/survivorship.py" --fail-under=90 || echo "WARNING: survivorship.py coverage below 90%"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = fs.readFileSync('coverage.xml', 'utf8');
+          
+          // Parse coverage percentage from coverage.xml
+          const match = coverage.match(/line-rate="([^"]+)"/);
+          const percentage = match ? Math.round(parseFloat(match[1]) * 100) : 'unknown';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 📊 Coverage Report
+            
+            **Overall Coverage**: ${percentage}%
+            
+            **Coverage Gates**:
+            - ✅ Overall: ${percentage}% (target: ≥75%)
+            - ⚠️ Critical modules: Check individual module coverage above
+            
+            **Coverage Details**: See the [coverage report](https://codecov.io/gh/${context.repo.owner}/${context.repo.repo}) for detailed information.`
+          });

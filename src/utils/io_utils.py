@@ -48,10 +48,17 @@ def load_settings(path: str) -> dict[str, Any]:
             "high": 92,
             "medium": 84,
             "penalty": {"suffix_mismatch": 25, "num_style_mismatch": 5},
+            "max_alias_pairs": 100000,
+            "scoring": {"use_bulk_cdist": True, "gate_cutoff": 72},
         },
         "llm": {"enabled": False, "delete_threshold": 85},
         "survivorship": {"tie_breakers": ["created_date", "account_id"]},
         "io": {"interim_format": "parquet"},
+        "group_stats": {"backend": "duckdb"},
+        "pipeline": {
+            "exact_equals_first_pass": {"enable": True}
+        },
+        "alias": {"optimize": True},
         "salesforce": {
             "object_types": ["Account", "Contact", "Lead", "Opportunity"],
             "batch_size": 200,
@@ -434,3 +441,126 @@ def validate_csv_file(file_path: str) -> bool:
     except Exception as e:
         logger.error(f"CSV validation failed for {file_path}: {e}")
         return False
+
+
+def detect_file_format(path: str) -> str:
+    """Detect file format based on extension and basic content sniffing.
+    
+    Args:
+        path: File path to analyze
+        
+    Returns:
+        File format string: 'csv', 'xlsx', 'xls', or 'unsupported'
+    """
+    from pathlib import Path
+    
+    p = Path(path)
+    suffix = p.suffix.lower()
+    
+    if suffix == ".csv":
+        return "csv"
+    if suffix == ".xlsx":
+        return "xlsx"
+    if suffix == ".xls":
+        return "xls"
+    
+    # Light content sniff: if no extension but starts like CSV header
+    try:
+        with open(p, "rb") as f:
+            head = f.read(64).lower()
+        if b"," in head and b"account_name" in head:
+            return "csv"
+    except Exception:
+        pass
+    
+    return "unsupported"
+
+
+def read_input_file(path: str, *, col_overrides: dict[str, str] | None = None) -> pd.DataFrame:
+    """Read input file with robust format detection and column validation.
+    
+    Args:
+        path: Path to input file
+        col_overrides: Optional column name mapping (old_name -> new_name)
+        
+    Returns:
+        DataFrame with normalized columns and created_date as YYYY-MM-DD string
+        
+    Raises:
+        ValueError: If file format is unsupported or required columns are missing
+        ImportError: If required engine dependencies are missing
+    """
+    import importlib.util
+    from pathlib import Path
+    
+    fmt = detect_file_format(path)
+    if fmt == "unsupported":
+        raise ValueError(f"Unsupported file format for: {path}")
+
+    if fmt == "csv":
+        df = pd.read_csv(path, dtype=str)
+    elif fmt == "xlsx":
+        if importlib.util.find_spec("openpyxl") is None:
+            raise ImportError("openpyxl required to read .xlsx files")
+        df = pd.read_excel(path, dtype=str, engine="openpyxl")
+    elif fmt == "xls":
+        if importlib.util.find_spec("xlrd") is None:
+            raise ImportError("xlrd required to read .xls files")
+        df = pd.read_excel(path, dtype=str, engine="xlrd")
+    else:
+        raise ValueError(f"Unsupported file format: {fmt}")
+
+    if col_overrides:
+        df = df.rename(columns=col_overrides)
+
+    # Note: Column validation is handled by schema resolution in the pipeline
+    # This function focuses on file I/O and basic normalization
+
+    # Normalize created_date to YYYY-MM-DD string format
+    if "created_date" not in df.columns:
+        df["created_date"] = "1970-01-01"
+    else:
+        # Parse dates and normalize to YYYY-MM-DD string format
+        dt = pd.to_datetime(df["created_date"], errors="coerce")
+        dt = dt.fillna(pd.Timestamp("1970-01-01"))
+        df["created_date"] = dt.dt.strftime("%Y-%m-%d")
+
+    return df
+
+
+def _require_pyarrow():
+    """Require pyarrow to be available for parquet operations."""
+    import importlib.util
+    if importlib.util.find_spec("pyarrow") is None:
+        raise ImportError("pyarrow required for parquet IO")
+
+
+def write_parquet_safely(df: pd.DataFrame, path: str) -> None:
+    """Write DataFrame to parquet file with safety checks.
+    
+    Args:
+        df: DataFrame to write
+        path: Output file path
+        
+    Raises:
+        ImportError: If pyarrow is not available
+    """
+    _require_pyarrow()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path, index=False)  # pandas will default to pyarrow engine
+
+
+def read_parquet_safely(path: str) -> pd.DataFrame:
+    """Read parquet file with safety checks.
+    
+    Args:
+        path: Input file path
+        
+    Returns:
+        DataFrame from parquet file
+        
+    Raises:
+        ImportError: If pyarrow is not available
+    """
+    _require_pyarrow()
+    return pd.read_parquet(path)

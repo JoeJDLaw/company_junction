@@ -65,6 +65,10 @@ ALLOWED_OBJECT_COLUMNS = {
     "name_raw",
     "name_base",
     "alias_sources",
+    "parent_account_id",
+    "Disposition",
+    "Relationship", 
+    "Cleaned Account Name",
     # Additional Salesforce columns
     "Potential Case Employer Junction ID",
     "Relationship (If Other)",

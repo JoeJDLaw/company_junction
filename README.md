@@ -487,6 +487,18 @@ CJ_GROUP_STATS_RUN_PARITY=true python src/cleaning.py ...
 
 > **🚨 Common Issues & Solutions**
 
+### 🔍 **Adversarial False Positives (Production Blocker)**
+
+If you're experiencing incorrect company groupings (e.g., "Apple Inc" being grouped with "Apple Bank Inc"), see the comprehensive troubleshooting plan:
+
+**📋 [Phase 2.0.2 Adversarial False Positives Plan](docs/plans/Phase2.0.2-Adversarial-FalsePositives.md)**
+
+This document provides:
+- Root cause analysis of false-positive cases
+- Detailed implementation strategy for distractor token handling
+- Test plans and acceptance criteria
+- Configuration options for fine-tuning similarity scoring
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ### ❌ Common Issues

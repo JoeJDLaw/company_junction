@@ -65,20 +65,20 @@ def generate_run_id(input_paths: list[str], config_paths: list[str]) -> str:
     return run_id
 
 
-def get_cache_directories(run_id: str) -> tuple[str, str]:
+def get_cache_directories(run_id: str, output_dir: Optional[str] = None) -> tuple[str, str]:
     """Get interim and processed cache directories for a run."""
-    interim_dir = str(get_interim_dir(run_id))
-    processed_dir = str(get_processed_dir(run_id))
+    interim_dir = str(get_interim_dir(run_id, output_dir))
+    processed_dir = str(get_processed_dir(run_id, output_dir))
     return interim_dir, processed_dir
 
 
-def create_cache_directories(run_id: str) -> tuple[str, str]:
+def create_cache_directories(run_id: str, output_dir: Optional[str] = None) -> tuple[str, str]:
     """Create cache directories for a run and return their paths."""
     if not run_id:
         logger.error("Missing run_id; refusing to write to non-scoped processed path")
         sys.exit(2)
 
-    interim_dir, processed_dir = get_cache_directories(run_id)
+    interim_dir, processed_dir = get_cache_directories(run_id, output_dir)
 
     os.makedirs(interim_dir, exist_ok=True)
     os.makedirs(processed_dir, exist_ok=True)

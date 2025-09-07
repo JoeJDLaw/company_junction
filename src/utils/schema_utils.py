@@ -188,6 +188,14 @@ def resolve_schema(
     # Start with empty mapping
     mapping = {}
 
+    # 0. Check for exact canonical matches first
+    available_columns = set(df.columns)
+    canonical_columns = [ACCOUNT_NAME, ACCOUNT_ID, CREATED_DATE]
+    for canonical_name in canonical_columns:
+        if canonical_name in available_columns:
+            mapping[canonical_name] = canonical_name
+            logger.debug(f"Exact canonical match: {canonical_name} -> {canonical_name}")
+
     # 1. CLI overrides take precedence
     if cli_overrides:
         logger.info(f"Applying CLI overrides: {cli_overrides}")
@@ -435,18 +443,19 @@ def _validate_required_columns(mapping: dict[str, str]) -> bool:
     return all(col in mapping for col in required_columns)
 
 
-def save_schema_mapping(mapping: Mapping[str, str], run_id: str) -> None:
+def save_schema_mapping(mapping: Mapping[str, str], run_id: str, output_dir: str | None = None) -> None:
     """Save schema mapping to file for observability and reproducibility.
 
     Args:
         mapping: Schema mapping from canonical names to actual column names
         run_id: Run ID for file organization
+        output_dir: Optional output directory override
 
     """
     try:
         from src.utils.path_utils import get_processed_dir
 
-        processed_dir = get_processed_dir(run_id)
+        processed_dir = get_processed_dir(run_id, output_dir)
         schema_file = processed_dir / "schema_mapping.json"
 
         # Create directory if it doesn't exist

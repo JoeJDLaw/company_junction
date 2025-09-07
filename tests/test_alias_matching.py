@@ -90,3 +90,20 @@ class TestAliasMatching:
     def test_compute_alias_matches(self):
         """Test that alias matching produces expected results."""
         compute_alias_matches(self.df_norm, self.df_groups, self.settings)
+
+    def test_alias_settings_missing_uses_defaults(self):
+        """Test that missing alias config section uses sensible defaults."""
+        # Settings with no "alias" section
+        settings = {"similarity": {"high": 90, "max_alias_pairs": 1000}}
+        
+        # df_norm / df_groups can be tiny empty frames for this smoke test
+        df_norm = pd.DataFrame({"name_core": [], "suffix_class": []}, dtype="string")
+        df_groups = pd.DataFrame({"group_id": [], "account_id": []}, dtype="string")
+        
+        # Should not crash and should use defaults
+        df_matches, stats = compute_alias_matches(
+            df_norm, df_groups, settings, parallel_executor=None
+        )
+        
+        assert isinstance(df_matches, pd.DataFrame)
+        assert isinstance(stats, dict)

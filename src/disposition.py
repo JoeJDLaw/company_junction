@@ -5,9 +5,16 @@ This module handles:
 - Blacklist detection
 - Suffix mismatch handling
 - LLM gate integration (stub for Phase 1)
+
+Blacklist behavior:
+- No disposition.blacklist key → built-ins + manual terms
+- Key present (even empty lists) → config terms + manual only (no built-ins, no heuristics)
+- Per-process caches; clear_blacklist_cache() resets during long runs
 """
 
-import logging
+import hashlib
+import json
+import logging 
 import re
 from typing import Any, Optional
 
@@ -18,9 +25,13 @@ from src.utils.schema_utils import DISPOSITION
 logger = logging.getLogger(__name__)
 
 # Module-level regex caches for performance optimization
+# Per-process caching; each worker warms its own cache
 _TOKEN_REGEX_CACHE = {}
 _PHRASE_REGEX_CACHE = {}
 _SUSPICIOUS_REGEX_CACHE = {}
+
+# Effective blacklist cache (config + manual)
+_EFFECTIVE_BL_CACHE: dict[str, list[str]] = {}
 
 
 def _get_token_regex(tokens: list[str]) -> re.Pattern:
@@ -49,6 +60,39 @@ def _get_suspicious_regex(pattern: str) -> re.Pattern:
     if pattern not in _SUSPICIOUS_REGEX_CACHE:
         _SUSPICIOUS_REGEX_CACHE[pattern] = re.compile(pattern, re.IGNORECASE)
     return _SUSPICIOUS_REGEX_CACHE[pattern]
+
+
+def _blacklist_cache_key(settings: Optional[dict[str, Any]]) -> str:
+    """Build a stable key from just the disposition.blacklist + manual terms."""
+    # Pull only the relevant portion of settings to keep the digest small/stable
+    bl_cfg = None
+    if settings and "disposition" in settings:
+        bl_cfg = settings.get("disposition", {}).get("blacklist", None)
+
+    # Manual list (best-effort; don't crash if it fails)
+    try:
+        manual = sorted(_load_manual_blacklist())
+    except Exception:
+        manual = []
+
+    payload = {"cfg": bl_cfg, "manual": manual}
+    s = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.md5(s.encode("utf-8")).hexdigest()
+
+
+def clear_blacklist_cache() -> None:
+    """Clear all blacklist-related caches.
+    
+    Call this when manual blacklist files are updated during long runs
+    to ensure fresh data is loaded.
+    """
+    global _EFFECTIVE_BL_CACHE, _TOKEN_REGEX_CACHE, _PHRASE_REGEX_CACHE
+    
+    _EFFECTIVE_BL_CACHE.clear()
+    _TOKEN_REGEX_CACHE.clear()
+    _PHRASE_REGEX_CACHE.clear()
+    
+    logger.info("disposition | blacklist_cache_cleared")
 
 
 # Phase 1.35.3: Moved hardcoded blacklist to configuration
@@ -116,7 +160,7 @@ def classify_disposition(
     # Check for blacklisted names
     # Handle both standardized and original column names
     account_name_col = "account_name" if "account_name" in row.index else "Account Name"
-    if _is_blacklisted(row.get(account_name_col, "")):
+    if _is_blacklisted(row.get(account_name_col, ""), settings):
         return "Delete"
 
     # Check for multiple names (requires splitting)
@@ -191,32 +235,50 @@ def _load_manual_dispositions() -> dict[str, str]:
 
 
 def get_blacklist_terms(settings: Optional[dict[str, Any]] = None) -> list[str]:
-    """Get blacklist terms from configuration or fallback to built-in.
-
-    Args:
-        settings: Configuration settings (optional)
-
-    Returns:
-        List of blacklist terms
-
+    """Return the effective blacklist terms with the following precedence:
+    - If `disposition.blacklist` key is MISSING entirely → built-in + manual
+    - If present:
+        * tokens / phrases provided (even empty lists) → honor literally
+        * always union manual terms
+        * (Optional future: allow a flag to inherit built-ins)
+    Results are cached per (blacklist cfg + manual) digest.
     """
-    if settings and "disposition" in settings:
-        # Phase 1.35.3: Load from configuration first
-        config_blacklist = settings.get("disposition", {}).get("blacklist", {})
-        if config_blacklist:
-            tokens: list[str] = config_blacklist.get("tokens", [])
-            phrases: list[str] = config_blacklist.get("phrases", [])
-            if tokens or phrases:
-                logger.info(
-                    f"disposition | loaded_blacklist | tokens={len(tokens)} | phrases={len(phrases)} | source=config",
-                )
-                return tokens + phrases
+    key = _blacklist_cache_key(settings)
+    cached = _EFFECTIVE_BL_CACHE.get(key)
+    if cached is not None:
+        return cached
 
-    # Fallback to built-in blacklist
-    logger.info(
-        f"disposition | loaded_blacklist | tokens={len(BLACKLIST_TOKENS)} | phrases={len(BLACKLIST_PHRASES)} | source=builtin",
-    )
-    return BLACKLIST.copy()
+    # Load manual (already included in key)
+    try:
+        manual_terms = set(_load_manual_blacklist())
+    except Exception:
+        manual_terms = set()
+
+    cfg = None
+    if settings and "disposition" in settings:
+        cfg = settings.get("disposition", {}).get("blacklist", None)
+
+    if cfg is None:
+        # No config provided → built-in + manual
+        terms = set(BLACKLIST) | manual_terms
+        logger.info(
+            "disposition | loaded_blacklist | source=builtin+manual | builtin=%d | manual=%d | effective=%d",
+            len(BLACKLIST), len(manual_terms), len(terms),
+        )
+    else:
+        tokens = set(cfg.get("tokens", []))
+        phrases = set(cfg.get("phrases", []))
+        # HONOR EXPLICIT EMPTIES: if user gives [], that means empty set
+        # (We can add an opt-in inherit flag later if desired.)
+        terms = tokens | phrases | manual_terms
+        logger.info(
+            "disposition | loaded_blacklist | source=config+manual | tokens=%d | phrases=%d | manual=%d | effective=%d",
+            len(tokens), len(phrases), len(manual_terms), len(terms),
+        )
+
+    result = sorted(terms)
+    _EFFECTIVE_BL_CACHE[key] = result
+    return result
 
 
 def _is_blacklisted_improved(
@@ -239,9 +301,10 @@ def _is_blacklisted_improved(
     name_lower = str(name).lower()
 
     # Check single-word tokens with word boundaries - use cached regex
-    token_regex = _get_token_regex(BLACKLIST_TOKENS)
-    if token_regex.search(name):
-        return True
+    if BLACKLIST_TOKENS:  # Guard against empty token list
+        token_regex = _get_token_regex(BLACKLIST_TOKENS)
+        if token_regex.search(name):
+            return True
 
     # Check multi-word phrases with substring matching
     for phrase in BLACKLIST_PHRASES:
@@ -268,21 +331,44 @@ def _is_blacklisted_improved(
     return False
 
 
-def _is_blacklisted(name: str) -> bool:
+def _is_blacklisted(name: str, settings: dict | None = None) -> bool:
     """Check if a company name is blacklisted.
 
     Args:
         name: Company name to check
+        settings: Configuration settings (optional, for config-driven blacklist)
 
     Returns:
         True if blacklisted
 
     """
-    # Load manual blacklist terms once
-    manual_blacklist = _load_manual_blacklist()
-    manual_terms = set(manual_blacklist) if manual_blacklist else None
+    # Precompute name.lower() once
+    name_l = (name or "").lower()
+    
+    # Use config-driven blacklist if settings provided, otherwise fall back to manual blacklist
+    if settings is not None:
+        terms = get_blacklist_terms(settings)
+        tokens = [t for t in terms if " " not in t]
+        phrases = [p for p in terms if " " in p]
+        
+        # Check single-word tokens with word boundaries
+        if tokens:
+            token_regex = _get_token_regex(tokens)
+            if token_regex.search(name):
+                return True
+        
+        # Check multi-word phrases
+        for phrase in phrases:
+            if phrase.lower() in name_l:
+                return True
+        
+        return False
+    else:
+        # Legacy path: Load manual blacklist terms once
+        manual_blacklist = _load_manual_blacklist()
+        manual_terms = set(manual_blacklist) if manual_blacklist else None
 
-    return _is_blacklisted_improved(name, manual_terms if manual_terms else set())
+        return _is_blacklisted_improved(name, manual_terms if manual_terms else set())
 
 
 def _is_mostly_punctuation_or_stopwords(name: str) -> bool:
@@ -398,11 +484,12 @@ def _is_suspicious_singleton(row: pd.Series, settings: dict[str, Any]) -> bool:
     return False
 
 
-def compute_group_metadata(df_groups: pd.DataFrame) -> dict[int, dict[str, Any]]:
+def compute_group_metadata(df_groups: pd.DataFrame, settings: dict[str, Any] | None = None) -> dict[int, dict[str, Any]]:
     """Compute metadata for each group.
 
     Args:
         df_groups: DataFrame with group assignments
+        settings: Configuration settings (optional, for config-driven blacklist)
 
     Returns:
         Dictionary mapping group_id to metadata
@@ -426,7 +513,7 @@ def compute_group_metadata(df_groups: pd.DataFrame) -> dict[int, dict[str, Any]]
         account_name_col = (
             "account_name" if "account_name" in group_data.columns else "Account Name"
         )
-        blacklist_hits = group_data[account_name_col].apply(_is_blacklisted).sum()
+        blacklist_hits = group_data[account_name_col].apply(lambda name: _is_blacklisted(name, settings)).sum()
 
         group_metadata[group_id] = {
             "group_size": len(group_data),
@@ -499,9 +586,6 @@ def _apply_dispositions_vectorized(
     if override_count > 0:
         logger.info(f"disposition | manual_overrides | count={override_count}")
 
-    # Compute group metadata
-    group_metadata = compute_group_metadata(df_groups)
-
     # Create result DataFrame
     result_df = df_groups.copy()
 
@@ -523,9 +607,12 @@ def _apply_dispositions_vectorized(
     tokens = [t for t in blacklist_terms if " " not in t]
     phrases = tuple(p for p in blacklist_terms if " " in p)
 
-    # Single-word token detection (word boundaries) - use cached regex
-    token_regex = _get_token_regex(tokens)
-    token_mask = name_series.str.contains(token_regex, na=False)
+    # ✅ Guard: empty token list must NOT build a regex (it would match everywhere)
+    if tokens:
+        token_regex = _get_token_regex(tokens)
+        token_mask = name_series.str.contains(token_regex, na=False)
+    else:
+        token_mask = false_series
 
     # Multi-word phrase detection (substring) - vectorized
     if phrases:
@@ -546,30 +633,30 @@ def _apply_dispositions_vectorized(
     conditions = []
     choices = []
 
-    # Manual override condition (highest priority)
-    if manual_overrides:
-        override_mask = result_df.index.astype(str).isin(manual_overrides.keys())
-        conditions.append(override_mask)
-        choices.append("manual_override")
-
     # Blacklist condition
     conditions.append(blacklist_mask.to_numpy())
     choices.append("Delete")
 
-    # Multiple names condition
+    # Multiple names condition - index-aligned defaults
     multiple_names_mask = result_df.get(
-        "has_multiple_names",
-        pd.Series([False] * len(result_df)),
-    )
+        "has_multiple_names", pd.Series(False, index=result_df.index)
+    ).astype(bool)
     conditions.append(multiple_names_mask.to_numpy())
     choices.append("Verify")
 
     # PROFILING: Start timing alias cross-refs mask
     alias_start = time.time()
     
-    # Alias matches condition - OPTIMIZED: use .map instead of .apply
-    alias_col = result_df.get("alias_cross_refs", pd.Series([[]] * len(result_df)))
-    alias_mask = alias_col.map(lambda x: bool(x) if isinstance(x, list) else False)
+    # ✅ Opportunistic alias mask (no new dependency)
+    if "has_alias" in result_df.columns:
+        alias_mask = result_df["has_alias"].fillna(False).astype(bool)
+    elif "alias_cross_refs" in result_df.columns:
+        alias_mask = result_df["alias_cross_refs"].map(
+            lambda x: bool(x) if isinstance(x, list) else False
+        )
+    else:
+        alias_mask = false_series
+    
     conditions.append(alias_mask.to_numpy())
     choices.append("Verify")
     
@@ -580,10 +667,10 @@ def _apply_dispositions_vectorized(
     # PROFILING: Start timing suffix mismatch mask
     suffix_start = time.time()
     
-    # Vectorized group size and suffix mismatch - OPTIMIZED
+    # ✅ Vectorized group size and suffix mismatch - fully vectorized
     group_size_series = result_df.groupby("group_id")["group_id"].transform("size")
     suffix_mismatch_series = (
-        result_df.groupby("group_id")["suffix_class"].transform(lambda s: s.nunique() > 1)
+        result_df.groupby("group_id")["suffix_class"].transform("nunique").gt(1)
     )
     
     conditions.append(suffix_mismatch_series.to_numpy())
@@ -592,38 +679,31 @@ def _apply_dispositions_vectorized(
     # PROFILING: End timing suffix mismatch mask
     suffix_time = time.time() - suffix_start
     logger.info(f"disposition | profiling | suffix_mismatch_mask | duration={suffix_time:.3f}s")
-    is_primary_series = result_df.get("is_primary", pd.Series([False] * len(result_df)))
+    
+    # ✅ Index-aligned defaults for optional boolean columns
+    is_primary_series = result_df.get(
+        "is_primary", pd.Series(False, index=result_df.index)
+    ).astype(bool)
 
-    # Singleton suspicious condition
+    # Singleton suspicious condition - safer guard
     singleton_mask = (group_size_series == 1) & (~blacklist_mask)
     suspicious_singleton_mask = false_series
-    if "disposition" in settings and "performance" in settings["disposition"]:
-        suspicious_regex = settings["disposition"]["performance"].get(
-            "suspicious_singleton_regex",
-        )
-        if suspicious_regex:
-            comp = _get_suspicious_regex(suspicious_regex)
-            suspicious_singleton_mask = name_lower.str.contains(comp, na=False)
-    singleton_suspicious = singleton_mask & suspicious_singleton_mask
-    conditions.append(singleton_suspicious.to_numpy())
+    perf_cfg = settings.get("disposition", {}).get("performance", {})
+    susp_re = perf_cfg.get("suspicious_singleton_regex")
+    if susp_re:
+        comp = _get_suspicious_regex(susp_re)
+        suspicious_singleton_mask = name_lower.str.contains(comp, na=False)
+    
+    conditions.append((singleton_mask & suspicious_singleton_mask).to_numpy())
     choices.append("Verify")
-
-    # Singleton clean condition
-    singleton_clean = singleton_mask & (~suspicious_singleton_mask)
-    conditions.append(singleton_clean.to_numpy())
+    conditions.append((singleton_mask & ~suspicious_singleton_mask).to_numpy())
     choices.append("Keep")
 
     # Multi-record group conditions
     multi_record_mask = group_size_series > 1
-
-    # Primary record condition
-    primary_mask = multi_record_mask & is_primary_series
-    conditions.append(primary_mask.to_numpy())
+    conditions.append((multi_record_mask & is_primary_series).to_numpy())
     choices.append("Keep")
-
-    # Duplicate record condition (default for multi-record non-primary)
-    duplicate_mask = multi_record_mask & (~is_primary_series)
-    conditions.append(duplicate_mask.to_numpy())
+    conditions.append((multi_record_mask & ~is_primary_series).to_numpy())
     choices.append("Update")
 
     # Apply np.select for vectorized classification - ensure object dtype
@@ -708,7 +788,7 @@ def _apply_dispositions_legacy(
         logger.info(f"Loaded {override_count} manual disposition overrides")
 
     # Compute group metadata
-    group_metadata = compute_group_metadata(df_groups)
+    group_metadata = compute_group_metadata(df_groups, settings)
 
     # Apply dispositions
     result_df = df_groups.copy()
@@ -803,7 +883,7 @@ def get_disposition_reason(
     # Check for blacklisted names
     # Handle both standardized and original column names
     account_name_col = "account_name" if "account_name" in row.index else "Account Name"
-    if _is_blacklisted(row.get(account_name_col, "")):
+    if _is_blacklisted(row.get(account_name_col, ""), settings):
         return "blacklisted_name"
 
     # Check for multiple names
@@ -879,7 +959,7 @@ def _generate_disposition_reasons_vectorized(
     reasons[blacklist_mask] = "blacklisted_name"
 
     # Multiple names reasons
-    multiple_names_mask = df.get("has_multiple_names", pd.Series([False] * len(df)))
+    multiple_names_mask = df.get("has_multiple_names", pd.Series(False, index=df.index)).astype(bool)
     reasons[multiple_names_mask] = "multi_name_string_requires_split"
 
     # Alias match reasons - use pre-computed mask
@@ -889,7 +969,7 @@ def _generate_disposition_reasons_vectorized(
     reasons[suffix_mismatch_series] = "suffix_mismatch"
 
     # Group size and primary status reasons - use pre-computed series
-    is_primary_series = df.get("is_primary", pd.Series([False] * len(df)))
+    is_primary_series = df.get("is_primary", pd.Series(False, index=df.index)).astype(bool)
 
     # Singleton reasons - use pre-computed series
     singleton_mask = (group_size_series == 1) & (~blacklist_mask)

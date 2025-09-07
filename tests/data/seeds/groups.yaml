@@ -1,0 +1,112 @@
+# Clusters define N≥3 items with explicit grouping expectations per item.
+# Each cluster tests a specific policy or edge case with multiple candidates.
+clusters:
+  - id: C_ORACLE_TRIAD
+    notes: "Oracle vs Oracle Corp must_group; Oracle Park must_not_group"
+    items:
+      - name: "Oracle"
+        gt_entity: GT_ORACLE
+        tags: ["control","triad","must_group"]
+      - name: "Oracle Corporation"
+        gt_entity: GT_ORACLE
+        tags: ["control","triad","must_group"]
+      - name: "Oracle Park"
+        gt_entity: GT_ORACLE_PARK
+        tags: ["adversarial","venue","triad","must_not_group"]
+
+  - id: C_APPLE_TRIAD
+    notes: "Apple core must_group; Apple Bank must_not_group"
+    items:
+      - name: "Apple"
+        gt_entity: GT_APPLE
+        tags: ["control","triad","must_group"]
+      - name: "Apple Inc"
+        gt_entity: GT_APPLE
+        tags: ["control","triad","must_group"]
+      - name: "Apple Bank Inc"
+        gt_entity: GT_APPLE_BANK
+        tags: ["adversarial","bank","triad","must_not_group"]
+
+  - id: C_MSFT_SUFFIX
+    notes: "Suffix-only variance policy: Corp/Corporation/Inc must_group"
+    items:
+      - name: "Microsoft Corporation"
+        gt_entity: GT_MSFT
+        tags: ["control","suffix","triad","must_group"]
+      - name: "Microsoft Corp"
+        gt_entity: GT_MSFT
+        tags: ["control","suffix","triad","must_group"]
+      - name: "Microsoft Inc"
+        gt_entity: GT_MSFT
+        tags: ["control","suffix","triad","must_group"]
+
+  - id: C_GE_SET
+    notes: "Substring traps; policy: GE + General Electric must_group; General Motors must_not_group"
+    items:
+      - name: "GE"
+        gt_entity: GT_GE
+        tags: ["control","alias","group","triad","must_group"]
+      - name: "General Electric"
+        gt_entity: GT_GE
+        tags: ["control","alias","group","triad","must_group"]
+      - name: "General Motors"
+        gt_entity: GT_GM
+        tags: ["adversarial","substring","triad","must_not_group"]
+
+  - id: C_CAFE
+    notes: "Transliteration: Café vs Cafe must_group"
+    items:
+      - name: "Café Corporation"
+        gt_entity: GT_CAFE
+        tags: ["control","transliteration","triad","must_group"]
+      - name: "Cafe Corporation"
+        gt_entity: GT_CAFE
+        tags: ["control","transliteration","triad","must_group"]
+      - name: "Cafe Services"
+        gt_entity: GT_CAFE_SVC
+        tags: ["probe","near_threshold","triad","must_not_group"]
+
+  - id: C_TARGET_EMOJI
+    notes: "Emoji policy: emoji-stripped names should group with non-emoji versions"
+    items:
+      - name: "Target"
+        gt_entity: GT_TARGET
+        tags: ["control","emoji","triad","must_group"]
+      - name: "🎯 Target"
+        gt_entity: GT_TARGET
+        tags: ["control","emoji","triad","must_group"]
+      - name: "Target Field"
+        gt_entity: GT_TARGET_FIELD
+        tags: ["adversarial","venue","triad","must_not_group"]
+
+  - id: C_AMAZON_QUAD
+    notes: "Complex brand extension policy: Amazon core must_group; AWS/Prime must_not_group"
+    items:
+      - name: "Amazon"
+        gt_entity: GT_AMAZON
+        tags: ["control","quad","must_group"]
+      - name: "Amazon.com Inc"
+        gt_entity: GT_AMAZON
+        tags: ["control","quad","must_group"]
+      - name: "Amazon Web Services"
+        gt_entity: GT_AMAZON_AWS
+        tags: ["adversarial","brand_ext","quad","must_not_group"]
+      - name: "Amazon Prime"
+        gt_entity: GT_AMAZON_PRIME
+        tags: ["adversarial","brand_ext","quad","must_not_group"]
+
+  - id: C_GOOGLE_QUAD
+    notes: "Subsidiary policy: Google core must_group; Google Cloud/Drive must_not_group"
+    items:
+      - name: "Google"
+        gt_entity: GT_GOOGLE
+        tags: ["control","quad","must_group"]
+      - name: "Google LLC"
+        gt_entity: GT_GOOGLE
+        tags: ["control","quad","must_group"]
+      - name: "Google Cloud"
+        gt_entity: GT_GOOGLE_CLOUD
+        tags: ["adversarial","brand_ext","quad","must_not_group"]
+      - name: "Google Drive"
+        gt_entity: GT_GOOGLE_DRIVE
+        tags: ["adversarial","brand_ext","quad","must_not_group"]

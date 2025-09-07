@@ -65,11 +65,12 @@ def get_config_path(filename: str = "settings.yaml") -> Path:
     return Path("config") / filename
 
 
-def get_processed_dir(run_id: Optional[str]) -> Path:
+def get_processed_dir(run_id: Optional[str], output_dir: Optional[str] = None) -> Path:
     """Get the processed data directory for a run.
 
     Args:
-        run_id: The run ID
+        run_id: The run ID or special directory name (e.g., "latest", "audit", "index")
+        output_dir: Optional output directory override (defaults to data/processed)
 
     Returns:
         Path to the processed directory, relative to project root
@@ -83,14 +84,18 @@ def get_processed_dir(run_id: Optional[str]) -> Path:
     if run_id is None:
         raise ValueError("run_id cannot be None")
 
-    return Path("data") / "processed" / run_id
+    if output_dir:
+        return Path(output_dir) / run_id
+    else:
+        return Path("data") / "processed" / run_id
 
 
-def get_interim_dir(run_id: str) -> Path:
+def get_interim_dir(run_id: str, output_dir: Optional[str] = None) -> Path:
     """Get the interim data directory for a run.
 
     Args:
         run_id: The run ID
+        output_dir: Optional output directory override (defaults to data/interim)
 
     Returns:
         Path to the interim directory, relative to project root
@@ -104,23 +109,27 @@ def get_interim_dir(run_id: str) -> Path:
     if run_id is None:
         raise ValueError("run_id cannot be None")
 
-    return Path("data") / "interim" / run_id
+    if output_dir:
+        return Path(output_dir) / run_id
+    else:
+        return Path("data") / "interim" / run_id
 
 
-def get_artifact_path(run_id: str, artifact: str) -> Path:
+def get_artifact_path(run_id: str, artifact: str, output_dir: Optional[str] = None) -> Path:
     """Get the path to an artifact for a run.
 
     Args:
         run_id: The run ID
         artifact: Name of the artifact file
+        output_dir: Optional output directory override
 
     Returns:
         Path to the artifact, relative to project root
 
     """
     # Check processed directory first, then interim
-    processed_path = get_processed_dir(run_id) / artifact
-    interim_path = get_interim_dir(run_id) / artifact
+    processed_path = get_processed_dir(run_id, output_dir) / artifact
+    interim_path = get_interim_dir(run_id, output_dir) / artifact
 
     # Return the path that exists, or processed as default
     if processed_path.exists():

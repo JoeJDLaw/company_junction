@@ -55,8 +55,12 @@ def _build_first_token_bucket(
 
     # Log bucket statistics
     logger.debug("Index mapping stats:")
-    logger.debug(f"  Original indices: {min(name_core.index)}..{max(name_core.index)}")
-    logger.debug(f"  Mapped indices: 0..{len(name_core)-1}")
+    if len(name_core) > 0:
+        logger.debug(f"  Original indices: {name_core.index.min()}..{name_core.index.max()}")
+        logger.debug(f"  Mapped indices: 0..{len(name_core)-1}")
+    else:
+        logger.debug("  Original indices: <empty>")
+        logger.debug("  Mapped indices: <empty>")
     logger.debug(f"  Total buckets: {len(bucket_arrays)}")
 
     return bucket_arrays, index_map, reverse_map
@@ -303,31 +307,24 @@ def compute_alias_matches(
     # Sort DataFrames by index and group_id for deterministic lookups
     df_norm = df_norm.sort_index()
     df_groups = df_groups.sort_values(["group_id", "account_id"]).sort_index().copy()
-    df_groups = df_groups.sort_values(["group_id", "account_id"]).sort_index().copy()
-    df_groups = (
-        df_groups.sort_values(["group_id"]).sort_index().copy()
-    )  # Final sort by group_id and index
-    df_groups = df_groups.copy()  # Make another copy to ensure index is preserved
-    df_groups = (
-        df_groups.sort_values(["group_id"]).sort_index().copy()
-    )  # Final sort by group_id and index
 
     # Enable debug logging for specific records
     debug_records = {243, 2725, 2726, 2727, 2728}  # Aegis records
 
     # Get thresholds and optimization settings
-    high_threshold = settings.get("similarity", {}).get("high", 92)
-    max_alias_pairs = settings.get("similarity", {}).get("max_alias_pairs", 100000)
-    optimize = settings.get("alias", {}).get("optimize", True)
-    progress_interval = settings.get("alias", {}).get("progress_interval_s", 1.0)
+    high_threshold = settings["similarity"]["high"]  # assuming guaranteed by schema
+    max_alias_pairs = settings["similarity"]["max_alias_pairs"]  # assuming guaranteed by schema
 
-    # Get worker count from multiple sources with fallback logic
+    alias_cfg = settings.get("alias", {})  # guard
+    optimize = alias_cfg.get("optimize", False)
+    progress_interval = alias_cfg.get("progress_interval_s", 1.0)
+
     workers = (
-        settings.get("alias", {}).get("workers")  # Alias-specific workers
-        or settings.get("parallelism", {}).get("workers")  # Config file
-        or settings.get("workers")  # Direct setting
-        or settings.get("effective_workers")  # Computed/CLI value
-        or 1  # Fallback to sequential
+        alias_cfg.get("workers")
+        or settings.get("parallelism", {}).get("workers")
+        or settings.get("workers")
+        or settings.get("effective_workers")
+        or 1
     )
 
     # Enhanced logging for debugging
@@ -747,48 +744,23 @@ def create_alias_cross_refs(
 
 
 def save_alias_matches(df_alias_matches: pd.DataFrame, output_path: str) -> None:
-    """Save alias matches DataFrame to parquet file.
+    """Save alias matches DataFrame to file, honoring extension.
 
     Args:
         df_alias_matches: DataFrame with alias matches
         output_path: Output file path
 
     """
-    # Sanitize to parquet-friendly columns only
-    sanitized_columns = [
-        "account_id",
-        "alias_text",
-        "matched_account_id",
-        "match_group_id",
-        "match_score",
-        "source",
-    ]
-
-    # Keep only columns that exist
-    available_columns = [
-        col for col in sanitized_columns if col in df_alias_matches.columns
-    ]
-    df_sanitized = df_alias_matches[available_columns].copy()
-
-    # Force proper dtypes
-    for col in df_sanitized.columns:
-        if col in [
-            "account_id",
-            "alias_text",
-            "matched_account_id",
-            "match_group_id",
-            "source",
-        ]:
-            df_sanitized[col] = df_sanitized[col].astype("string")
-        elif col == "match_score":
-            df_sanitized[col] = df_sanitized[col].astype("float32")
-
-    df_sanitized.to_parquet(output_path, index=False)
-    logger.info(f"Saved {len(df_sanitized)} alias matches to {output_path}")
+    if output_path.endswith(".parquet"):
+        from src.utils.io_utils import write_parquet_safely
+        write_parquet_safely(df_alias_matches, output_path)
+    else:
+        df_alias_matches.to_csv(output_path, index=False)
+    logger.info(f"Saved {len(df_alias_matches)} alias matches to {output_path}")
 
 
 def load_alias_matches(input_path: str) -> pd.DataFrame:
-    """Load alias matches DataFrame from parquet file.
+    """Load alias matches DataFrame based on file extension.
 
     Args:
         input_path: Input file path
@@ -798,7 +770,10 @@ def load_alias_matches(input_path: str) -> pd.DataFrame:
 
     """
     try:
-        df_alias_matches = pd.read_parquet(input_path)
+        if input_path.endswith(".parquet"):
+            df_alias_matches = pd.read_parquet(input_path)
+        else:
+            df_alias_matches = pd.read_csv(input_path)
         logger.info(f"Loaded alias matches from {input_path}")
         return df_alias_matches
     except Exception as e:

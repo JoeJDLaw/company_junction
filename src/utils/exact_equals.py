@@ -66,9 +66,24 @@ def find_exact_equals_groups(
         Tuple of (exact_raw_groups, raw_exact_map, candidate_pairs_exact_raw)
 
     """
+    # Choose backend using centralized engine selection
+    from src.utils.engine_selection import choose_backend, exact_equals_duckdb
+    
+    backend = choose_backend("exact_equals", settings, n_rows=len(df), df=df)
+    effective_backend = "pandas"
+    
+    # Check if DuckDB implementation is enabled
+    if backend == "duckdb" and settings.get("engines", {}).get("enable_unstable_duckdb_paths", False):
+        # exact_raw_groups, raw_exact_map, candidate_pairs_df = exact_equals_duckdb(df, settings, name_column)
+        pass
+    
     logger.info(
-        f"exact_equals | backend=pandas | records={len(df)} | name_column={name_column}",
+        "exact_equals | requested_backend=%s | effective_backend=%s | records=%d | name_column=%s",
+        backend, effective_backend, len(df), name_column
     )
+    
+    if backend == "duckdb":
+        logger.warning("exact_equals | duckdb_selected_but_unimplemented | falling_back_to=pandas")
 
     # Build raw exact keys
     df_with_keys = df.copy()
@@ -167,21 +182,42 @@ def find_exact_equals_groups(
 
     # Create candidate pairs for exact equals (100-score edges)
     candidate_pairs_exact_raw = []
-    for _, group in exact_groups.iterrows():
-        account_ids = group["account_id"]
-        if len(account_ids) >= 2:
-            # Create pairs between all members (spanning tree approach)
-            for i in range(len(account_ids)):
-                for j in range(i + 1, len(account_ids)):
-                    candidate_pairs_exact_raw.append(
-                        {
-                            "id_a": account_ids[i],
-                            "id_b": account_ids[j],
-                            "score": 100.0,  # Exact match
-                            "group_join_reason": "exact_equal_raw",
-                            "raw_exact_key": group["raw_exact_key"],
-                        },
-                    )
+    
+    pairs_mode = (
+        settings.get("pipeline", {})
+        .get("exact_equals_first_pass", {})
+        .get("pairs_emission", "spanning_tree")
+    )
+    
+    if pairs_mode == "spanning_tree":
+        for _, group in exact_groups.iterrows():
+            ids = group["account_id"]
+            if len(ids) >= 2:
+                # Create spanning tree (n-1 edges)
+                for i in range(1, len(ids)):
+                    candidate_pairs_exact_raw.append({
+                        "id_a": ids[0], 
+                        "id_b": ids[i], 
+                        "score": 100.0,
+                        "group_join_reason": "exact_equal_raw",
+                        "raw_exact_key": group["raw_exact_key"],
+                    })
+    else:  # "complete"
+        for _, group in exact_groups.iterrows():
+            account_ids = group["account_id"]
+            if len(account_ids) >= 2:
+                # Create pairs between all members (complete graph)
+                for i in range(len(account_ids)):
+                    for j in range(i + 1, len(account_ids)):
+                        candidate_pairs_exact_raw.append(
+                            {
+                                "id_a": account_ids[i],
+                                "id_b": account_ids[j],
+                                "score": 100.0,  # Exact match
+                                "group_join_reason": "exact_equal_raw",
+                                "raw_exact_key": group["raw_exact_key"],
+                            },
+                        )
 
     candidate_pairs_df = pd.DataFrame(candidate_pairs_exact_raw)
 
@@ -194,7 +230,8 @@ def find_exact_equals_groups(
 
     logger.info(
         f"exact_equals | built_groups={total_reps} | total_members={total_members} | "
-        f"reps={total_reps} | singletons={singletons} | representative_policy={representative_policy}",
+        f"reps={total_reps} | singletons={singletons} | representative_policy={representative_policy} | "
+        f"pairs_mode={pairs_mode} | pairs_generated={len(candidate_pairs_df)}",
     )
 
     return exact_raw_groups, raw_exact_map_df, candidate_pairs_df

@@ -431,15 +431,15 @@ def excel_serial_to_datetime(val: Any) -> Optional[pd.Timestamp]:
                             return result
                     except (ValueError, TypeError):
                         continue
-                # If no specific format works, try pandas default parsing
+                # If no specific format works, try pandas default parsing with coerce
                 try:
-                    result = pd.to_datetime(val)
+                    result = pd.to_datetime(val, errors="coerce")
                     if pd.notna(result):
                         return result
                 except (ValueError, TypeError):
                     pass
             except Exception as e:
-                # Log the specific error for debugging
+                # Log the specific error for debugging (only at debug level)
                 logger.debug(f"Date parsing failed for '{val}': {e}")
 
         # If it's a number, try Excel serial conversion
@@ -458,7 +458,8 @@ def excel_serial_to_datetime(val: Any) -> Optional[pd.Timestamp]:
         return None
 
     except Exception as e:
-        logger.warning(f"Failed to convert {val} to datetime: {e}")
+        # Only log at debug level to avoid spam - invalid dates are common in real data
+        logger.debug(f"Failed to convert {val} to datetime: {e}")
         return None
 
 

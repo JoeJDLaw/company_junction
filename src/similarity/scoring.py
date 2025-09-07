@@ -92,16 +92,23 @@ def compute_score_components(
         base -= cast("int", penalties.get("punctuation_mismatch", 0))
 
     score = max(0, min(100, round(base)))
-    return ScoreComponents(
-        score=score,
-        ratio_name=int(ratio_name),
-        ratio_set=int(ratio_set),
-        jaccard=jaccard,
-        num_style_match=num_style_match,
-        suffix_match=suffix_match,
-        punctuation_mismatch=punct_mismatch,
-        base_score=float(base),
-    )
+    
+    # Return both canonical and alias keys for API compatibility
+    return {
+        # Canonical keys (current API)
+        "composite_score": score,
+        "token_set_ratio": int(ratio_set),
+        "token_sort_ratio": int(ratio_name),
+        "jaccard": jaccard,
+        "num_style_match": num_style_match,
+        "suffix_match": suffix_match,
+        "punctuation_mismatch": punct_mismatch,
+        "base_score": float(base),
+        # Alias keys for backward compatibility
+        "score": score,
+        "ratio_set": int(ratio_set),
+        "ratio_name": int(ratio_name),
+    }
 
 
 def score_pairs_parallel(
@@ -216,10 +223,10 @@ def score_pairs_bulk(
         return []
 
     # Get penalties and settings
-    penalties = settings.get("similarity", {}).get("penalty", {})
-    scoring_settings = settings.get("similarity", {}).get("scoring", {})
-    _use_bulk_cdist = scoring_settings.get("use_bulk_cdist", True)
-    gate_cutoff = scoring_settings.get("gate_cutoff", 72)
+    penalties = settings["similarity"]["penalty"]
+    scoring_settings = settings["similarity"]["scoring"]
+    _use_bulk_cdist = scoring_settings["use_bulk_cdist"]
+    gate_cutoff = scoring_settings["gate_cutoff"]
 
     # Ensure suffix_class column exists with default values
     if "suffix_class" not in df_norm.columns:

@@ -1,0 +1,71 @@
+# Pairs define canonical expectations and the variants to emit.
+# rule: if expectation == must_group => both sides share the same ground_truth_entity_id
+#       if expectation == must_not_group => sides get different ground_truth_entity_id values
+pairs:
+  - id: P0_APPLE_BANK
+    expectation: must_not_group
+    left:
+      gt_entity: GT_APPLE
+      base: "Apple Inc"
+      variants:
+        - "Apple Inc"
+        - "Apple   Inc"
+        - "Apple Inc."
+    right:
+      gt_entity: GT_APPLE_BANK
+      base: "Apple Bank Inc"
+      variants:
+        - "Apple Bank Inc"
+        - "Apple Bank Incorporated"
+    tags: ["adversarial", "bank", "must_not_group"]
+    notes: "Bank distractor: same token core, different business type"
+
+  - id: P0_ORACLE_PARK
+    expectation: must_not_group
+    left:  { gt_entity: GT_ORACLE, base: "Oracle", variants: ["Oracle", "Oracle Corp"] }
+    right: { gt_entity: GT_ORACLE_PARK, base: "Oracle Park", variants: ["Oracle Park", "Oracle Stadium"] }
+    tags: ["adversarial", "venue", "must_not_group"]
+    notes: "Venue distractor"
+
+  - id: P0_TARGET_FIELD
+    expectation: must_not_group
+    left:  { gt_entity: GT_TARGET, base: "Target Corp", variants: ["Target Corp", "Target Corporation"] }
+    right: { gt_entity: GT_TARGET_FIELD, base: "Target Field", variants: ["Target Field"] }
+    tags: ["adversarial", "venue", "must_not_group"]
+    notes: "Venue distractor"
+
+  - id: P0_UBER_EATS
+    expectation: must_not_group
+    left:  { gt_entity: GT_UBER, base: "Uber Technologies", variants: ["Uber Technologies", "Uber Technologies Inc"] }
+    right: { gt_entity: GT_UBER_EATS, base: "Uber Eats", variants: ["Uber Eats"] }
+    tags: ["adversarial", "brand_ext", "must_not_group"]
+    notes: "Brand extension distractor"
+
+  - id: P0_MSFT_HOMOGLYPH
+    expectation: must_not_group
+    left:  { gt_entity: GT_MICROSOFT_LATIN, base: "Microsoft", variants: ["Microsoft", "Microsoft Inc"] }
+    right: { gt_entity: GT_MICROSOFT_CYR,   base: "Microѕoft", variants: ["Microѕoft", "Microѕoft Inc"] }  # note Cyrillic ѕ
+    tags: ["adversarial", "homoglyph", "must_not_group"]
+    notes: "Homoglyph trap (Cyrillic ѕ)"
+
+  - id: P0_JNJ_ALIAS
+    expectation: must_group
+    left:  { gt_entity: GT_JNJ, base: "Johnson & Johnson", variants: ["Johnson & Johnson"] }
+    right: { gt_entity: GT_JNJ, base: "Johnson and Johnson", variants: ["Johnson and Johnson"] }
+    tags: ["control", "alias", "must_group"]
+    notes: "Ampersand vs 'and'"
+
+  - id: P0_3M_ALIAS
+    expectation: must_group
+    left:  { gt_entity: GT_3M, base: "3M", variants: ["3M"] }
+    right: { gt_entity: GT_3M, base: "3M Company", variants: ["3M Company"] }
+    tags: ["control", "numeric_prefix", "must_group"]
+    notes: "Numeric prefix variant"
+
+  # Optional: near-threshold probes (tune names to hit token_set_ratio≈100 but composite < medium)
+  - id: P0_NEAR_THRESHOLD_APPLE
+    expectation: must_not_group
+    left:  { gt_entity: GT_APPLE_NEAR, base: "Apple Inc", variants: ["Apple Inc"] }
+    right: { gt_entity: GT_APPLE_SERVICES, base: "Apple Services", variants: ["Apple Services"] }
+    tags: ["probe", "near_threshold", "must_not_group"]
+    notes: "High token_set_ratio, low semantic agreement"

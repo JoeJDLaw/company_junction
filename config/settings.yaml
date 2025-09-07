@@ -19,6 +19,7 @@ pipeline:
     min_group_size: 2
     key_trim: true
     representative_policy: "min_account_id"
+    pairs_emission: "spanning_tree"  # "spanning_tree" | "complete"
 
 # Filtering Configuration
 filtering:
@@ -123,6 +124,10 @@ disposition:
     compile_token_regex_once: true  # Phase 1.35.3: compile regex once
     suspicious_singleton_regex: "(?i)\\b(unknown|unsure|not sure|no idea|test|sample|example|dummy|temp|temporary|temp agency|none|n/?a|tbd|delete|remove|do not use)\\b"
   # Phase 1.35.3: Moved hardcoded blacklist to configuration
+  # Blacklist behavior:
+  # - No disposition.blacklist key → built-ins + manual terms
+  # - Key present (even empty lists) → config terms + manual only (no built-ins, no heuristics)
+  # - Per-process caches; clear_blacklist_cache() resets during long runs
   blacklist:
     tokens: [
       "temp", "temporary", "unknown", "na", "n/a", "tbd", "test", "sample",
@@ -155,7 +160,7 @@ ui_perf:
 ui:
   sort:
     default: "group_size DESC"      # Default sort when unknown sort key provided
-  use_duckdb_for_groups: false     # Legacy flag for DuckDB preference
+  use_duckdb_for_groups: true      # Force DuckDB routing for groups list
   similarity_slider:
     enable: true
     control: "stepper"              # plus/minus control, not free slider
@@ -164,6 +169,14 @@ ui:
     min: 90                         # lower bound for stepper
     max: 100                        # upper bound for stepper
     step: 1                         # increment for +/- buttons
+  page_size_default: 50            # Emergency reduction from 500
+  timeout_seconds: 30              # Timeout for UI operations
+  cache_capacity: 16               # LRU cache capacity for details
+  duckdb_threads: 4                # Number of DuckDB threads
+  max_pyarrow_group_stats_seconds: 5  # Auto-switch threshold for group stats
+  # Admin and maintenance features
+  admin_mode: true                 # Enable admin features like run deletion
+  enable_run_deletion: true        # Enable run deletion functionality
 
 # Salesforce Integration
 salesforce:
@@ -193,6 +206,18 @@ engine:
       row_group_size: 128000
       dictionary_compression: true
       statistics: true
+
+# Engine Selection Configuration
+engines:
+  # Backend selection for specific stages
+  filtering: "auto"  # "auto" | "pandas" | "duckdb"
+  exact_equals: "auto"  # "auto" | "pandas" | "duckdb"
+  
+  # Automatic selection thresholds
+  duckdb_threshold_rows: 50000  # Use DuckDB for datasets >= this size
+  
+  # Feature flags for unstable DuckDB implementations
+  enable_unstable_duckdb_paths: false  # Enable experimental DuckDB implementations
 
 # Parallelism Configuration
 parallelism:
@@ -252,17 +277,6 @@ paths:
   processed_data: "data/processed"
   test_fixtures: "tests/fixtures"
 
-# UI Configuration
-ui:
-  page_size_default: 50  # Emergency reduction from 500
-  timeout_seconds: 30  # Timeout for UI operations
-  cache_capacity: 16  # LRU cache capacity for details
-  duckdb_threads: 4  # Number of DuckDB threads
-  max_pyarrow_group_stats_seconds: 5  # Auto-switch threshold for group stats
-  use_duckdb_for_groups: true  # Force DuckDB routing for groups list
-  # Admin and maintenance features
-  admin_mode: true  # Enable admin features like run deletion
-  enable_run_deletion: true  # Enable run deletion functionality
 
 # Phase 1.35.4: Group Stats Configuration
 group_stats:

@@ -77,8 +77,8 @@ def pair_scores(
         logger.info(f"Generated {len(pairs)} candidate pairs")
 
         # Compute similarity scores
-        scoring_settings = settings.get("similarity", {}).get("scoring", {})
-        use_bulk_cdist = scoring_settings.get("use_bulk_cdist", True)
+        scoring_settings = settings["similarity"]["scoring"]
+        use_bulk_cdist = scoring_settings["use_bulk_cdist"]
 
         if use_bulk_cdist and len(pairs) > 1000:
             logger.info("Using bulk scoring for large dataset")
@@ -101,7 +101,7 @@ def pair_scores(
         pairs_df = pd.DataFrame.from_records(scores)
 
         # Filter on medium threshold (single canonical key)
-        medium_threshold = settings.get("similarity", {}).get("medium", 84)
+        medium_threshold = settings["similarity"]["medium"]
         pairs_df = pairs_df[pairs_df["score"] >= medium_threshold].copy()
 
         # Sort explicitly: id_a, id_b ascending, score descending
@@ -113,11 +113,7 @@ def pair_scores(
         # Ensure string types for consistency
         pairs_df = ensure_pandas_strings(pairs_df, ["id_a", "id_b"])
 
-        # Save candidate pairs if interim directory provided
-        if interim_dir:
-            candidate_pairs_path = f"{interim_dir}/candidate_pairs.parquet"
-            pairs_df.to_parquet(candidate_pairs_path, index=False)
-            logger.info(f"Candidate pairs saved to {candidate_pairs_path}")
+        # Saving is handled by the caller via save_candidate_pairs(...) to honor interim_format
 
         logger.info(
             f"Final result: {len(pairs_df)} pairs above medium threshold ({medium_threshold})",
@@ -145,7 +141,11 @@ def pair_scores(
 
 def save_candidate_pairs(pairs_df: pd.DataFrame, pairs_path: str) -> None:
     """Save candidate pairs DataFrame to file."""
-    pairs_df.to_parquet(pairs_path, index=False)
+    if pairs_path.endswith(".parquet"):
+        from src.utils.io_utils import write_parquet_safely
+        write_parquet_safely(pairs_df, pairs_path)
+    else:
+        pairs_df.to_csv(pairs_path, index=False)
     logger.info(f"Candidate pairs saved to {pairs_path}")
 
 

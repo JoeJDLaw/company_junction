@@ -94,10 +94,22 @@ The `coverage.xml` file is included for CI integration:
 
 ## 🎯 Next Steps
 
-1. **Review the testing plan** in `docs/plans/testing_plan_phase2.md`
+1. **Review the testing plan** in `TESTING_PLAN_README.md`
 2. **Generate HTML report** locally using instructions above
 3. **Identify specific gaps** in critical modules
-4. **Begin Phase 1 implementation** after plan approval
+4. **Address adversarial false positives** - See [Phase2.0.2-Adversarial-FalsePositives.md](docs/plans/Phase2.0.2-Adversarial-FalsePositives.md) for detailed plan
+5. **Begin Phase 1 implementation** after plan approval
+
+## 🚨 Critical Coverage Gaps (Adversarial Testing)
+
+**Priority**: The adversarial false-positive issue requires new similarity scoring logic that must be thoroughly tested:
+
+- **New distractor detection logic** - Requires ≥95% coverage
+- **Non-distractor evidence validation** - Requires ≥95% coverage  
+- **Penalty application and logging** - Requires ≥95% coverage
+- **Configuration validation** - Requires ≥95% coverage
+
+**Impact**: These new code paths are critical for production safety and must be covered before deployment.
 
 ---
 

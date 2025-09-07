@@ -230,23 +230,33 @@ class DuckDBGroupStatsEngine:
         df_copy = df.copy()
         self.conn.register("groups_df", df_copy)
 
-        # SQL query for group statistics
+        # SQL query for group statistics with proper column handling
+        # Check if disposition column exists in the DataFrame
+        has_disposition = DISPOSITION in df_copy.columns
+        
+        if has_disposition:
+            disposition_select = f"""
+            COALESCE(
+                MAX(CASE WHEN {IS_PRIMARY} THEN "{DISPOSITION}" ELSE NULL END),
+                'Update'
+            ) as disposition_col"""
+        else:
+            # If disposition column doesn't exist, use default value
+            disposition_select = "'Update' as disposition_col"
+        
         query = f"""
         SELECT
-            {GROUP_ID},
+            "{GROUP_ID}",
             COUNT(*) as {GROUP_SIZE},
-            MAX(CASE WHEN {WEAKEST_EDGE_TO_PRIMARY} IS NOT NULL THEN {WEAKEST_EDGE_TO_PRIMARY} ELSE 0.0 END) as {MAX_SCORE},
+            MAX(CASE WHEN "{WEAKEST_EDGE_TO_PRIMARY}" IS NOT NULL THEN "{WEAKEST_EDGE_TO_PRIMARY}" ELSE 0.0 END) as {MAX_SCORE},
             COALESCE(
-                MAX(CASE WHEN {IS_PRIMARY} THEN {ACCOUNT_NAME} ELSE NULL END),
-                MIN({ACCOUNT_NAME})
+                MAX(CASE WHEN "{IS_PRIMARY}" THEN "{ACCOUNT_NAME}" ELSE NULL END),
+                MIN("{ACCOUNT_NAME}")
             ) as {PRIMARY_NAME},
-            COALESCE(
-                MAX(CASE WHEN {IS_PRIMARY} THEN {DISPOSITION} ELSE NULL END),
-                'Update'
-            ) as disposition_col
+            {disposition_select}
         FROM groups_df
-        GROUP BY {GROUP_ID}
-        ORDER BY {GROUP_ID}
+        GROUP BY "{GROUP_ID}"
+        ORDER BY "{GROUP_ID}"
         """
 
         # Execute query
