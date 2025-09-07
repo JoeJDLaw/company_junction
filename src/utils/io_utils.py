@@ -41,7 +41,7 @@ def load_settings(path: str) -> dict[str, Any]:
     DEFAULTS = {
         "data": {
             "name_column": "Account Name",
-            "supported_formats": [".csv", ".xlsx", ".xls"],
+            "supported_formats": [".csv", ".xlsx", ".xls", ".json", ".xml"],
             "output_pattern": "cleaned_{object_type}_{timestamp}.csv",
         },
         "similarity": {
@@ -64,6 +64,11 @@ def load_settings(path: str) -> dict[str, Any]:
             "batch_size": 200,
             "max_retries": 3,
             "retry_delay": 5,
+        },
+        "ingest": {
+            "name_synonyms": ["account name","name","company","company name","legal name","organization","org name"],
+            "id_synonyms": ["account id","id","sfid","external id","uuid","guid","record id"],
+            "use_input_disposition": False
         },
         "logging": {
             "level": "INFO",
@@ -189,7 +194,7 @@ def list_data_files(
 
     """
     if extensions is None:
-        extensions = [".csv", ".xlsx", ".xls"]
+        extensions = [".csv", ".xlsx", ".xls", ".json", ".xml"]
 
     files: list[Path] = []
     for ext in extensions:
@@ -450,7 +455,7 @@ def detect_file_format(path: str) -> str:
         path: File path to analyze
         
     Returns:
-        File format string: 'csv', 'xlsx', 'xls', or 'unsupported'
+        File format string: 'csv', 'xlsx', 'xls', 'json', 'xml', or 'unsupported'
     """
     from pathlib import Path
     
@@ -463,6 +468,10 @@ def detect_file_format(path: str) -> str:
         return "xlsx"
     if suffix == ".xls":
         return "xls"
+    if suffix == ".json":
+        return "json"
+    if suffix == ".xml":
+        return "xml"
     
     # Light content sniff: if no extension but starts like CSV header
     try:
@@ -470,28 +479,43 @@ def detect_file_format(path: str) -> str:
             head = f.read(64).lower()
         if b"," in head and b"account_name" in head:
             return "csv"
+        if head.startswith(b"<?xml") or head.startswith(b"<"):
+            return "xml"
+        if head.startswith(b"{"):
+            return "json"
     except Exception:
         pass
     
     return "unsupported"
 
 
-def read_input_file(path: str, *, col_overrides: dict[str, str] | None = None) -> pd.DataFrame:
-    """Read input file with robust format detection and column validation.
+def read_input_file(
+    path: str, 
+    *, 
+    col_overrides: dict[str, str] | None = None,
+    json_record_path: str | None = None,
+    xml_record_path: str | None = None,
+    sheet: str | None = None,
+    add_source_path: bool = False,  # NEW
+) -> pd.DataFrame:
+    """Read input file with robust format detection and ordinal tracking.
     
     Args:
         path: Path to input file
         col_overrides: Optional column name mapping (old_name -> new_name)
+        json_record_path: Optional JSON record path for JSON files
+        xml_record_path: Optional XML record XPath for XML files
+        sheet: Optional Excel sheet name or index
+        add_source_path: If True, JSON/XML rows will include per-row __source_path
         
     Returns:
-        DataFrame with normalized columns and created_date as YYYY-MM-DD string
+        DataFrame with source ordinal tracking and normalized columns (and __source_path for JSON/XML if requested)
         
     Raises:
         ValueError: If file format is unsupported or required columns are missing
         ImportError: If required engine dependencies are missing
     """
     import importlib.util
-    from pathlib import Path
     
     fmt = detect_file_format(path)
     if fmt == "unsupported":
@@ -499,14 +523,24 @@ def read_input_file(path: str, *, col_overrides: dict[str, str] | None = None) -
 
     if fmt == "csv":
         df = pd.read_csv(path, dtype=str)
+        # Add source ordinal for CSV (1-based line index) - P1 Fix: cast to int32
+        df["__source_row_ordinal"] = pd.Series(range(1, len(df) + 1), dtype="int32")
     elif fmt == "xlsx":
         if importlib.util.find_spec("openpyxl") is None:
             raise ImportError("openpyxl required to read .xlsx files")
-        df = pd.read_excel(path, dtype=str, engine="openpyxl")
+        df = pd.read_excel(path, dtype=str, engine="openpyxl", sheet_name=sheet)
+        # Add source ordinal for Excel (1-based row index) - P1 Fix: cast to int32
+        df["__source_row_ordinal"] = pd.Series(range(1, len(df) + 1), dtype="int32")
     elif fmt == "xls":
         if importlib.util.find_spec("xlrd") is None:
             raise ImportError("xlrd required to read .xls files")
-        df = pd.read_excel(path, dtype=str, engine="xlrd")
+        df = pd.read_excel(path, dtype=str, engine="xlrd", sheet_name=sheet)
+        # Add source ordinal for Excel (1-based row index) - P1 Fix: cast to int32
+        df["__source_row_ordinal"] = pd.Series(range(1, len(df) + 1), dtype="int32")
+    elif fmt == "json":
+        df = parse_json_to_dataframe(path, json_record_path, add_source_path=add_source_path)
+    elif fmt == "xml":
+        df = parse_xml_to_dataframe(path, xml_record_path, add_source_path=add_source_path)
     else:
         raise ValueError(f"Unsupported file format: {fmt}")
 
@@ -528,11 +562,130 @@ def read_input_file(path: str, *, col_overrides: dict[str, str] | None = None) -
     return df
 
 
+def parse_json_to_dataframe(
+    path: str, 
+    record_path: str | None = None,
+    add_source_path: bool = False
+) -> pd.DataFrame:
+    """Parse JSON file to DataFrame with ordinal tracking and optional per-row source paths."""
+    import json
+    from pathlib import Path
+    
+    # P1 Fix: Guard optional deps for JSON/XML
+    try:
+        from jsonpath_ng import parse
+    except ImportError as e:
+        raise ImportError("--json-record-path requires jsonpath-ng. Install with `pip install jsonpath-ng`.") from e
+    
+    with open(path, 'r', encoding='utf-8') as f:
+        doc = json.load(f)
+    
+    if not record_path:
+        raise ValueError("record_path is required for JSON parsing")
+    
+    expr = parse(record_path)
+    matches = list(expr.find(doc))
+    
+    rows = []
+    for i, m in enumerate(matches, start=1):
+        # Flatten the matched value
+        rec = pd.json_normalize(m.value, max_level=1)
+        rec["__source_row_ordinal"] = pd.Series([i], dtype="int32")
+        
+        if add_source_path:
+            # Try to capture the specific, per-row path. Fallback to the selector.
+            path_str = None
+            try:
+                # jsonpath-ng may expose full path on recent versions
+                path_str = str(getattr(m, "full_path", None) or m.path)
+            except Exception:
+                path_str = record_path  # safe fallback
+            
+            # Include file name for extra clarity
+            rec["__source_path"] = f"{Path(path).name}:{path_str}"
+        
+        rows.append(rec)
+    
+    if not rows:
+        columns = ["__source_row_ordinal"]
+        if add_source_path:
+            columns.append("__source_path")
+        return pd.DataFrame(columns=columns)
+    
+    df = pd.concat(rows, ignore_index=True)
+    
+    # Coerce passthroughs to string for safety
+    for c in df.columns:
+        if c not in ("__source_row_ordinal", "__source_path"):
+            df[c] = df[c].astype("string")
+    
+    return df
+
+
+def parse_xml_to_dataframe(
+    path: str, 
+    record_xpath: str | None = None,
+    add_source_path: bool = False
+) -> pd.DataFrame:
+    """Parse XML file to DataFrame with ordinal tracking and optional per-row source paths."""
+    from pathlib import Path
+    
+    # P1 Fix: Guard optional deps for JSON/XML
+    try:
+        from lxml import etree
+    except ImportError as e:
+        raise ImportError("--xml-record-path requires lxml. Install with `pip install lxml`.") from e
+    
+    if not record_xpath:
+        raise ValueError("XML parsing requires --xml-record-path")
+    
+    parser = etree.XMLParser(recover=True)
+    tree = etree.parse(path, parser)
+    nodes = tree.xpath(record_xpath)
+    
+    rows = []
+    for i, node in enumerate(nodes, start=1):
+        # Extract immediate children to columns
+        rec_dict = {}
+        for child in node:
+            rec_dict[child.tag] = child.text or ""
+        
+        rec = pd.DataFrame([rec_dict])
+        rec["__source_row_ordinal"] = pd.Series([i], dtype="int32")
+        
+        if add_source_path:
+            try:
+                abs_xpath = tree.getpath(node)  # absolute, index-inclusive
+            except Exception:
+                abs_xpath = record_xpath  # safe fallback
+            
+            rec["__source_path"] = f"{Path(path).name}:{abs_xpath}"
+        
+        rows.append(rec)
+    
+    if not rows:
+        columns = ["__source_row_ordinal"]
+        if add_source_path:
+            columns.append("__source_path")
+        return pd.DataFrame(columns=columns)
+    
+    df = pd.concat(rows, ignore_index=True)
+    
+    # Coerce passthroughs to string for safety
+    for c in df.columns:
+        if c not in ("__source_row_ordinal", "__source_path"):
+            df[c] = df[c].astype("string")
+    
+    return df
+
+
 def _require_pyarrow():
     """Require pyarrow to be available for parquet operations."""
     import importlib.util
     if importlib.util.find_spec("pyarrow") is None:
         raise ImportError("pyarrow required for parquet IO")
+
+
 
 
 def write_parquet_safely(df: pd.DataFrame, path: str) -> None:

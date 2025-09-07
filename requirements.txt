@@ -22,6 +22,7 @@ iniconfig==2.1.0
 isodate==0.7.2
 Jinja2==3.1.6
 joblib==1.5.2
+jsonpath-ng==1.6.1
 jsonschema==4.25.1
 jsonschema-specifications==2025.4.1
 libcst==1.7.0

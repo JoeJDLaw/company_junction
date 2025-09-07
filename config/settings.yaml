@@ -6,10 +6,27 @@ data:
   name_column: "Account Name"
   
   # Supported file formats
-  supported_formats: [".csv", ".xlsx", ".xls"]
+  supported_formats: [".csv", ".xlsx", ".xls", ".json", ".xml"]
   
   # Output file pattern
   output_pattern: "cleaned_{object_type}_{timestamp}.csv"
+
+# Ingest Configuration
+ingest:
+  name_synonyms: ["account name", "name", "company", "company name", "legal name", "organization", "org name"]
+  id_synonyms: ["account id", "id", "sfid", "external id", "uuid", "guid", "record id"]
+  use_input_disposition: false
+  preserve_input_column_order: true
+
+# Compatibility Settings
+compatibility:
+  suppress_metadata_columns: false    # If true, do NOT add any new metadata columns beyond the three above
+  force_salesforce_mode: false        # Emergency fallback if any regressions are detected
+
+# Observability Settings
+observability:
+  structured_logs: true               # Emit one JSON line summarizing mappings per run
+  dry_run_ingest: false               # If true, run ingest mapping and logging but do not proceed to heavy stages
 
 # Pipeline Configuration
 pipeline:
@@ -56,6 +73,31 @@ similarity:
   scoring:
     use_bulk_cdist: true  # NEW: use RapidFuzz bulk scoring
     gate_cutoff: 72  # NEW: token_set_ratio gate cutoff
+  
+  # Distractor guardrails to prevent false-positive groupings
+  distractor_guardrails:
+    enabled: false  # Default off - flip to true to enable guardrails
+    strict_mode: false  # Optional ramp - when true, applies stricter penalties
+    
+    # Distractor token categories and penalty weights
+    distractor_tokens:
+      bank: ["bank", "banking", "financial", "credit", "loan"]
+      venue: ["park", "field", "stadium", "arena", "center", "theater", "theatre"]
+      brand_extension: ["eats", "web services", "aws", "cloud", "payments"]
+      generic: ["services", "solutions", "group", "holdings", "ventures"]
+    
+    # Penalty weights (0-100, where 100 = complete veto)
+    penalty_weights:
+      bank: 50      # Moderate penalty for bank distractors
+      venue: 75     # Strong penalty for venue distractors  
+      brand_extension: 40  # Moderate penalty for brand extensions
+      generic: 20   # Light penalty for generic terms
+    
+    # Non-distractor evidence requirements
+    evidence_requirements:
+      min_non_distractor_tokens: 2  # Require ≥2 shared non-distractor tokens
+      strong_corroboration_threshold: 90  # Char-sim threshold for 1-token + corroboration
+      require_suffix_match_for_corroboration: true  # Require suffix match for 1-token cases
   
   # NEW: Enhanced normalization for better retail brand matching
   normalization:

@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -94,20 +95,43 @@ from src.utils.schema_utils import (
 logger = logging.getLogger(__name__)
 
 
+def write_artifact(df: pd.DataFrame, base: str, prefer_parquet: bool = True) -> str:
+    """Write DataFrame to parquet or CSV with fallback."""
+    Path(base).parent.mkdir(parents=True, exist_ok=True)
+    if prefer_parquet:
+        try:
+            from src.utils.io_utils import write_parquet_safely
+            write_parquet_safely(df, base + ".parquet")
+            return base + ".parquet"
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"Parquet write failed ({e!s}) → falling back to CSV")
+    csv = base + ".csv"
+    df.to_csv(csv, index=False)
+    logger.info(f"Parquet unavailable → wrote CSV: {csv}")
+    return csv
+
+
 def _assert_pairs_cover_accounts(
     pairs: pd.DataFrame,
     accounts: pd.DataFrame,
-    id_col: str = ACCOUNT_ID,
+    id_col: str = "internal_row_id",  # P0 Fix: Use internal_row_id by default for v0
 ) -> None:
     """Assert that all pair IDs exist in the accounts DataFrame.
 
     Args:
         pairs: DataFrame with id_a and id_b columns
         accounts: DataFrame with account IDs
-        id_col: Name of the ID column in accounts DataFrame
+        id_col: Name of the ID column in accounts DataFrame (default: internal_row_id for v0)
 
     """
-    acc_ids = accounts[id_col].astype("string").fillna("").str.strip()
+    # Ensure dtype safety for nullable dtypes
+    pairs = pairs.assign(
+        id_a=pairs["id_a"].astype("string"),
+        id_b=pairs["id_b"].astype("string")
+    )
+    acc_ids = accounts[id_col].astype("string")
     a_missing = ~pairs["id_a"].isin(acc_ids)
     b_missing = ~pairs["id_b"].isin(acc_ids)
 
@@ -287,18 +311,266 @@ def _create_performance_summary_enhanced(
         raise
 
 
-def load_salesforce_data(file_path: str, *, col_overrides: dict[str, str] | None = None) -> pd.DataFrame:
-    """Load Salesforce export data from CSV or Excel file.
+def load_salesforce_data(
+    file_path: str, 
+    *, 
+    col_overrides: dict[str, str] | None = None,
+    json_record_path: str | None = None,
+    xml_record_path: str | None = None,
+    sheet: str | None = None
+) -> pd.DataFrame:
+    """Load data from CSV, Excel, JSON, or XML file.
 
     Args:
-        file_path: Path to the Salesforce export file
+        file_path: Path to the input file
         col_overrides: Optional column name mapping (old_name -> new_name)
+        json_record_path: Optional JSON record path for JSON files
+        xml_record_path: Optional XML record XPath for XML files
+        sheet: Optional Excel sheet name or index
 
     Returns:
-        DataFrame containing the Salesforce data with normalized created_date
+        DataFrame containing the data with source ordinal tracking
 
     """
-    return read_input_file(file_path, col_overrides=col_overrides)
+    return read_input_file(
+        file_path, 
+        col_overrides=col_overrides,
+        json_record_path=json_record_path,
+        xml_record_path=xml_record_path,
+        sheet=sheet,
+        add_source_path=bool(json_record_path or xml_record_path),  # NEW
+    )
+
+
+def apply_ingest_mapping(
+    df: pd.DataFrame,
+    name_col: Optional[str] = None,
+    id_col: Optional[str] = None,
+    run_id: Optional[str] = None,
+    settings: Optional[dict] = None,
+    dry_run: bool = False,
+    log_preview: bool = False
+) -> tuple[pd.DataFrame, str, Optional[str]]:
+    """Apply ingest mapping to DataFrame.
+    
+    Args:
+        df: Input DataFrame with __source_row_ordinal column
+        name_col: Optional name column (raw or normalized)
+        id_col: Optional ID column (raw or normalized)
+        run_id: Run ID for internal_row_id generation
+        settings: Settings dictionary
+        dry_run: If True, only validate and log
+        log_preview: If True, include sample rows in logs
+        
+    Returns:
+        DataFrame with ingest mapping applied
+    """
+    if settings is None:
+        settings = {}
+    
+    # 0) Capture original headers and normalize (collision-safe)
+    original_headers = list(df.columns)
+    new_cols = normalize_headers_unique_list(list(df.columns))
+    if len(set(new_cols)) != len(new_cols):
+        logger.warning("Header normalization produced duplicates; investigate rules.")
+    df.columns = new_cols
+    
+    # Initialize resolved columns
+    resolved_id_col = None  # P0 Fix: prevent UnboundLocalError
+    
+    # 1) Map account_name (required) - support both raw and normalized names
+    detected_name_col = name_col or detect_name_col(df.columns, settings, df)
+    if detected_name_col:
+        resolved_name_col, resolution_type = resolve_header_arg(df.columns, detected_name_col, normalize_one)
+        if not resolved_name_col:
+            raise ValueError("Need an account name column. Use --name-col or include one of the synonyms.")
+        logger.info(f"Resolved name column '{resolved_name_col}' via {resolution_type} resolution")
+    else:
+        raise ValueError("Need an account name column. Use --name-col or include one of the synonyms.")
+    
+    df["account_name"] = df[resolved_name_col].astype("string")
+    
+    # 2) Map account_id (optional) - use NULL for missing values
+    detected_id_col = id_col or detect_id_col(df.columns, settings, df)
+    if detected_id_col:
+        resolved_id_col, resolution_type = resolve_header_arg(df.columns, detected_id_col, normalize_one)
+        if resolved_id_col:
+            logger.info(f"Resolved ID column '{resolved_id_col}' via {resolution_type} resolution")
+            df["account_id"] = df[resolved_id_col].astype("string")
+        else:
+            df["account_id"] = pd.Series(pd.NA, index=df.index, dtype="string")
+    else:
+        df["account_id"] = pd.Series(pd.NA, index=df.index, dtype="string")
+    
+    # 3) Input disposition passthrough (no effect on computation)
+    if "disposition" in df.columns and not settings.get("ingest", {}).get("use_input_disposition", False):
+        df["input_disposition"] = df["disposition"].astype("string")
+        df.drop(columns=["disposition"], inplace=True)
+        logger.info("ingest: moved 'disposition' → 'input_disposition' (flag off)")
+    
+    # 4) Generate internal_row_id from source ordinal (string)
+    source_ordinal_col = "source_row_ordinal"  # Normalized name
+    if source_ordinal_col not in df.columns:
+        raise ValueError("Missing source_row_ordinal (normalized from __source_row_ordinal) – this should be added during file parsing")
+    
+    safe_run_id = run_id or "run"
+    df["internal_row_id"] = df[source_ordinal_col].map(lambda i: f"{safe_run_id}-{int(i):09d}").astype("string")
+    
+    # 5) Store original headers for export ordering
+    df.attrs["original_headers"] = original_headers
+    
+    # 6) Apply dry-run logging if requested
+    if dry_run:
+        run_type = settings.get("run_type", "dev") if settings else "dev"
+        dry_run_ingest(df, resolved_name_col, resolved_id_col, run_id, log_preview, run_type)
+    
+    return df, resolved_name_col, resolved_id_col
+
+
+def normalize_one(c: str) -> str:
+    """Normalize a single column name to snake_case."""
+    c = (c or "").strip().lower()
+    c = re.sub(r"[^a-z0-9]+", "_", c)
+    c = re.sub(r"_+", "_", c).strip("_")
+    return c
+
+
+def normalize_headers_unique_list(cols: list[str]) -> list[str]:
+    """Collision-safe header normalization returning a list."""
+    seen = set()
+    out = []
+    for c in cols:
+        base = normalize_one(c)
+        k = base
+        i = 2
+        while k in seen:
+            k = f"{base}__{i}"
+            i += 1
+        seen.add(k)
+        out.append(k)
+        if k != base:
+            logger.info(f"Header collision resolved: '{c}' -> '{k}'")
+    return out
+
+
+def normalize_headers_unique(cols):
+    """Collision-safe header normalization (legacy dict version)."""
+    new_cols = normalize_headers_unique_list(list(cols))
+    return dict(zip(cols, new_cols))
+
+
+def resolve_header_arg(df_cols, user_arg, normalizer):
+    """Resolve header argument supporting both raw and normalized names."""
+    if user_arg in df_cols:
+        return user_arg, "raw"
+    n = normalizer(user_arg)
+    if n in df_cols:
+        return n, "normalized"
+    return None, None
+
+
+def _norm_set(s):
+    """Normalize a set of strings using normalize_one."""
+    return {normalize_one(x) for x in s}
+
+
+def _norm_tokens(c: str) -> set[str]:
+    """Extract normalized tokens from a column name."""
+    s = normalize_one(c)
+    return set(s.split("_")) if s else set()
+
+
+def detect_name_col(cols, settings, df=None):
+    """Detect name column using synonyms and compound token matching."""
+    syn = settings.get("ingest", {}).get("name_synonyms",
+          {"account name","name","company","company name","legal name","organization","org name"})
+    syn_norm = _norm_set(syn)
+    
+    # exact match first
+    exact = [c for c in cols if c in syn_norm]
+    if exact: 
+        return pick_best_by_non_null(exact, df)
+    
+    # token overlap (e.g., company_name)
+    token_hits = [c for c in cols if _norm_tokens(c) & _norm_set({"company","name","account","org"})]
+    return pick_best_by_non_null(token_hits, df) if token_hits else None
+
+
+def detect_id_col(cols, settings, df=None):
+    """Detect ID column using synonyms and compound token matching."""
+    syn = settings.get("ingest", {}).get("id_synonyms",
+          {"account id","id","sfid","external id","uuid","guid","record id"})
+    syn_norm = _norm_set(syn)
+    
+    # exact match first
+    exact = [c for c in cols if c in syn_norm]
+    if exact: 
+        return pick_best_by_non_null(exact, df)
+    
+    # token overlap (e.g., account_id, external_id)
+    token_hits = [c for c in cols if _norm_tokens(c) & _norm_set({"id","sfid","uuid","guid","record"})]
+    return pick_best_by_non_null(token_hits, df) if token_hits else None
+
+
+def pick_best_by_non_null(candidates, df):
+    """Pick the candidate with highest non-null rate."""
+    if not candidates:
+        return None
+    
+    if len(candidates) == 1:
+        return candidates[0]
+    
+    # If no DataFrame provided, just return first candidate
+    if df is None:
+        logger.warning("No DataFrame provided for non-null rate calculation, using first candidate")
+        return candidates[0]
+    
+    # P1 Fix: Implement actual non-null rate calculation
+    best_candidate = None
+    best_rate = -1
+    
+    for candidate in candidates:
+        if candidate in df.columns:
+            non_null_count = df[candidate].notna().sum()
+            total_count = len(df)
+            non_null_rate = non_null_count / total_count if total_count > 0 else 0
+            
+            if non_null_rate > best_rate:
+                best_rate = non_null_rate
+                best_candidate = candidate
+    
+    if best_candidate is None:
+        logger.warning(f"No valid candidates found among {candidates}, using first candidate")
+        return candidates[0]
+    
+    logger.info(f"Selected '{best_candidate}' with {best_rate:.1%} non-null rate among {len(candidates)} candidates")
+    return best_candidate
+
+
+def dry_run_ingest(df, name_col, id_col, run_id, log_preview, run_type="dev"):
+    """Enhanced dry-run with validation and structured logging."""
+    log_ingest = {
+        "name_col": name_col,
+        "id_col": id_col or None,
+        "name_non_null": int(df[name_col].notna().sum()),
+        "id_non_null": int(df["account_id"].notna().sum()),
+        "rows": int(len(df)),
+        "internal_row_id_generated": True,
+        "dry_run": True,
+    }
+    
+    # P1 Fix: Guard PII preview in production
+    if log_preview:
+        if run_type == "prod":
+            logger.warning("--log-preview blocked in production mode for PII protection")
+        else:
+            preview_cols = ["account_name", "account_id", "internal_row_id"]
+            available_cols = [c for c in preview_cols if c in df.columns]
+            if available_cols:
+                log_ingest["preview"] = df[available_cols].head(5).to_dict("records")
+                logger.info("PII preview included in logs (non-production mode)")
+    
+    logger.info(json.dumps({"ingest_summary": log_ingest}))
 
 
 def validate_required_columns(df: pd.DataFrame) -> bool:
@@ -316,7 +588,7 @@ def validate_required_columns(df: pd.DataFrame) -> bool:
     """
     # Use canonical column names since DataFrame has been renamed
     # Only check for columns that are actually mapped and renamed
-    required_columns = [ACCOUNT_ID, ACCOUNT_NAME]  # CREATED_DATE is optional, auto-added if missing
+    required_columns = [ACCOUNT_NAME]  # ACCOUNT_ID is optional in v0, CREATED_DATE is optional, auto-added if missing
 
     # Check for Account Name (required)
     if ACCOUNT_NAME not in df.columns:
@@ -411,6 +683,14 @@ def run_pipeline(
     col_overrides: Optional[dict[str, str]] = None,
     profile: bool = False,
     run_type: str = "dev",
+    # Ingest-specific arguments
+    name_col: Optional[str] = None,
+    id_col: Optional[str] = None,
+    json_record_path: Optional[str] = None,
+    xml_record_path: Optional[str] = None,
+    sheet: Optional[str] = None,
+    ingest_dry_run: bool = False,
+    log_preview: bool = False,
 ) -> None:
     """Run the complete deduplication pipeline.
 
@@ -457,6 +737,22 @@ def run_pipeline(
 
     # Load configuration
     settings = load_settings(config_path)
+    
+    # Setup logging early to ensure proper formatting for all subsequent logs
+    setup_logging(settings.get("logging", {}))
+    logger.info("Logging configured")
+    
+    # Store interim_dir for consistent resume path resolution
+    settings["interim_dir"] = str(interim_dir)
+    
+    # P1 Fix: Parquet dependency coupling - downgrade to CSV if pyarrow unavailable
+    from src.utils.io_utils import _is_pyarrow_available
+    if settings.get("io", {}).get("interim_format", "parquet") == "parquet" and not _is_pyarrow_available():
+        logger.info("pyarrow not found; downgrading interim_format to 'csv'")
+        if "io" not in settings:
+            settings["io"] = {}
+        settings["io"]["interim_format"] = "csv"
+    
     relationship_ranks = load_relationship_ranks(
         str(get_config_path("relationship_ranks.csv")),
     )
@@ -467,9 +763,6 @@ def run_pipeline(
             settings["parallelism"] = {}
         settings["parallelism"]["workers"] = workers
         logger.info(f"Using CLI worker count: {workers}")
-
-    # Setup logging
-    setup_logging(settings.get("logging", {}).get("level", "INFO"))
 
     # Initialize performance tracker
     perf_tracker = PerformanceTracker()
@@ -586,7 +879,35 @@ def run_pipeline(
             col_overrides_for_io = {v: k for k, v in col_overrides.items()}
             logger.debug(f"Converted col_overrides for I/O: {col_overrides_for_io}")
         
-        df = load_salesforce_data(input_path, col_overrides=col_overrides_for_io)
+        # Load data with ingest support
+        df = load_salesforce_data(
+            input_path, 
+            col_overrides=col_overrides_for_io,
+            json_record_path=json_record_path,
+            xml_record_path=xml_record_path,
+            sheet=sheet
+        )
+        
+        # Apply ingest mapping if not resuming
+        if not resume_from or resume_from == "normalization":
+            df, resolved_name_col, resolved_id_col = apply_ingest_mapping(
+                df, 
+                name_col=name_col,
+                id_col=id_col,
+                run_id=run_id,
+                settings=settings,
+                dry_run=ingest_dry_run,
+                log_preview=log_preview
+            )
+            
+            # Exit early if dry-run
+            if ingest_dry_run:
+                logger.info("Dry-run ingest completed successfully")
+                return
+            
+            # Emit structured ingest summary even for full runs (not just dry-run)
+            run_type = settings.get("run_type", "dev") if settings else "dev"
+            dry_run_ingest(df, resolved_name_col, resolved_id_col, run_id, False, run_type)  # No preview for full runs
 
         # Initialize variables that may be used across stages
         alias_stats: dict[str, Any] | None = None
@@ -597,7 +918,7 @@ def run_pipeline(
 
             # Load filtered data (pipeline produces filtered, not normalized)
             normalized_path = str(
-                get_interim_dir(run_id, output_dir) / f"accounts_filtered.{interim_format}",
+                Path(settings.get("interim_dir", get_interim_dir(run_id, output_dir))) / f"accounts_filtered.{interim_format}",
             )
             if Path(normalized_path).exists():
                 logger.info(f"Loading normalized data from {normalized_path}")
@@ -608,9 +929,20 @@ def run_pipeline(
                     df_norm = pd.read_csv(normalized_path)
                 logger.info(f"Loaded {len(df_norm)} normalized records")
             else:
-                raise FileNotFoundError(
-                    f"Required intermediate file not found: {normalized_path}",
-                )
+                # Check for alternate format when users flip formats between runs
+                alt = normalized_path.rsplit(".",1)[0] + (".csv" if interim_format=="parquet" else ".parquet")
+                if Path(alt).exists():
+                    logger.warning(f"interim_format changed; loading alternate: {alt}")
+                    if alt.endswith(".parquet"):
+                        from src.utils.io_utils import read_parquet_safely
+                        df_norm = read_parquet_safely(alt)
+                    else:
+                        df_norm = pd.read_csv(alt)
+                    logger.info(f"Loaded {len(df_norm)} normalized records from alternate format")
+                else:
+                    raise FileNotFoundError(
+                        f"Required intermediate file not found: {normalized_path}",
+                    )
 
             # Load candidate pairs if needed
             if resume_from in [
@@ -621,7 +953,7 @@ def run_pipeline(
                 "final_output",
             ]:
                 pairs_path = str(
-                    get_interim_dir(run_id, output_dir) / f"candidate_pairs.{interim_format}",
+                    Path(settings.get("interim_dir", get_interim_dir(run_id, output_dir))) / f"candidate_pairs.{interim_format}",
                 )
                 if Path(pairs_path).exists():
                     logger.info(f"Loading candidate pairs from {pairs_path}")
@@ -644,7 +976,7 @@ def run_pipeline(
                 "alias_matching",
                 "final_output",
             ]:
-                groups_path = str(get_interim_dir(run_id, output_dir) / f"groups.{interim_format}")
+                groups_path = str(Path(settings.get("interim_dir", get_interim_dir(run_id, output_dir))) / f"groups.{interim_format}")
                 if Path(groups_path).exists():
                     logger.info(f"Loading groups from {groups_path}")
                     if interim_format == "parquet":
@@ -661,7 +993,7 @@ def run_pipeline(
             # Load survivorship results if needed
             if resume_from in ["grouping", DISPOSITION, "alias_matching", "final_output"]:
                 survivorship_path = str(
-                    get_interim_dir(run_id, output_dir) / f"survivorship.{interim_format}",
+                    Path(settings.get("interim_dir", get_interim_dir(run_id, output_dir))) / f"survivorship.{interim_format}",
                 )
                 if Path(survivorship_path).exists():
                     logger.info(
@@ -686,7 +1018,7 @@ def run_pipeline(
             # Load dispositions if needed
             if resume_from in ["grouping", "alias_matching", "final_output"]:
                 dispositions_path = str(
-                    get_interim_dir(run_id, output_dir) / f"dispositions.{interim_format}",
+                    Path(settings.get("interim_dir", get_interim_dir(run_id, output_dir))) / f"dispositions.{interim_format}",
                 )
                 if Path(dispositions_path).exists():
                     logger.info(f"Loading dispositions from {dispositions_path}")
@@ -704,7 +1036,7 @@ def run_pipeline(
             # Load alias matches if needed
             if resume_from in ["grouping", "final_output"]:
                 alias_matches_path = str(
-                    get_interim_dir(run_id, output_dir) / f"alias_matches.{interim_format}",
+                    Path(settings.get("interim_dir", get_interim_dir(run_id, output_dir))) / f"alias_matches.{interim_format}",
                 )
                 if Path(alias_matches_path).exists():
                     logger.info(f"Loading alias matches from {alias_matches_path}")
@@ -719,51 +1051,71 @@ def run_pipeline(
                         f"Required intermediate file not found: {alias_matches_path}",
                     )
 
-        # Phase 1.26.1: Dynamic schema resolution
-        from src.utils.schema_utils import resolve_schema, save_schema_mapping
+            # Resume sanity check: verify loaded data has non-zero rows
+            if resume_from and resume_from != "normalization":
+                logger.info("Performing resume sanity checks...")
+                if 'df_norm' in locals() and len(df_norm) == 0:
+                    raise ValueError("Resume failed: df_norm has zero rows")
+                if 'pairs_df' in locals() and len(pairs_df) == 0:
+                    raise ValueError("Resume failed: pairs_df has zero rows")
+                if 'df_groups' in locals() and len(df_groups) == 0:
+                    raise ValueError("Resume failed: df_groups has zero rows")
+                if resume_from in ["final_output"] and 'df_primary' in locals() and len(df_primary) == 0:
+                    raise ValueError("Resume failed: df_primary has zero rows")
+                logger.info("Resume sanity checks passed")
 
-        # Resolve schema mapping from DataFrame headers
-        input_filename = Path(input_path).name
-        schema_mapping = resolve_schema(
-            df,
-            settings,
-            cli_overrides=col_overrides,
-            input_filename=input_filename,
-        )
+        # P0 Fix: Skip schema machinery unless force_salesforce_mode
+        if settings.get("compatibility", {}).get("force_salesforce_mode", False):
+            # Phase 1.26.1: Dynamic schema resolution
+            from src.utils.schema_utils import resolve_schema, save_schema_mapping
 
-        # Save schema mapping for observability and reproducibility
-        save_schema_mapping(schema_mapping, run_id, output_dir)
+            # Resolve schema mapping from DataFrame headers
+            input_filename = Path(input_path).name
+            schema_mapping = resolve_schema(
+                df,
+                settings,
+                cli_overrides=col_overrides,
+                input_filename=input_filename,
+            )
 
-        # Log schema resolution results
-        logger.info(
-            f"schema_resolved | run_id={run_id} "
-            f"required_ok=true "
-            f"account_name=\"{schema_mapping.get(ACCOUNT_NAME, 'NOT_FOUND')}\" "
-            f"mapped={schema_mapping} "
-            f"heuristics_used={'heuristic' in str(schema_mapping)}",
-        )
+            # Save schema mapping for observability and reproducibility
+            save_schema_mapping(schema_mapping, run_id, output_dir)
 
-        # Apply canonical rename using helper function
-        # This renames columns from ACTUAL -> CANONICAL before any canonical constants are used
-        df = apply_canonical_rename(df, dict(schema_mapping))
+            # Log schema resolution results
+            logger.info(
+                f"schema_resolved | run_id={run_id} "
+                f"required_ok=true "
+                f"account_name=\"{schema_mapping.get(ACCOUNT_NAME, 'NOT_FOUND')}\" "
+                f"mapped={schema_mapping} "
+                f"heuristics_used={'heuristic' in str(schema_mapping)}",
+            )
+
+            # Apply canonical rename using helper function
+            # This renames columns from ACTUAL -> CANONICAL before any canonical constants are used
+            df = apply_canonical_rename(df, dict(schema_mapping))
+        else:
+            # v0 ingest mode: skip schema resolution to avoid double-mapping
+            logger.info("Skipping schema resolution in v0 ingest mode")
 
         # Validate required columns after renaming
         validate_required_columns(df)
 
-        # Preserve original account_id as account_id_src for audit trail
-        df["account_id_src"] = df[ACCOUNT_ID].astype("string").fillna("").str.strip()
+        # P0 Fix: Gate SFID normalization behind force_salesforce_mode
+        if settings.get("compatibility", {}).get("force_salesforce_mode", False):
+            # Preserve original account_id as account_id_src for audit trail
+            df["account_id_src"] = df[ACCOUNT_ID].astype("string").fillna("").str.strip()
 
-        # Canonicalize Salesforce IDs to 18-character form
-        logger.info("Canonicalizing Salesforce IDs to 18-character form")
-        df[ACCOUNT_ID] = normalize_sfid_series(df["account_id_src"])
+            # Canonicalize Salesforce IDs to 18-character form
+            logger.info("Canonicalizing Salesforce IDs to 18-character form")
+            df[ACCOUNT_ID] = normalize_sfid_series(df["account_id_src"])
+        else:
+            # v0 ingest mode: leave account_id as-is (no SFID canonicalization)
+            logger.info("Skipping SFID canonicalization in v0 ingest mode")
 
-        # Remove duplicate account_id records (keep first occurrence)
-        initial_count = len(df)
-        df = df.drop_duplicates(subset=[ACCOUNT_ID], keep="first")
-        if len(df) < initial_count:
-            logger.warning(
-                f"Removed {initial_count - len(df)} duplicate {ACCOUNT_ID} records after canonicalization",
-            )
+        # P0 Fix: Remove blanket drop_duplicates on ACCOUNT_ID in v0
+        # This was causing massive row loss when many rows have <NA> IDs
+        # TODO: Implement guarded deduplication only for valid SFIDs if needed
+        logger.info("Skipping duplicate removal on ACCOUNT_ID in v0 ingest mode")
 
         # Handle Excel serial dates with robust error handling
         if CREATED_DATE in df.columns:
@@ -836,8 +1188,6 @@ def run_pipeline(
                 r"^1099$",  # Tax form references
             ]
 
-            import re
-
             pattern_mask = (
                 df_norm["name_core"]
                 .str.lower()
@@ -877,8 +1227,7 @@ def run_pipeline(
                         f"filtering | existing_file_present | fallback_path={filtered_out_path} | reason=no_overwrite_policy",
                     )
 
-                from src.utils.io_utils import write_parquet_safely
-                write_parquet_safely(filtered_out_df, filtered_out_path)
+                write_artifact(filtered_out_df, filtered_out_path.replace('.parquet', ''))
                 logger.info(
                     f"filtering | written=accounts_filtered_out.parquet | records={len(filtered_out_records)} | path={filtered_out_path}",
                 )
@@ -887,7 +1236,7 @@ def run_pipeline(
             total_filtered = initial_count - filtered_count
 
             # Choose backend using centralized engine selection
-            from src.utils.engine_selection import choose_backend, filtering_duckdb
+            from src.utils.engine_selection import choose_backend
             
             backend = choose_backend("filtering", settings, n_rows=len(df_norm), df=df_norm)
             effective_backend = "pandas"  # current implementation
@@ -963,8 +1312,7 @@ def run_pipeline(
 
                 # Save unique normalized data
                 unique_path = f"{interim_dir}/unique_normalized.parquet"
-                from src.utils.io_utils import write_parquet_safely
-                write_parquet_safely(df_norm, unique_path)
+                write_artifact(df_norm, unique_path.replace('.parquet', ''))
                 logger.info(
                     f"exact_equals | written=unique_normalized.parquet | records={len(df_norm)} | path={unique_path}",
                 )
@@ -1006,8 +1354,8 @@ def run_pipeline(
             pairs_df["id_a"] = pairs_df["id_a"].astype("string").fillna("").str.strip()
             pairs_df["id_b"] = pairs_df["id_b"].astype("string").fillna("").str.strip()
 
-            # Verify referential integrity
-            _assert_pairs_cover_accounts(pairs_df, df_norm, id_col=ACCOUNT_ID)
+            # Verify referential integrity (P0 Fix: use internal_row_id for v0)
+            _assert_pairs_cover_accounts(pairs_df, df_norm, id_col="internal_row_id")
 
             # Save candidate pairs
             pairs_path = f"{interim_dir}/candidate_pairs.{interim_format}"
@@ -1462,7 +1810,7 @@ def run_pipeline(
                 # Save canonical file
                 group_stats_path = str(get_artifact_path(run_id, "group_stats.parquet", output_dir))
                 from src.utils.io_utils import write_parquet_safely
-                write_parquet_safely(df_group_stats, group_stats_path)
+                write_artifact(df_group_stats, group_stats_path.replace('.parquet', ''))
 
                 logger.info(
                     f"group_stats | pandas_complete | groups={len(df_group_stats)} | path={group_stats_path}",
@@ -1627,8 +1975,7 @@ def run_pipeline(
 
                 # Save to processed directory for UI access
                 details_path = str(get_artifact_path(run_id, "group_details.parquet", output_dir))
-                from src.utils.io_utils import write_parquet_safely
-                write_parquet_safely(df_details, details_path)
+                write_artifact(df_details, details_path.replace('.parquet', ''))
 
                 logger.info(
                     f"Generated group details: {len(df_details)} records, saved to {details_path}",
@@ -1728,8 +2075,7 @@ def run_pipeline(
             # Also write Parquet version for UI
             try:
                 parquet_path = os.path.join(processed_dir, "review_ready.parquet")
-                from src.utils.io_utils import write_parquet_safely
-                write_parquet_safely(df_final, parquet_path)
+                write_artifact(df_final, parquet_path.replace('.parquet', ''))
                 logger.info(f"Also wrote Parquet review file: {parquet_path}")
             except Exception as e:
                 logger.warning(f"Parquet write failed: {e}")
@@ -1815,7 +2161,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Company Junction Deduplication Pipeline",
     )
-    parser.add_argument("--input", required=True, help="Input CSV file path")
+    parser.add_argument("--input", required=True, help="Input data file path (CSV/XLSX/XLS/JSON/XML)")
     parser.add_argument("--outdir", required=True, help="Output directory path")
     parser.add_argument(
         "--config",
@@ -1898,6 +2244,15 @@ def main() -> None:
         version="Company Junction Pipeline v2.0.0",
         help="Show version information and exit",
     )
+    
+    # Ingest-specific arguments
+    parser.add_argument("--name-col", help="Name column (accepts raw or normalized names)")
+    parser.add_argument("--id-col", help="ID column (optional, accepts raw or normalized names)")
+    parser.add_argument("--json-record-path", help="JSON record path (optional)")
+    parser.add_argument("--xml-record-path", help="XML record XPath (optional)")
+    parser.add_argument("--sheet", help="Excel sheet name or index (optional)")
+    parser.add_argument("--dry-run-ingest", action="store_true", help="Run ingest-only with validation and exit")
+    parser.add_argument("--log-preview", action="store_true", help="Include sample rows in dry-run logs (debug only)")
 
     args = parser.parse_args()
 
@@ -1940,6 +2295,14 @@ def main() -> None:
             col_overrides=col_overrides_dict,
             profile=args.profile,
             run_type=args.run_type,
+            # Ingest-specific arguments
+            name_col=args.name_col,
+            id_col=args.id_col,
+            json_record_path=args.json_record_path,
+            xml_record_path=args.xml_record_path,
+            sheet=args.sheet,
+            ingest_dry_run=args.dry_run_ingest,
+            log_preview=args.log_preview,
         )
     except KeyboardInterrupt:
         logger.warning("Pipeline interrupted by user (Ctrl+C)")

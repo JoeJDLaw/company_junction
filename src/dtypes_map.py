@@ -10,6 +10,10 @@ DTYPES = {
     "account_id": "string",  # Keep as string for alphanumeric IDs
     "account_name": "string",
     "created_date": "string",  # Keep as string for Excel serial compatibility
+    # Ingest fields
+    "internal_row_id": "string",
+    "input_disposition": "string",
+    "__source_row_ordinal": "int32",
     # Normalization fields
     "name_core": "string",
     "name_core_tokens": "string",  # JSON string of token list
@@ -48,6 +52,7 @@ DTYPES = {
 ALLOWED_OBJECT_COLUMNS = {
     "name_core",
     "disposition_reason",
+    "input_disposition",
     "block_key",
     "applied_penalties",
     "survivorship_reason",

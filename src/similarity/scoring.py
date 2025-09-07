@@ -91,10 +91,21 @@ def compute_score_components(
     if punct_mismatch:
         base -= cast("int", penalties.get("punctuation_mismatch", 0))
 
+    # Apply distractor guardrails if enabled
+    distractor_penalty = 0
+    distractor_penalty_applied = {}
+    applied_penalties = {}
+    
+    if settings and settings.get("similarity", {}).get("distractor_guardrails", {}).get("enabled", False):
+        distractor_penalty, distractor_penalty_applied, applied_penalties = _apply_distractor_guardrails(
+            name_core_a, name_core_b, tokens_a, tokens_b, ratio_name, suffix_match, settings
+        )
+        base -= distractor_penalty
+
     score = max(0, min(100, round(base)))
     
     # Return both canonical and alias keys for API compatibility
-    return {
+    result = {
         # Canonical keys (current API)
         "composite_score": score,
         "token_set_ratio": int(ratio_set),
@@ -109,6 +120,13 @@ def compute_score_components(
         "ratio_set": int(ratio_set),
         "ratio_name": int(ratio_name),
     }
+    
+    # Add distractor guardrails information if applied
+    if distractor_penalty > 0:
+        result["distractor_penalty_applied"] = distractor_penalty_applied
+        result["applied_penalties"] = applied_penalties
+    
+    return result
 
 
 def score_pairs_parallel(
@@ -296,3 +314,95 @@ def _check_numeric_style_match(name_a: str, name_b: str) -> bool:
         return False
 
     return nums_a == nums_b
+
+
+def _apply_distractor_guardrails(
+    name_core_a: str,
+    name_core_b: str,
+    tokens_a: set[str],
+    tokens_b: set[str],
+    ratio_name: float,
+    suffix_match: bool,
+    settings: dict[str, Any],
+) -> tuple[int, dict[str, Any], dict[str, Any]]:
+    """Apply distractor guardrails to prevent false-positive groupings.
+    
+    Args:
+        name_core_a: Core name for first entity
+        name_core_b: Core name for second entity
+        tokens_a: Token set for first entity
+        tokens_b: Token set for second entity
+        ratio_name: Token sort ratio (for strong corroboration)
+        suffix_match: Whether suffix classes match
+        settings: Configuration settings
+        
+    Returns:
+        Tuple of (penalty_amount, penalty_details, applied_penalties)
+    """
+    guardrails_config = settings.get("similarity", {}).get("distractor_guardrails", {})
+    distractor_tokens = guardrails_config.get("distractor_tokens", {})
+    penalty_weights = guardrails_config.get("penalty_weights", {})
+    evidence_req = guardrails_config.get("evidence_requirements", {})
+    
+    # Flatten all distractor tokens into a single set for lookup
+    all_distractor_tokens = set()
+    for category, tokens in distractor_tokens.items():
+        all_distractor_tokens.update(token.lower() for token in tokens)
+    
+    # Find shared tokens and categorize them
+    shared_tokens = tokens_a & tokens_b
+    shared_distractor_tokens = shared_tokens & all_distractor_tokens
+    shared_non_distractor_tokens = shared_tokens - all_distractor_tokens
+    
+    # Count non-distractor evidence
+    non_distractor_count = len(shared_non_distractor_tokens)
+    min_required = evidence_req.get("min_non_distractor_tokens", 2)
+    strong_threshold = evidence_req.get("strong_corroboration_threshold", 90)
+    require_suffix = evidence_req.get("require_suffix_match_for_corroboration", True)
+    
+    # Check if we have sufficient non-distractor evidence
+    has_sufficient_evidence = (
+        non_distractor_count >= min_required or
+        (non_distractor_count >= 1 and 
+         ratio_name >= strong_threshold and 
+         (suffix_match or not require_suffix))
+    )
+    
+    # If we have sufficient evidence, no penalty
+    if has_sufficient_evidence:
+        return 0, {}, {}
+    
+    # Calculate penalty based on distractor categories found
+    total_penalty = 0
+    penalty_details = {
+        "insufficient_evidence": True,
+        "shared_distractor_tokens": list(shared_distractor_tokens),
+        "shared_non_distractor_tokens": list(shared_non_distractor_tokens),
+        "non_distractor_count": non_distractor_count,
+        "min_required": min_required,
+    }
+    applied_penalties = {}
+    
+    # Apply penalties for each distractor category found
+    for category, tokens in distractor_tokens.items():
+        category_tokens = set(token.lower() for token in tokens)
+        found_tokens = shared_distractor_tokens & category_tokens
+        
+        if found_tokens:
+            penalty_weight = penalty_weights.get(category, 0)
+            if penalty_weight > 0:
+                # Apply penalty proportional to the number of distractor tokens
+                category_penalty = penalty_weight * len(found_tokens)
+                total_penalty += category_penalty
+                applied_penalties[f"distractor_{category}"] = category_penalty
+                penalty_details[f"distractor_{category}_tokens"] = list(found_tokens)
+                penalty_details[f"distractor_{category}_penalty"] = category_penalty
+    
+    # Apply base insufficient evidence penalty if no specific distractor penalties
+    if total_penalty == 0 and not has_sufficient_evidence:
+        base_penalty = 50  # Default penalty for insufficient evidence
+        total_penalty = base_penalty
+        applied_penalties["insufficient_evidence"] = base_penalty
+        penalty_details["base_insufficient_evidence_penalty"] = base_penalty
+    
+    return int(total_penalty), penalty_details, applied_penalties
